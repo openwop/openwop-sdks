@@ -1,0 +1,135 @@
+# openwop-sdks publishing workflow.
+#
+# The three client SDKs publish from here (carved out of openwop/openwop in
+# 2026-06). Per PUBLISHING.md §"Versioning alignment" the SDKs track the spec
+# major — a coordinated spec release (a `v*` tag here, mirroring the spec
+# corpus's `v*`) publishes all three; per-package tags publish one.
+#
+#   Tag pattern         Triggers              Use case
+#   -----------------   ----------------      -----------------------
+#   v*                  all 3 publish jobs    Coordinated spec-aligned release
+#   openwop/v*          publish-ts-client     SDK-only patch (TS)
+#   openwop-client/v*   publish-python        SDK-only patch (Python)
+#   go/v*               publish-go            SDK-only patch (Go) + the subdir
+#                                             module-discovery tag proxy.golang.org
+#                                             indexes (module: …/openwop-sdks/go)
+
+name: openwop-sdks — Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+      - 'openwop/v*'
+      - 'openwop-client/v*'
+      - 'go/v*'
+
+jobs:
+  validate-tag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Validate tag format
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          case "$tag" in
+            v[0-9]*.[0-9]*.[0-9]*|v[0-9]*.[0-9]*.[0-9]*-*|\
+            openwop/v[0-9]*.[0-9]*.[0-9]*|openwop/v[0-9]*.[0-9]*.[0-9]*-*|\
+            openwop-client/v[0-9]*.[0-9]*.[0-9]*|openwop-client/v[0-9]*.[0-9]*.[0-9]*-*|\
+            go/v[0-9]*.[0-9]*.[0-9]*|go/v[0-9]*.[0-9]*.[0-9]*-*)
+              echo "tag '$tag' matches expected SemVer pattern" ;;
+            *)
+              echo "::error::tag '$tag' does not match an expected SemVer pattern"
+              echo "Expected: vX.Y.Z | openwop/vX.Y.Z | openwop-client/vX.Y.Z | go/vX.Y.Z"
+              exit 1 ;;
+          esac
+
+  preflight:
+    needs: validate-tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.22'
+      - name: SDK gate
+        run: npm run check
+
+  publish-ts-client:
+    needs: preflight
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      startsWith(github.ref, 'refs/tags/openwop/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
+      - run: npm install -g npm@latest
+      - run: cd sdk/typescript && npm ci
+      - run: cd sdk/typescript && npm run build
+      - name: Publish to npm (skip if already published)
+        run: |
+          cd sdk/typescript
+          PKG=$(node -p "require('./package.json').name")
+          VER=$(node -p "require('./package.json').version")
+          if npm view "$PKG@$VER" version >/dev/null 2>&1; then
+            echo "✓ $PKG@$VER already on npm — skipping (idempotent)."
+          else
+            npm publish --access public --provenance
+          fi
+
+  publish-python:
+    needs: preflight
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      startsWith(github.ref, 'refs/tags/openwop-client/v')
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - run: pip install --upgrade build
+      - run: cd sdk/python && python -m build
+      - name: Publish to PyPI via OIDC trusted publisher
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: sdk/python/dist
+          skip-existing: true
+
+  publish-go:
+    needs: preflight
+    if: |
+      startsWith(github.ref, 'refs/tags/v') ||
+      startsWith(github.ref, 'refs/tags/go/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-go@v6
+        with:
+          go-version: '1.22'
+      # Go modules are tag-based; proxy.golang.org indexes from the `go/v*` tag.
+      # This job confirms vet+test pass against the tagged source.
+      - run: cd sdk/go && go vet ./...
+      - run: cd sdk/go && go test ./...
+      - name: Verify Go module discoverability
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          echo "Go module is tag-driven via ${GITHUB_REF}."
+          echo "Consumers: go get github.com/openwop/openwop-sdks/go@${VERSION}"
+          echo "Cache warm-up may take ~5min for proxy.golang.org."

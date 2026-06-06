@@ -6,6 +6,7 @@
   "license": "Apache-2.0",
   "scripts": {
     "check": "bash scripts/sdks-check.sh",
-    "check:parity": "node scripts/check-sdk-parity.mjs"
+    "check:parity": "node scripts/check-sdk-parity.mjs",
+    "check:vendored": "node scripts/check-vendored-sync.mjs"
   }
 }
