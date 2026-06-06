@@ -3,7 +3,7 @@
 > **Status:** Living document. Last reviewed 2026-06-02 against:
 > - `@openwop/openwop` TypeScript SDK (5 files under `sdk/typescript/src/`)
 > - `openwop-client` Python SDK (5 files under `sdk/python/src/openwop_client/`)
-> - `github.com/openwop/openwop/sdk/go` Go SDK (`sdk/go/`)
+> - `github.com/openwop/openwop-sdks/go` Go SDK (`sdk/go/`)
 >
 > **Now machine-enforced.** `sdk/parity-expectations.json` declares a per-SDK
 > status for every OpenAPI operation, and `scripts/check-sdk-parity.mjs`
@@ -37,7 +37,7 @@ Per-operation parity counts (from `sdk/parity-expectations.json`):
 |---|---:|---:|---:|
 | TypeScript (`@openwop/openwop`) | 44 | 4 | 0 |
 | Python (`openwop-client`) | 44 | 4 | 0 |
-| Go (`github.com/openwop/openwop/sdk/go`) | 44 | 4 | 0 |
+| Go (`github.com/openwop/openwop-sdks/go`) | 44 | 4 | 0 |
 
 **2026-06-02 full port.** A parity audit found `sdk/PARITY.md`'s prior
 "34/34/34 as of 2026-05-15" headline was stale: the agent-platform surfaces

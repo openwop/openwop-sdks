@@ -3,7 +3,7 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration** — a single contract for runs in which LLM agents, deterministic tools, sub-workflows, and human reviewers collaborate, with durable suspend / resume, replay, version negotiation, and observability owned by the protocol itself. This package is the reference Go client: synchronous, zero runtime deps, strongly-typed structs for every spec'd REST endpoint plus a channel-based SSE consumer.
 
 ```bash
-go get github.com/openwop/openwop/sdk/go
+go get github.com/openwop/openwop-sdks/go
 ```
 
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Status:** FINAL v1 (2026-04-27) · **Mirrors:** the TypeScript and Python SDKs (same endpoint coverage, idiomatic Go shape)
@@ -24,7 +24,7 @@ import (
     "fmt"
     "log"
 
-    openwopclient "github.com/openwop/openwop/sdk/go"
+    openwopclient "github.com/openwop/openwop-sdks/go"
 )
 
 func main() {

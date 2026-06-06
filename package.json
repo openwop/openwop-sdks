@@ -1,0 +1,11 @@
+{
+  "name": "openwop-sdks",
+  "version": "1.1.7",
+  "private": true,
+  "description": "OpenWOP client SDKs — TypeScript (@openwop/openwop), Python (openwop-client), and Go (github.com/openwop/openwop-sdks/go). Carved from the openwop spec corpus.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "check": "bash scripts/sdks-check.sh",
+    "check:parity": "node scripts/check-sdk-parity.mjs"
+  }
+}

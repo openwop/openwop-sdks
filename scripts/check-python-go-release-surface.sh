@@ -4,7 +4,7 @@
 set -euo pipefail
 
 SPEC_ROOT="."
-EXPECTED_GO_MODULE="github.com/openwop/openwop/sdk/go"
+EXPECTED_GO_MODULE="github.com/openwop/openwop-sdks/go"
 
 echo "=== check-python-go-release-surface — auditing Python and Go release surfaces ==="
 echo

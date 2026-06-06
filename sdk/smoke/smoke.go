@@ -1,4 +1,4 @@
-// Go smoke for github.com/openwop/openwop/sdk/go.
+// Go smoke for github.com/openwop/openwop-sdks/go.
 //
 // Exercises the wire round-trip against a running SQLite reference host:
 //   1. Capability discovery (unauthenticated)
@@ -17,7 +17,7 @@ import (
 	"os"
 	"time"
 
-	openwop "github.com/openwop/openwop/sdk/go"
+	openwop "github.com/openwop/openwop-sdks/go"
 )
 
 const fixture = "conformance-noop"

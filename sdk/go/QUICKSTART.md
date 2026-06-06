@@ -13,7 +13,7 @@
 ## Install
 
 ```bash
-go get github.com/openwop/openwop/sdk/go
+go get github.com/openwop/openwop-sdks/go
 ```
 
 The SDK is **stdlib-only at runtime** — `net/http` for HTTP, no `gorilla`/`fiber`/`chi`. Idiomatic Go: explicit `context.Context` on every method, structured errors, typed response bodies.
@@ -44,7 +44,7 @@ import (
 	"log"
 	"time"
 
-	openwopclient "github.com/openwop/openwop/sdk/go"
+	openwopclient "github.com/openwop/openwop-sdks/go"
 )
 
 func main() {
@@ -159,4 +159,4 @@ for event := range ch {
 | `dial tcp 127.0.0.1:3737: connect: connection refused` | The in-memory host isn't running | Boot `npm start` in `examples/hosts/in-memory/` first |
 | `401 Unauthorized` from the API | API key mismatch | Pass `openwop-inmem-dev-key` as the second arg to `NewClient` |
 | Run never reaches terminal | Workflow uses a fixture the host doesn't advertise | Check `discovery.Fixtures` — only listed fixtures will start |
-| `go: github.com/openwop/openwop/sdk/go: missing go.sum entry` | First install | Run `go mod tidy` to populate `go.sum` |
+| `go: github.com/openwop/openwop-sdks/go: missing go.sum entry` | First install | Run `go mod tidy` to populate `go.sum` |
