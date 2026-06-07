@@ -29,7 +29,7 @@ npm start
 # → [openwop-host-in-memory] listening on http://127.0.0.1:3737 (api key: openwop-inmem-dev-key, 46 fixtures loaded)
 ```
 
-The host loads 46 [conformance fixtures](../../conformance/fixtures.md) so the example below has workflows to run against.
+The host loads 46 [conformance fixtures](https://github.com/openwop/openwop/blob/main/conformance/fixtures.md) so the example below has workflows to run against.
 
 ## Walkthrough
 
@@ -95,12 +95,12 @@ terminal: completed
 
 | Step | SDK method | Spec |
 |---|---|---|
-| Discovery | `client.discovery()` | [`capabilities.md`](../../spec/v1/capabilities.md) |
-| Create run | `client.create_run(CreateRunRequest)` | [`rest-endpoints.md`](../../spec/v1/rest-endpoints.md) `POST /v1/runs` |
-| Poll snapshot | `client.get_run(run_id)` | [`rest-endpoints.md`](../../spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}` |
-| Read events | `client.get_run_events_poll(run_id)` | [`rest-endpoints.md`](../../spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}/events` (JSON mode) |
+| Discovery | `client.discovery()` | [`capabilities.md`](https://github.com/openwop/openwop/blob/main/spec/v1/capabilities.md) |
+| Create run | `client.create_run(CreateRunRequest)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `POST /v1/runs` |
+| Poll snapshot | `client.get_run(run_id)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}` |
+| Read events | `client.get_run_events_poll(run_id)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}/events` (JSON mode) |
 
-Every method on `OpenwopClient` maps 1:1 to an OpenAPI operation in [`api/openapi.yaml`](../../api/openapi.yaml).
+Every method on `OpenwopClient` maps 1:1 to an OpenAPI operation in [`api/openapi.yaml`](https://github.com/openwop/openwop/blob/main/api/openapi.yaml).
 
 ## Streaming events (live SSE)
 
@@ -116,10 +116,10 @@ for event in client.stream_run_events(run.run_id):
 ## Next steps
 
 - **Survey the wire surface:** [`README.md`](./README.md) §"Endpoint coverage" lists every method.
-- **Auth profiles:** [`auth-profiles.md`](../../spec/v1/auth-profiles.md) — API-key rotation, OAuth2 client credentials, OIDC user-bearer, mTLS.
-- **Webhooks:** subscribe to run events out-of-band; see [`webhooks.md`](../../spec/v1/webhooks.md).
-- **Replay:** time-travel debugging via `POST /v1/runs/{runId}:fork`; see [`replay.md`](../../spec/v1/replay.md).
-- **Build your own host:** [`examples/hosts/sqlite/README.md`](../../examples/hosts/sqlite/README.md) doubles as a "Build Your Own Host" walkthrough.
+- **Auth profiles:** [`auth-profiles.md`](https://github.com/openwop/openwop/blob/main/spec/v1/auth-profiles.md) — API-key rotation, OAuth2 client credentials, OIDC user-bearer, mTLS.
+- **Webhooks:** subscribe to run events out-of-band; see [`webhooks.md`](https://github.com/openwop/openwop/blob/main/spec/v1/webhooks.md).
+- **Replay:** time-travel debugging via `POST /v1/runs/{runId}:fork`; see [`replay.md`](https://github.com/openwop/openwop/blob/main/spec/v1/replay.md).
+- **Build your own host:** [`examples/hosts/sqlite/README.md`](https://github.com/openwop/openwop-examples/blob/main/examples/hosts/sqlite/README.md) doubles as a "Build Your Own Host" walkthrough.
 
 ## Troubleshooting
 
