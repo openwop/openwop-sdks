@@ -2,6 +2,7 @@
 
 ## [Unreleased]
 
+- **`waiting-external` is now classified as an active (non-terminal) run status.** `ACTIVE_RUN_STATUSES` (and therefore `isActiveRunStatus`) now includes `'waiting-external'`, and `isTerminalRunStatus('waiting-external')` now returns `false`. This aligns the helpers with the canonical 9-member `RunStatus` enum in `schemas/run-snapshot.schema.json` — a run awaiting an external event MAY still transition, so it is not terminal. Previously the helper set omitted it, so it was misclassified as terminal-unknown. Behavior change for consumers that branch on `isTerminalRunStatus` / `isActiveRunStatus` (e.g. polling loops). No wire-shape change.
 - **`client.prompts.get` now returns `PromptTemplate | null`** (was `PromptTemplate`). It resolves to `null` on `404` — consistent with the other get-by-id helpers (`agents.get`, `tools.get`, …) and the Python/Go SDKs — while a `400 prompt_ref_ambiguous` and other errors still throw, so callers can distinguish "not found" from "ambiguous reference." Minor source-compatibility note for TypeScript consumers: a null-check may now be required at the call site.
 
 ## [1.1.6] — 2026-05-31 — catch-up republish: agent-platform SDK surface
