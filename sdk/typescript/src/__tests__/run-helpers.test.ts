@@ -76,7 +76,6 @@ describe('isTerminalRunStatus', () => {
     // The negative-set check means these all flip to terminal.
     expect(isTerminalRunStatus('planned')).toBe(true);
     expect(isTerminalRunStatus('executing')).toBe(true);
-    expect(isTerminalRunStatus('waiting-external')).toBe(true);
     expect(isTerminalRunStatus('timed-out')).toBe(true);
     expect(isTerminalRunStatus('interrupted')).toBe(true);
     // Truly garbage strings also flip terminal — the polling loop must
@@ -85,12 +84,12 @@ describe('isTerminalRunStatus', () => {
     expect(isTerminalRunStatus('')).toBe(true);
   });
 
-  it('does NOT misclassify the spec\'s waiting-input as terminal', () => {
-    // Regression guard: `waiting-input` is active per the spec; an
-    // implementation that derived terminal-set from a different source
-    // (e.g. main-repo engine which uses `waiting-external`) might miss
-    // this distinction.
+  it('does NOT misclassify the spec\'s active waiting-* statuses as terminal', () => {
+    // Regression guard: `waiting-input` AND `waiting-external` are both
+    // canonical, non-terminal statuses per schemas/run-snapshot.schema.json —
+    // a run in either state MAY still transition, so neither is terminal.
     expect(isTerminalRunStatus('waiting-input')).toBe(false);
+    expect(isTerminalRunStatus('waiting-external')).toBe(false);
   });
 });
 

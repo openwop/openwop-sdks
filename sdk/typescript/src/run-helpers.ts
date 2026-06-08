@@ -18,11 +18,11 @@
  * the small known-non-terminal set is treated as terminal. This keeps
  * the helper correct against:
  *
- *   - the canonical 8-member spec union (`pending` / `running` / `paused`
- *     / `waiting-approval` / `waiting-input` / `completed` / `failed` /
- *     `cancelled`)
- *   - host extensions like `'planned'`, `'executing'`, `'waiting-external'`,
- *     `'timed-out'`, `'interrupted'` which the OpenWOP engine emits
+ *   - the canonical 9-member spec union (`pending` / `running` / `paused`
+ *     / `waiting-approval` / `waiting-input` / `waiting-external` /
+ *     `completed` / `failed` / `cancelled`)
+ *   - host extensions like `'planned'`, `'executing'`, `'timed-out'`,
+ *     `'interrupted'` which the OpenWOP engine emits
  *   - any future spec additions before the SDK ships an updated minor
  *
  * @module @openwop/openwop/run-helpers
@@ -44,6 +44,7 @@ export const ACTIVE_RUN_STATUSES = [
   'paused',
   'waiting-approval',
   'waiting-input',
+  'waiting-external',
 ] as const;
 
 /**

@@ -111,7 +111,8 @@ describe('client.prompts.get', () => {
     const result = await client.prompts.get({ templateId: 'writer-system' });
     expect(captured[0]!.method).toBe('GET');
     expect(captured[0]!.url).toBe('https://test.example/v1/prompts/writer-system');
-    expect(result.templateId).toBe('writer-system');
+    // get() returns `PromptTemplate | null` (null on 404); a 200 yields the template.
+    expect(result?.templateId).toBe('writer-system');
   });
 
   it('forwards version + libraryId as query params', async () => {
@@ -257,13 +258,14 @@ describe('client.prompts error envelope mapping', () => {
     });
   });
 
-  it('throws WopError on 404 from get', async () => {
+  it('returns null on 404 from get (get-or-null, per the SDK-wide convention)', async () => {
+    // get() deliberately maps 404 → null (like agents.get / tools.get /
+    // runs.ancestry / debugBundle … and the Python/Go SDKs), so callers can
+    // distinguish "no such template" from a real error. Non-404 errors still throw.
     const { client } = mockClient(() => ({
       status: 404,
       body: { error: 'prompt_template_not_found', message: 'no template' },
     }));
-    await expect(
-      client.prompts.get({ templateId: 'unknown' }),
-    ).rejects.toMatchObject({ status: 404 });
+    expect(await client.prompts.get({ templateId: 'unknown' })).toBeNull();
   });
 });
