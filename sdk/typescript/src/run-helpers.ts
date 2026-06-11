@@ -18,9 +18,9 @@
  * the small known-non-terminal set is treated as terminal. This keeps
  * the helper correct against:
  *
- *   - the canonical 9-member spec union (`pending` / `running` / `paused`
+ *   - the canonical 10-member spec union (`pending` / `running` / `paused`
  *     / `waiting-approval` / `waiting-input` / `waiting-external` /
- *     `completed` / `failed` / `cancelled`)
+ *     `completed` / `failed` / `cancelling` / `cancelled`)
  *   - host extensions like `'planned'`, `'executing'`, `'timed-out'`,
  *     `'interrupted'` which the OpenWOP engine emits
  *   - any future spec additions before the SDK ships an updated minor
@@ -45,6 +45,9 @@ export const ACTIVE_RUN_STATUSES = [
   'waiting-approval',
   'waiting-input',
   'waiting-external',
+  // RFC 0094 §B — transitional state during the cancel cascade; the run
+  // WILL still transition (to terminal `cancelled`), so it is active.
+  'cancelling',
 ] as const;
 
 /**

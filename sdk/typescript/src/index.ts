@@ -59,6 +59,8 @@ export type {
   AgentHandoffPayload,
   AgentDecidedPayload,
   MemoryWrittenPayload,
+  // RFC 0094 §D — streaming output chunk (`output.chunk` / `ai.message.chunk`)
+  OutputChunkPayload,
   // RFC 0027 + RFC 0028 — Prompt library (spec/v1/prompts.md)
   GetPromptRequest,
   ListPromptsRequest,
@@ -113,6 +115,7 @@ export {
   isAgentHandoff,
   isAgentDecided,
   isMemoryWritten,
+  isOutputChunk,
   subscribeToAgentReasoning,
 } from './event-helpers.js';
 export type {

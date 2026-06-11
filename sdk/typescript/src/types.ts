@@ -21,6 +21,10 @@ export type RunStatus =
   | 'waiting-external'
   | 'completed'
   | 'failed'
+  /** RFC 0094 §B — transitional state between a cancel request being
+   *  accepted and the terminal `cancelled`. Non-terminal: a snapshot
+   *  read during the cancel cascade carries it. */
+  | 'cancelling'
   | 'cancelled';
 
 export interface Capabilities {
@@ -36,6 +40,25 @@ export interface Capabilities {
     maxRunDurationMs?: number;
     /** RFC 0058. Engine-side agent-loop iteration ceiling; upper bound for `RunConfigurable.maxLoopIterations`. */
     maxLoopIterations?: number;
+    /** RFC 0094 §H. Maximum REST request body size (bytes) the host
+     *  accepts. Hosts that advertise it MUST enforce it. */
+    maxRequestBodyBytes?: number;
+  };
+  /** RFC 0094 §H. gRPC transport advertisement per `grpc-transport.md`
+   *  §"Capability advertisement". Absent ⇒ the host exposes no gRPC
+   *  transport. A host that exposes the gRPC surface advertises this
+   *  block AND includes `'grpc'` in `supportedTransports`. REST + SSE
+   *  remain exposed regardless. */
+  grpc?: {
+    /** Toggle — `true` when the gRPC surface is live. */
+    supported: boolean;
+    /** Full URI: `grpc://` (cleartext, intra-trusted-network only) OR
+     *  `grpcs://` (TLS). Hosts SHOULD require TLS in production. */
+    endpoint?: string;
+    /** Canonical service name. v1 hosts MUST use `openwop.v1.Engine`. */
+    service: 'openwop.v1.Engine';
+    /** TLS posture. Production hosts MUST set `'required'`. */
+    tls: 'required' | 'optional' | 'disabled';
   };
   extensions?: Record<string, unknown>;
   // Network-handshake superset (all `(future)` fields per capabilities.md)
@@ -402,7 +425,17 @@ export interface ResolveInterruptResponse {
  * (the `InterruptPayload` shape).
  */
 export interface InterruptByTokenInspection {
-  kind: 'approval' | 'clarification' | 'external-event' | 'custom';
+  kind:
+    | 'approval'
+    | 'clarification'
+    | 'external-event'
+    | 'custom'
+    // Multi-Agent Shift Phase 4 — multi-turn user interjections.
+    | 'conversation.start'
+    | 'conversation.exchange'
+    | 'conversation.close'
+    // Phase 1 — confidence-escalation contract.
+    | 'low-confidence';
   key: string;
   resumeSchema?: Record<string, unknown>;
   timeoutMs?: number;
@@ -711,6 +744,31 @@ export interface MemoryWrittenPayload {
   nodeId?: string;
   agentId?: string;
   tags?: string[];
+  [key: string]: unknown;
+}
+
+/** `output.chunk` / `ai.message.chunk` payload (RFC 0094 §D —
+ *  `run-event-payloads.schema.json#$defs/outputChunk`). Emitted for
+ *  streaming output (e.g., LLM token chunks); stream-mode `messages`
+ *  consumers see these. `runId` is required so multiplexed consumers
+ *  can route chunks without out-of-band context; `isLast` is required —
+ *  consumers rely on it for fold termination. `meta` carries the tiered
+ *  metadata per `stream-modes.md §messages` (Tier 1 typed slots + a
+ *  Tier 2 provider-pass-through escape hatch); kept loosely typed here
+ *  like the other extensible payload meta objects. */
+export interface OutputChunkPayload {
+  nodeId: string;
+  /** Run this chunk belongs to. */
+  runId: string;
+  chunk: string;
+  /** True for the final chunk of a given AI node call. */
+  isLast: boolean;
+  /** Optional sub-stream identifier when a node emits multiple
+   *  parallel streams. */
+  channel?: string;
+  /** Tiered chunk metadata (`finishReason`, `logprobs`, `toolCalls`,
+   *  `model`, `usage`, `provider` pass-through, …). */
+  meta?: Record<string, unknown>;
   [key: string]: unknown;
 }
 

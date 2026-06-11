@@ -327,3 +327,56 @@ func UnmarshalMemoryWritten(ev RunEventDoc) (MemoryWrittenPayload, error) {
 	}
 	return p, nil
 }
+
+// ── RFC 0094 §D — output.chunk / ai.message.chunk ────────────────────
+
+// OutputChunkPayload mirrors the `output.chunk` / `ai.message.chunk`
+// payload (run-event-payloads.schema.json#$defs/outputChunk, RFC 0094 §D).
+// Required: NodeID, RunID, Chunk, IsLast. Optional: Channel, Meta. RunID
+// lets multiplexed consumers route chunks without out-of-band context;
+// IsLast is true for the final chunk of a given AI node call — consumers
+// rely on it for fold termination. Meta carries the tiered metadata per
+// stream-modes.md §messages (finishReason, logprobs, toolCalls, model,
+// usage, provider pass-through, …) and is kept loose.
+type OutputChunkPayload struct {
+	NodeID  string         `json:"nodeId"`
+	RunID   string         `json:"runId"`
+	Chunk   string         `json:"chunk"`
+	IsLast  bool           `json:"isLast"`
+	Channel string         `json:"channel,omitempty"`
+	Meta    map[string]any `json:"meta,omitempty"`
+}
+
+// IsOutputChunk reports whether the event is a well-formed streaming
+// output chunk (RFC 0094 §D). Accepts both discriminators —
+// `output.chunk` is the persisted run-event type; `ai.message.chunk` is
+// the stream-mode `messages` SSE event name carrying the same payload.
+func IsOutputChunk(ev RunEventDoc) bool {
+	if ev.Type != "output.chunk" && ev.Type != "ai.message.chunk" {
+		return false
+	}
+	if !payloadHasString(ev.Payload, "nodeId") ||
+		!payloadHasString(ev.Payload, "runId") ||
+		!payloadHasString(ev.Payload, "chunk") {
+		return false
+	}
+	m, ok := payloadAsMap(ev.Payload)
+	if !ok {
+		return false
+	}
+	_, ok = m["isLast"].(bool)
+	return ok
+}
+
+// UnmarshalOutputChunk extracts the typed payload from an
+// `output.chunk` / `ai.message.chunk` event.
+func UnmarshalOutputChunk(ev RunEventDoc) (OutputChunkPayload, error) {
+	var p OutputChunkPayload
+	if !IsOutputChunk(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
