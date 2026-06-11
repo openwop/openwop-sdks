@@ -31,6 +31,7 @@ from .types import (
     BulkCancelRunsRequest,
     BulkCancelRunsResponse,
     Capabilities,
+    CapabilitiesGrpc,
     CapabilitiesLimits,
     CancelRunRequest,
     CancelRunResponse,
@@ -114,6 +115,18 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         maxNodeExecutions=raw_limits.get("maxNodeExecutions"),
         maxRunDurationMs=raw_limits.get("maxRunDurationMs"),
         maxLoopIterations=raw_limits.get("maxLoopIterations"),
+        maxRequestBodyBytes=raw_limits.get("maxRequestBodyBytes"),
+    )
+    raw_grpc = d.get("grpc")
+    grpc = (
+        CapabilitiesGrpc(
+            supported=bool(raw_grpc.get("supported", False)),
+            service=raw_grpc.get("service", "openwop.v1.Engine"),
+            tls=raw_grpc.get("tls", "required"),
+            endpoint=raw_grpc.get("endpoint"),
+        )
+        if isinstance(raw_grpc, dict)
+        else None
     )
     return Capabilities(
         protocolVersion=str(d["protocolVersion"]),
@@ -128,6 +141,7 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         configurable=d.get("configurable"),
         observability=d.get("observability"),
         minClientVersion=d.get("minClientVersion"),
+        grpc=grpc,
     )
 
 

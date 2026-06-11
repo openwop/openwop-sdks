@@ -15,9 +15,17 @@ const (
 	StatusPaused          RunStatus = "paused"
 	StatusWaitingApproval RunStatus = "waiting-approval"
 	StatusWaitingInput    RunStatus = "waiting-input"
+	// StatusWaitingExternal distinguishes external-event waits from HITL
+	// waits at the wire level (interrupt-profiles.md
+	// §openwop-interrupt-external-event). Active (non-terminal).
+	StatusWaitingExternal RunStatus = "waiting-external"
 	StatusCompleted       RunStatus = "completed"
 	StatusFailed          RunStatus = "failed"
-	StatusCancelled       RunStatus = "cancelled"
+	// StatusCancelling (RFC 0094 §B) is the transitional state between a
+	// cancel request being accepted and the terminal "cancelled". Active
+	// (non-terminal): a snapshot read during the cancel cascade carries it.
+	StatusCancelling RunStatus = "cancelling"
+	StatusCancelled  RunStatus = "cancelled"
 )
 
 // StreamMode values per `?streamMode=` on the events SSE endpoint.
@@ -38,6 +46,28 @@ type CapabilitiesLimits struct {
 	MaxNodeExecutions   *int `json:"maxNodeExecutions,omitempty"`
 	MaxRunDurationMs    *int `json:"maxRunDurationMs,omitempty"`  // RFC 0058
 	MaxLoopIterations   *int `json:"maxLoopIterations,omitempty"` // RFC 0058
+	// MaxRequestBodyBytes is the maximum REST request body size (bytes) the
+	// host accepts (RFC 0094 §H). Hosts that advertise it MUST enforce it.
+	MaxRequestBodyBytes *int `json:"maxRequestBodyBytes,omitempty"`
+}
+
+// CapabilitiesGRPC is the RFC 0094 §H gRPC transport advertisement per
+// grpc-transport.md §"Capability advertisement". Absent from Capabilities ⇒
+// the host exposes no gRPC transport. A host that exposes the gRPC surface
+// advertises this block AND includes "grpc" in SupportedTransports. REST +
+// SSE remain exposed regardless.
+type CapabilitiesGRPC struct {
+	// Supported toggles — true when the gRPC surface is live.
+	Supported bool `json:"supported"`
+	// Endpoint is a full URI: grpc:// (cleartext, intra-trusted-network
+	// only) OR grpcs:// (TLS). Hosts SHOULD require TLS in production.
+	Endpoint string `json:"endpoint,omitempty"`
+	// Service is the canonical service name; v1 hosts MUST use
+	// "openwop.v1.Engine".
+	Service string `json:"service"`
+	// TLS posture: "required" | "optional" | "disabled". Production hosts
+	// MUST set "required".
+	TLS string `json:"tls"`
 }
 
 // CapBreachedKind is the `kind` discriminator on a cap.breached event payload
@@ -71,6 +101,9 @@ type Capabilities struct {
 	Configurable          map[string]any     `json:"configurable,omitempty"`
 	Observability         map[string]any     `json:"observability,omitempty"`
 	MinClientVersion      *string            `json:"minClientVersion,omitempty"`
+	// GRPC is the RFC 0094 §H gRPC transport advertisement; nil ⇒ the host
+	// exposes no gRPC transport.
+	GRPC *CapabilitiesGRPC `json:"grpc,omitempty"`
 }
 
 // RunSnapshotError mirrors `RunSnapshot.error`.
@@ -403,6 +436,12 @@ type ResolveInterruptResponse struct {
 // InterruptByTokenInspection mirrors GET /v1/interrupts/{token} —
 // see suspend-request.schema.json (InterruptPayload).
 type InterruptByTokenInspection struct {
+	// Kind is the interrupt discriminator. One of "approval" |
+	// "clarification" | "external-event" | "custom" | "conversation.start" |
+	// "conversation.exchange" | "conversation.close" | "low-confidence"
+	// (the Multi-Agent Shift Phase 4 conversation kinds + the Phase 1
+	// low-confidence escalation kind). Kept as an open string for
+	// forward-compat.
 	Kind         string         `json:"kind"`
 	Key          string         `json:"key"`
 	Data         any            `json:"data"`
@@ -562,6 +601,10 @@ var ActiveRunStatuses = []string{
 	"paused",
 	"waiting-approval",
 	"waiting-input",
+	"waiting-external",
+	// RFC 0094 §B — transitional state during the cancel cascade; the run
+	// WILL still transition (to terminal "cancelled"), so it is active.
+	"cancelling",
 }
 
 // TerminalRunStatuses lists the spec-known terminal statuses. Hosts MAY

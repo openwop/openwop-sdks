@@ -20,6 +20,7 @@ from .events import (
     AgentToolCalledPayload,
     AgentToolReturnedPayload,
     MemoryWrittenPayload,
+    OutputChunkPayload,
     ReasoningVerbosity,
     agent_decided_payload,
     agent_handoff_payload,
@@ -34,7 +35,9 @@ from .events import (
     is_agent_tool_called,
     is_agent_tool_returned,
     is_memory_written,
+    is_output_chunk,
     memory_written_payload,
+    output_chunk_payload,
 )
 from .sse import stream_events
 from .types import (
@@ -52,6 +55,7 @@ from .types import (
     BulkCancelRunsRequest,
     BulkCancelRunsResponse,
     Capabilities,
+    CapabilitiesGrpc,
     Annotation,
     CancelRunRequest,
     CancelRunResponse,
@@ -116,6 +120,7 @@ __all__ = [
     "BulkCancelRunsRequest",
     "BulkCancelRunsResponse",
     "Capabilities",
+    "CapabilitiesGrpc",
     "Annotation",
     "CancelRunRequest",
     "CancelRunResponse",
@@ -184,6 +189,7 @@ __all__ = [
     "AgentHandoffPayload",
     "AgentDecidedPayload",
     "MemoryWrittenPayload",
+    "OutputChunkPayload",
     "is_agent_reasoned",
     "is_agent_reasoning_delta",
     "is_agent_tool_called",
@@ -198,6 +204,8 @@ __all__ = [
     "agent_decided_payload",
     "is_memory_written",
     "memory_written_payload",
+    "is_output_chunk",
+    "output_chunk_payload",
     # Webhook helpers (SDK-3, 2026-05-15)
     "verify_webhook_signature",
     "sign_webhook_delivery",

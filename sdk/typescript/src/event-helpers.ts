@@ -36,6 +36,7 @@ import type {
   AgentToolCalledPayload,
   AgentToolReturnedPayload,
   MemoryWrittenPayload,
+  OutputChunkPayload,
   RunEventDoc,
   TypedRunEvent,
 } from './types.js';
@@ -141,6 +142,22 @@ export function isMemoryWritten(
     hasStringField(ev.payload, 'memoryRef') &&
     hasStringField(ev.payload, 'memoryId')
   );
+}
+
+/** `output.chunk` / `ai.message.chunk` (RFC 0094 §D). Accepts both
+ *  discriminators — `output.chunk` is the persisted run-event type;
+ *  `ai.message.chunk` is the stream-mode `messages` SSE event name
+ *  carrying the same payload per `stream-modes.md §messages`. Narrows
+ *  when the payload carries the required `nodeId` + `runId` + `chunk`
+ *  strings AND the boolean `isLast`. */
+export function isOutputChunk(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<OutputChunkPayload> {
+  if (ev.type !== 'output.chunk' && ev.type !== 'ai.message.chunk') return false;
+  if (!hasStringField(ev.payload, 'nodeId')) return false;
+  if (!hasStringField(ev.payload, 'runId')) return false;
+  if (!hasStringField(ev.payload, 'chunk')) return false;
+  return typeof (ev.payload as Record<string, unknown>).isLast === 'boolean';
 }
 
 // ─── High-level subscription helper ─────────────────────────────────────

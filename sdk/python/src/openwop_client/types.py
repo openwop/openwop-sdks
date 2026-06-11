@@ -21,11 +21,20 @@ RunStatus = Literal[
     "paused",
     "waiting-approval",
     "waiting-input",
+    "waiting-external",
     "completed",
     "failed",
+    "cancelling",
     "cancelled",
 ]
-"""Run statuses per `RunSnapshot.status` in OpenAPI."""
+"""Run statuses per `RunSnapshot.status` in OpenAPI.
+
+``waiting-external`` distinguishes external-event waits from HITL waits at
+the wire level (`interrupt-profiles.md §openwop-interrupt-external-event`).
+``cancelling`` (RFC 0094 §B) is the transitional state between a cancel
+request being accepted and the terminal ``cancelled``; both are active
+(non-terminal) — see :data:`ACTIVE_RUN_STATUSES`.
+"""
 
 StreamMode = Literal["values", "updates", "messages", "debug"]
 
@@ -41,6 +50,24 @@ class CapabilitiesLimits:
     # RFC 0058 run-execution bounds.
     maxRunDurationMs: int | None = None
     maxLoopIterations: int | None = None
+    # RFC 0094 §H. Maximum REST request body size (bytes) the host accepts.
+    maxRequestBodyBytes: int | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesGrpc:
+    """RFC 0094 §H gRPC transport advertisement per `grpc-transport.md`
+    §"Capability advertisement". Absent from :class:`Capabilities` ⇒ the
+    host exposes no gRPC transport; REST + SSE remain exposed regardless.
+    """
+
+    supported: bool
+    # Canonical service name. v1 hosts MUST use "openwop.v1.Engine".
+    service: Literal["openwop.v1.Engine"]
+    # TLS posture. Production hosts MUST set "required".
+    tls: Literal["required", "optional", "disabled"]
+    # Full URI: grpc:// (cleartext, intra-trusted-network only) or grpcs:// (TLS).
+    endpoint: str | None = None
 
 
 # The `kind` discriminator on a `cap.breached` payload
@@ -74,6 +101,8 @@ class Capabilities:
     configurable: dict[str, Any] | None = None
     observability: dict[str, Any] | None = None
     minClientVersion: str | None = None
+    # RFC 0094 §H gRPC transport advertisement.
+    grpc: CapabilitiesGrpc | None = None
 
 
 # ── RunSnapshot ─────────────────────────────────────────────────────────
@@ -410,7 +439,18 @@ class ResolveInterruptResponse:
 class InterruptByTokenInspection:
     """Mirror of `suspend-request.schema.json` (InterruptPayload)."""
 
-    kind: Literal["approval", "clarification", "external-event", "custom"]
+    kind: Literal[
+        "approval",
+        "clarification",
+        "external-event",
+        "custom",
+        # Multi-Agent Shift Phase 4 — multi-turn user interjections.
+        "conversation.start",
+        "conversation.exchange",
+        "conversation.close",
+        # Phase 1 — confidence-escalation contract.
+        "low-confidence",
+    ]
     key: str
     data: Any
     resumeSchema: dict[str, Any] | None = None
@@ -531,6 +571,10 @@ ACTIVE_RUN_STATUSES: frozenset[str] = frozenset(
         "paused",
         "waiting-approval",
         "waiting-input",
+        "waiting-external",
+        # RFC 0094 §B — transitional state during the cancel cascade; the
+        # run WILL still transition (to terminal "cancelled"), so active.
+        "cancelling",
     }
 )
 """Run statuses considered active — the run MAY still transition.

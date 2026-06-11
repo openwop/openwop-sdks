@@ -116,6 +116,20 @@ class MemoryWrittenPayload(TypedDict, total=False):
     tags: list[str]
 
 
+class OutputChunkPayload(TypedDict, total=False):
+    """`output.chunk` / `ai.message.chunk` payload (RFC 0094 §D —
+    `run-event-payloads.schema.json#$defs/outputChunk`). Required:
+    `nodeId`, `runId`, `chunk`, `isLast`. Optional: `channel`, `meta`
+    (tiered metadata per `stream-modes.md §messages`, kept loose)."""
+
+    nodeId: str
+    runId: str
+    chunk: str
+    isLast: bool
+    channel: str
+    meta: dict[str, Any]
+
+
 # ── Predicates ──────────────────────────────────────────────────────────
 
 
@@ -195,6 +209,23 @@ def is_memory_written(ev: RunEventDoc) -> bool:
     )
 
 
+def is_output_chunk(ev: RunEventDoc) -> bool:
+    """`output.chunk` / `ai.message.chunk` discriminator + required-field
+    check (RFC 0094 §D). Accepts both discriminators — `output.chunk` is
+    the persisted run-event type; `ai.message.chunk` is the stream-mode
+    `messages` SSE event name carrying the same payload."""
+    if ev.type not in ("output.chunk", "ai.message.chunk"):
+        return False
+    if not _payload_has_str(ev.payload, "nodeId"):
+        return False
+    if not _payload_has_str(ev.payload, "runId"):
+        return False
+    if not _payload_has_str(ev.payload, "chunk"):
+        return False
+    is_last = ev.payload.get("isLast") if isinstance(ev.payload, dict) else None
+    return isinstance(is_last, bool)
+
+
 # ── Typed extractors ────────────────────────────────────────────────────
 
 
@@ -236,6 +267,11 @@ def memory_written_payload(ev: RunEventDoc) -> MemoryWrittenPayload | None:
     return ev.payload if is_memory_written(ev) else None
 
 
+def output_chunk_payload(ev: RunEventDoc) -> OutputChunkPayload | None:
+    """Return the payload as `OutputChunkPayload` if matched, else `None`."""
+    return ev.payload if is_output_chunk(ev) else None
+
+
 __all__ = [
     "ReasoningVerbosity",
     "AgentReasonedPayload",
@@ -245,6 +281,7 @@ __all__ = [
     "AgentHandoffPayload",
     "AgentDecidedPayload",
     "MemoryWrittenPayload",
+    "OutputChunkPayload",
     "is_agent_reasoned",
     "is_agent_reasoning_delta",
     "is_agent_tool_called",
@@ -252,7 +289,9 @@ __all__ = [
     "is_agent_handoff",
     "is_agent_decided",
     "is_memory_written",
+    "is_output_chunk",
     "memory_written_payload",
+    "output_chunk_payload",
     "agent_reasoned_payload",
     "agent_reasoning_delta_payload",
     "agent_tool_called_payload",
