@@ -60,6 +60,21 @@ export interface Capabilities {
     /** TLS posture. Production hosts MUST set `'required'`. */
     tls: 'required' | 'optional' | 'disabled';
   };
+  /** RFC 0101. Multi-party group-conversation advertisement. Absent ⇒ the
+   *  host does not support N agents co-participating in one shared
+   *  transcript (the single user + single driving agent shape of RFC 0005
+   *  remains). When `supported: true`, the host honors the additive
+   *  `participants: AgentRef[]` roster on `conversation.opened` and the
+   *  conditionally-required per-turn `speakerId` on `role: 'agent'`
+   *  conversation turns — advertising `supported: true` without enforcing
+   *  both is a dishonest claim (`OPENWOP_REQUIRE_BEHAVIOR=true` fails it). */
+  multiPartyConversation?: {
+    /** Toggle — `true` when the host supports multi-party conversations. */
+    supported: boolean;
+    /** Upper bound on `participants[]` size the host accepts. Absent ⇒
+     *  host-defined / unbounded. */
+    maxParticipants?: number;
+  };
   extensions?: Record<string, unknown>;
   // Network-handshake superset (all `(future)` fields per capabilities.md)
   implementation?: { name?: string; version?: string; vendor?: string };

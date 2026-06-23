@@ -70,6 +70,21 @@ type CapabilitiesGRPC struct {
 	TLS string `json:"tls"`
 }
 
+// CapabilitiesMultiPartyConversation is the RFC 0101 multi-party
+// group-conversation advertisement. Absent from Capabilities ⇒ the host does
+// not support N agents co-participating in one shared transcript (the single
+// user + single driving agent shape of RFC 0005 remains). When Supported is
+// true, the host honors the additive participants ([]AgentRef) roster on
+// conversation.opened and the conditionally-required per-turn speakerId on
+// role:"agent" conversation turns.
+type CapabilitiesMultiPartyConversation struct {
+	// Supported toggles — true when the host supports multi-party conversations.
+	Supported bool `json:"supported"`
+	// MaxParticipants is the upper bound on participants[] the host accepts;
+	// nil ⇒ host-defined / unbounded.
+	MaxParticipants *int `json:"maxParticipants,omitempty"`
+}
+
 // CapBreachedKind is the `kind` discriminator on a cap.breached event payload
 // (run-event-payloads.schema.json#capBreached): the four engine kinds, the
 // RFC 0008 §K wasm-* runtime caps, and the RFC 0058 run-scoped bounds.
@@ -104,6 +119,9 @@ type Capabilities struct {
 	// GRPC is the RFC 0094 §H gRPC transport advertisement; nil ⇒ the host
 	// exposes no gRPC transport.
 	GRPC *CapabilitiesGRPC `json:"grpc,omitempty"`
+	// MultiPartyConversation is the RFC 0101 multi-party group-conversation
+	// advertisement; nil ⇒ the host does not support multi-party conversations.
+	MultiPartyConversation *CapabilitiesMultiPartyConversation `json:"multiPartyConversation,omitempty"`
 }
 
 // RunSnapshotError mirrors `RunSnapshot.error`.
