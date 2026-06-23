@@ -71,10 +71,14 @@ tags:
     description: Run-produced artifacts.
   - name: webhooks
     description: Subscribe to run events via outbound HTTP.
+  - name: triggers
+    description: Durable trigger-bridge subscriptions (RFC 0083). RFC 0099 adds the external-event create surface (`POST /v1/trigger-subscriptions`); gated on `capabilities.triggerBridge.ingestion.registrationEndpoint`.
   - name: audit
     description: Audit-log integrity verification (gated on the `openwop-audit-log-integrity` profile).
   - name: prompts
     description: Prompt-template library — list, fetch, render, mutate (RFC 0028; gated on `capabilities.prompts.*`).
+  - name: content
+    description: Localized authored content — public delivery + tenant-scoped admin CRUD (RFC 0103; gated on `capabilities.content.supported`).
   - name: host
     description: Host-capability resources — e.g. the RFC 0059 agent workspace file store (gated on `capabilities.workspace.*`).
   - name: packs-test
@@ -473,6 +477,319 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '501':
           description: 'Host does not advertise capabilities.feedback.supported (RFC 0056).'
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/error-envelope.schema.json'
+
+  # ── External-event trigger subscriptions (RFC 0099) ──────────────────
+  # Gated on `capabilities.triggerBridge.ingestion.registrationEndpoint: true`.
+  # The portable create surface for an external-event (webhook/email/form)
+  # subscription that binds a source to a workflow to start. Returns the
+  # created TriggerSubscription (RFC 0083 §B) plus a source-specific binding
+  # (ingest URL/address + secret fingerprint), returned once at creation.
+  # Hosts without the advertised capability return `501 capability_not_provided`.
+  /v1/trigger-subscriptions:
+    post:
+      tags: [triggers]
+      summary: Register an external-event trigger subscription (RFC 0099).
+      description: |
+        Creates an external-event (`webhook`/`email`/`form`) TriggerSubscription
+        bound to a workflow, with a dedup config and a source-authenticity
+        verification policy (RFC 0099 §F.2). The `workflowId` MUST resolve under
+        the caller's RFC 0048 owner triple. The response carries the created
+        TriggerSubscription plus a source-specific `binding`; the binding
+        secret/URL is returned ONCE and is not re-fetchable in cleartext.
+      operationId: createTriggerSubscription
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/trigger-subscription-registration.schema.json'
+      responses:
+        '201':
+          description: Subscription created. Returns the TriggerSubscription + a source-specific binding.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [subscription, binding]
+                additionalProperties: false
+                properties:
+                  subscription:
+                    $ref: '../schemas/trigger-subscription.schema.json'
+                  binding:
+                    type: object
+                    description: |
+                      Source-specific binding the caller needs to wire the external
+                      source. For `webhook`: `{ ingestUrl, secretFingerprint }`; for
+                      `email`: `{ ingestAddress }`; for `form`: `{ ingestUrl }`. The
+                      secret is returned once at creation (SR-1).
+                    additionalProperties: true
+                    properties:
+                      ingestUrl: { type: string, format: uri }
+                      ingestAddress: { type: string }
+                      secretFingerprint: { type: string, maxLength: 32 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '501':
+          description: 'Host does not advertise capabilities.triggerBridge.ingestion.registrationEndpoint (RFC 0099).'
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/error-envelope.schema.json'
+
+  # ── Localized content surface (RFC 0103) ─────────────────────────────
+  # Public, cacheable delivery + tenant-scoped admin CRUD for authored
+  # localized content (pages → sections). Locale on the public path is
+  # negotiated via `Accept-Language` per the Stable i18n.md annex (no
+  # `?locale=`); admin writes target a locale in the body. Gated on
+  # `capabilities.content.supported: true` (requires `i18n.supported`).
+  # Hosts without the capability return `501 capability_not_provided`.
+  /v1/content/pages/{slug}:
+    get:
+      tags: [content]
+      # Public delivery: anonymous-capable, cacheable. Tenant is host-resolved
+      # (credential-derived when authenticated; host-defined when anonymous,
+      # localized-content.md §F). Clears global ApiKeyAuth like getCapabilities.
+      security: []
+      summary: Deliver a published content page resolved for the negotiated locale (RFC 0103 §D).
+      description: |
+        Resolves the published page `slug` for the locale negotiated from
+        `Accept-Language` (i18n.md fallback: q-value order → language family →
+        `content.baseLocale`), applies the per-section field merge
+        (`localized-content.md` §C), and returns the already-merged sections in
+        render order. Sets `Content-Language` to the locale used,
+        `Vary: Accept-Language, Accept-Encoding`, and
+        `Cache-Control: public, max-age=300, stale-while-revalidate=3600`.
+        Serves `status: "published"` content only. Tenant is host-resolved
+        (`localized-content.md` §F): credential-derived when authenticated,
+        host-defined (e.g. domain) when anonymous. A `slug` absent for the
+        resolved tenant returns the same `404` as a nonexistent slug (no
+        cross-tenant enumeration).
+      operationId: getContentPage
+      parameters:
+        - name: slug
+          in: path
+          required: true
+          schema: { type: string, pattern: '^[a-z][a-z0-9-]*$' }
+          description: The page slug.
+        - name: Accept-Language
+          in: header
+          required: false
+          schema: { type: string }
+          description: BCP-47 preference list; authoritative for locale selection (i18n.md). A malformed value MUST NOT 400.
+      responses:
+        '200':
+          description: The resolved, published page for the negotiated locale.
+          headers:
+            Content-Language:
+              schema: { type: string }
+              description: The BCP-47 locale actually used (equals the response `locale`).
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/localized-content-page-response.schema.json'
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501':
+          description: 'Host does not advertise capabilities.content.supported (RFC 0103).'
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/error-envelope.schema.json'
+
+  /v1/content/pages:
+    get:
+      tags: [content]
+      summary: List content pages for the caller's tenant (RFC 0103 §D, admin).
+      description: |
+        Tenant-scoped admin listing of pages (draft + published). Requires a
+        principal with `content.read` scope.
+      operationId: listContentPages
+      responses:
+        '200':
+          description: The caller-tenant's pages.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '../schemas/localized-content-page.schema.json'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '501':
+          description: 'Host does not advertise capabilities.content.supported (RFC 0103).'
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/error-envelope.schema.json'
+    post:
+      tags: [content]
+      summary: Create a content page (RFC 0103 §D, admin).
+      description: Tenant-scoped page creation. Requires `content.write` scope.
+      operationId: createContentPage
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/localized-content-page.schema.json'
+      responses:
+        '201':
+          description: The created page.
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/localized-content-page.schema.json'
+        '400':
+          description: 'Invalid request (e.g. baseLocale in supportedLocales, or a malformed locale/slug).'
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/error-envelope.schema.json'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /v1/content/pages/{pageId}/sections/{sectionId}:
+    put:
+      tags: [content]
+      summary: Upsert a section's base or per-locale fields (RFC 0103 §D, admin).
+      description: |
+        Locale-targeted write: `locale == content.baseLocale` upserts the
+        section's base `data`; any other (BCP-47-subset) locale upserts
+        `localizations[locale]`. Tenant-scoped; requires `content.write`.
+      operationId: putContentSection
+      parameters:
+        - name: pageId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+        - name: sectionId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [locale, data]
+              properties:
+                locale:
+                  type: string
+                  pattern: '^[a-z]{2}(-[A-Z]{2})?$'
+                  description: Target locale; baseLocale upserts `data`, else `localizations[locale]`.
+                data:
+                  type: object
+                  additionalProperties: true
+                  description: The field overlay for the target locale.
+      responses:
+        '200':
+          description: The updated section record.
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/localized-content-section.schema.json'
+        '400':
+          description: 'Invalid request (e.g. baseLocale in supportedLocales, or a malformed locale/slug).'
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/error-envelope.schema.json'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /v1/content/settings:
+    get:
+      tags: [content]
+      summary: Read the tenant's content language settings (RFC 0103 §B, admin).
+      description: Tenant-scoped read of `{ baseLocale, supportedLocales, autoTranslateOnPublish }`. Requires `content.read`.
+      operationId: getContentSettings
+      responses:
+        '200':
+          description: The tenant's language settings.
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/localized-content-language-settings.schema.json'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '501':
+          description: 'Host does not advertise capabilities.content.supported (RFC 0103).'
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/error-envelope.schema.json'
+    put:
+      tags: [content]
+      summary: Update the tenant's content language settings (RFC 0103 §B, admin).
+      description: |
+        Tenant-scoped settings update. The invariant `baseLocale ∉
+        supportedLocales` MUST hold (else `400`). Requires `content.write`.
+      operationId: putContentSettings
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '../schemas/localized-content-language-settings.schema.json'
+      responses:
+        '200':
+          description: The updated language settings.
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/localized-content-language-settings.schema.json'
+        '400':
+          description: 'Invalid request (e.g. baseLocale in supportedLocales, or a malformed locale/slug).'
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/error-envelope.schema.json'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  # ── Durable A2A task read seam (RFC 0100) ────────────────────────────
+  # Host-extension convenience read of the persisted A2ATaskState projection
+  # (RFC 0100 §2). The NORMATIVE A2A surface stays the A2A `tasks/get`
+  # JSON-RPC method per A2A v0.3 — this is a non-normative host-extension
+  # name under `/v1/host/sample/*`. Gated on `capabilities.a2a.durableTasks`.
+  /v1/host/sample/a2a/tasks/{taskId}:
+    get:
+      tags: [host]
+      summary: Read the persisted durable A2A task projection (RFC 0100, host-extension).
+      description: |
+        Returns the persisted `A2ATaskState` for `taskId` (== the backing
+        `runId`) per RFC 0100 §2 — a host-extension convenience read of the
+        durable projection that survives caller disconnect. The normative A2A
+        read surface remains the A2A `tasks/get` JSON-RPC method. Hosts that do
+        not advertise `capabilities.a2a.durableTasks` return `501`.
+      operationId: getA2ATaskState
+      parameters:
+        - name: taskId
+          in: path
+          required: true
+          schema: { type: string, minLength: 1 }
+          description: The A2A Task.id (equals the backing OpenWOP runId).
+      responses:
+        '200':
+          description: The persisted durable A2A task projection.
+          content:
+            application/json:
+              schema:
+                $ref: '../schemas/a2a-task-state.schema.json'
+        '401': { $ref: '#/components/responses/Unauthenticated' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '501':
+          description: 'Host does not advertise capabilities.a2a.durableTasks (RFC 0100).'
           content:
             application/json:
               schema:
