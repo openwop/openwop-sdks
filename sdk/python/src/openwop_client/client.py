@@ -33,6 +33,7 @@ from .types import (
     Capabilities,
     CapabilitiesGrpc,
     CapabilitiesLimits,
+    CapabilitiesMultiPartyConversation,
     CancelRunRequest,
     CancelRunResponse,
     CreateRunRequest,
@@ -128,6 +129,15 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         if isinstance(raw_grpc, dict)
         else None
     )
+    raw_mpc = d.get("multiPartyConversation")
+    multi_party = (
+        CapabilitiesMultiPartyConversation(
+            supported=bool(raw_mpc.get("supported", False)),
+            maxParticipants=raw_mpc.get("maxParticipants"),
+        )
+        if isinstance(raw_mpc, dict)
+        else None
+    )
     return Capabilities(
         protocolVersion=str(d["protocolVersion"]),
         supportedEnvelopes=list(d.get("supportedEnvelopes", [])),
@@ -142,6 +152,7 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         observability=d.get("observability"),
         minClientVersion=d.get("minClientVersion"),
         grpc=grpc,
+        multiPartyConversation=multi_party,
     )
 
 

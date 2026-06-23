@@ -70,6 +70,22 @@ class CapabilitiesGrpc:
     endpoint: str | None = None
 
 
+@dataclass(frozen=True)
+class CapabilitiesMultiPartyConversation:
+    """RFC 0101 multi-party group-conversation advertisement. Absent from
+    :class:`Capabilities` ⇒ the host does not support N agents
+    co-participating in one shared transcript (the single user + single
+    driving agent shape of RFC 0005 remains). When ``supported`` is true,
+    the host honors the additive ``participants: AgentRef[]`` roster on
+    ``conversation.opened`` and the conditionally-required per-turn
+    ``speakerId`` on ``role: 'agent'`` conversation turns.
+    """
+
+    supported: bool
+    # Upper bound on participants[] the host accepts; None ⇒ host-defined / unbounded.
+    maxParticipants: int | None = None
+
+
 # The `kind` discriminator on a `cap.breached` payload
 # (run-event-payloads.schema.json#capBreached): four engine kinds + RFC 0008 §K
 # wasm-* runtime caps + RFC 0058 run-scoped bounds.
@@ -103,6 +119,8 @@ class Capabilities:
     minClientVersion: str | None = None
     # RFC 0094 §H gRPC transport advertisement.
     grpc: CapabilitiesGrpc | None = None
+    # RFC 0101 multi-party group-conversation advertisement.
+    multiPartyConversation: CapabilitiesMultiPartyConversation | None = None
 
 
 # ── RunSnapshot ─────────────────────────────────────────────────────────
