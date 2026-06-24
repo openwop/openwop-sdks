@@ -201,6 +201,7 @@ export type {
 // AI Envelope types (DRAFT v1.x — spec/v1/ai-envelope.md). Inbound LLM-emission
 // envelope, distinct from RunEventDoc (outbound) and ErrorEnvelope (host HTTP).
 export type {
+  A2UISurfacePayload,
   AIEnvelope,
   AIEnvelopeErrorPayload,
   ClarificationRequestPayload,

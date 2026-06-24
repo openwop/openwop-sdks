@@ -1112,6 +1112,39 @@ export interface AIEnvelopeErrorPayload {
   details?: Record<string, unknown>;
 }
 
+/**
+ * Payload of the core `ui.a2ui-surface` envelope kind (RFC 0102 — A2UI
+ * agent-authored interface surfaces, `schemas/envelopes/ui.a2ui-surface.schema.json`).
+ * An advertised, optional core kind beside the `media.*` family: a declarative
+ * interactive UI a consumer renders with native widgets, routing user actions
+ * back **without executing agent-supplied code**.
+ *
+ * `surface` is the closed component tree, kept loose here (`Record<string,
+ * unknown>`) — it is rendered by a dedicated A2UI renderer the SDK does not
+ * provide, and matches the SDK convention of keeping complex nested shapes
+ * structural (cf. `ClarificationRequestPayload.questions[].schema`).
+ *
+ * NOTE: the broader AI-envelope surface (`AIEnvelope`, `EnvelopeMeta`, the
+ * universal payloads) is currently modeled only in this TypeScript SDK; the
+ * Python and Go SDKs do not yet model AI envelopes. `A2UISurfacePayload`
+ * therefore lands here only; cross-SDK AI-envelope modeling is a separate
+ * follow-on (tracked in PARITY.md), not part of RFC 0102.
+ */
+export interface A2UISurfacePayload {
+  /** The A2UI catalog version the surface targets. A host-enumerated,
+   *  growing set (currently `'0.9.1'`); a consumer MUST refuse an unknown /
+   *  higher version with `unknown_schema_version`. Typed as `string` (not a
+   *  pinned literal) so the read-type stays forward-compatible as the host's
+   *  supported set grows; the consumer enforces refuse-unknown at runtime. */
+  catalogVersion: string;
+  /** The A2UI surface document — a closed component tree, self-contained and
+   *  renderable from the payload alone (never a live reference into an
+   *  external catalog). Kept structural; rendered by an A2UI renderer. */
+  surface: Record<string, unknown>;
+  /** OPTIONAL model reasoning (RFC 0030 §A), conventionally first. */
+  reasoning?: string;
+}
+
 // ── RFC 0027 + RFC 0028 — Prompt library (spec/v1/prompts.md) ──
 
 /**
