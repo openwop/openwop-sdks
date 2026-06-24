@@ -1,6 +1,8 @@
 # `openwopclient` Changelog
 
-## [Unreleased]
+## [1.4.0] — 2026-06-24 — RFC 0099–0110 client-surface catch-up (capabilities, voice/presence events, A2UI, content+trigger REST, approver routing)
+
+_Re-aligns the three SDKs to a common `1.4.0` (TypeScript + Python were `1.3.0`; Go was `1.3.1` after its resolvable-path re-cut). Lands the RFC 0099–0110 client surface the corpus shipped in conformance `1.25.0 → 1.37.0`._
 
 - **RFC 0104 — portable HITL approver-routing capability.** `Capabilities` gains `Interrupt` (`*CapabilitiesInterrupt` → `*CapabilitiesApproverRouting` `{Supported, RefKinds, Audience}`), JSON-tag driven. The advisory approverGroupRefs/approverRoleRefs/audience fields ride the opaque interrupt payload (interrupts stay untyped by convention) — no ApprovalData struct. Read-only + additive.
 
