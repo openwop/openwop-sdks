@@ -36,10 +36,10 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/openwop/openwop"
-"Source" = "https://github.com/openwop/openwop"
-"Bug Tracker" = "https://github.com/openwop/openwop/issues"
-"Changelog" = "https://github.com/openwop/openwop/blob/main/sdk/python/CHANGELOG.md"
+"Homepage" = "https://github.com/openwop/openwop-sdks"
+"Source" = "https://github.com/openwop/openwop-sdks"
+"Bug Tracker" = "https://github.com/openwop/openwop-sdks/issues"
+"Changelog" = "https://github.com/openwop/openwop-sdks/blob/main/sdk/python/CHANGELOG.md"
 "Spec corpus" = "https://github.com/openwop/openwop/tree/main/spec/v1/"
 
 [tool.hatch.build.targets.wheel]
