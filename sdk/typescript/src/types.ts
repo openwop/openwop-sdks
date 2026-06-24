@@ -859,6 +859,104 @@ export interface OutputChunkPayload {
   [key: string]: unknown;
 }
 
+// ─── RFC 0106 voice.* run-event payloads ────────────────────────────────
+// Mirror `run-event-payloads.schema.json`. These events are emitted on the
+// durable event log by the host-side `ctx.callTranscriber` /
+// `ctx.callSpeechSynthesizer(stream:true)` methods (out of client-SDK scope);
+// a client tails them off the run event stream.
+
+/** `voice.speech_start` (RFC 0106). Host detected start of speech. */
+export interface VoiceSpeechStartPayload {
+  /** Milliseconds since the turn/session epoch. */
+  atMs: number;
+  [key: string]: unknown;
+}
+
+/** `voice.transcript` (RFC 0106). An interim or final transcript fragment.
+ *  `contentTrust` is REQUIRED and always `'untrusted'` — live transcript is
+ *  untrusted ingress (`voice-transcript-untrusted`); consumers MUST NOT
+ *  promote it to higher authority. */
+export interface VoiceTranscriptPayload {
+  text: string;
+  /** `true` once the fragment is finalized (committed at `voice.turn_commit`). */
+  isFinal: boolean;
+  atMs: number;
+  /** Always `'untrusted'`. */
+  contentTrust: 'untrusted';
+  /** Stable prefix carried across interim revisions. */
+  committedPrefix?: string;
+  /** Provider-formatted variant (punctuation/casing). */
+  formatted?: string;
+  /** Provider stability score for an interim fragment. */
+  stability?: number;
+  [key: string]: unknown;
+}
+
+/** `voice.endpoint_candidate` (RFC 0106). A `semantic` turn detector's
+ *  candidate end-of-turn, distinct from the committed `voice.turn_commit`. */
+export interface VoiceEndpointCandidatePayload {
+  atMs: number;
+  /** Detector confidence in the candidate endpoint. */
+  confidence?: number;
+  [key: string]: unknown;
+}
+
+/** `voice.turn_commit` (RFC 0106). The turn is committed; `finalText` is the
+ *  settled transcript the `ctx.callTranscriber` Promise resolves with. */
+export interface VoiceTurnCommitPayload {
+  atMs: number;
+  finalText: string;
+  [key: string]: unknown;
+}
+
+/** `voice.synthesis_chunk` (RFC 0106). Metadata for a streamed-synthesis
+ *  clause-boundary chunk; bytes ride `url`/`streamRef` (or inline `base64`
+ *  only under the host cap), never inlined past the cap. */
+export interface VoiceSynthesisChunkPayload {
+  /** Monotonic chunk sequence within the synthesis. */
+  seq: number;
+  mimeType: string;
+  /** Host-served URL for the chunk bytes. */
+  url?: string;
+  /** Live-conduit handle for the chunk bytes. */
+  streamRef?: string;
+  /** Inline bytes — present only under the host's inline cap. */
+  base64?: string;
+  durationMs?: number;
+  /** `true` for the final chunk of the synthesis. */
+  final?: boolean;
+  [key: string]: unknown;
+}
+
+/** `voice.barge_in` (RFC 0106). Overlapping speech detected during playback. */
+export interface VoiceBargeInPayload {
+  atMs: number;
+  [key: string]: unknown;
+}
+
+/** `voice.cancelled` (RFC 0106). Downstream work cancelled (e.g. after a
+ *  barge-in); no synthesis chunk follows. */
+export interface VoiceCancelledPayload {
+  atMs: number;
+  /** Host-defined cancellation reason. */
+  reason?: string;
+  [key: string]: unknown;
+}
+
+/** `channel.presence` (RFC 0110). EPHEMERAL online + typing presence for a
+ *  `type:'channel'` conversation. Observable on the LIVE run-event stream
+ *  only — the host MUST NOT persist it to the replayable event log, so it is
+ *  ABSENT on replay / `POST /v1/runs/{runId}:fork`. Membership-gated: every
+ *  ref is a current participant (opaque RFC 0041 subject refs, non-PII). */
+export interface ChannelPresencePayload {
+  conversationId: string;
+  /** Subject refs of members currently present (subset of participants). */
+  present: readonly string[];
+  /** Subset of `present` currently typing (boolean-by-presence; no free text). */
+  typing?: readonly string[];
+  [key: string]: unknown;
+}
+
 /** A `RunEventDoc` narrowed to a specific event-type discriminator +
  *  payload shape. Returned by the `isAgent*` type guards in
  *  `event-helpers.ts`. */

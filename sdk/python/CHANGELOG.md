@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **RFC 0106/0110 — typed event helpers.** Adds the seven `voice.*` payload `TypedDict`s + `is_voice_*` predicates + `voice_*_payload` extractors, and `is_channel_presence` / `channel_presence_payload` (RFC 0110), joining the event-helper family in `openwop_client.events` (re-exported from the package root). `voice.transcript` requires `contentTrust="untrusted"` (`voice-transcript-untrusted`); numeric checks exclude `bool` (an `int` subclass). `channel.presence` is ephemeral — LIVE stream only, absent on replay/`:fork`.
+
 - **RFC 0100/0105/0106/0108/0109/0110 — capability discovery types.** `Capabilities` gains `a2a` (`CapabilitiesA2A`, RFC 0100), `conversationTurnModelProvenance` (`CapabilitiesConversationTurnModelProvenance`, RFC 0109), `channelPresence` (`CapabilitiesChannelPresence`, RFC 0110), and a typed `aiProviders` (`CapabilitiesAIProviders`) block carrying the RFC 0108 `selfHosted`, RFC 0105 `speechSynthesis`, and RFC 0106 `realtimeVoice` (`CapabilitiesRealtimeVoice`) flags. All parsed by `discovery_capabilities()` and re-exported from the package root. Read-only + additive — absent blocks ⇒ `None`. Host-side `ctx.callTranscriber`/`ctx.callSpeechSynthesizer` (node-facing host methods) are out of client-SDK scope.
 
 ## [1.3.0] — 2026-06-24 — RFC 0093/0094/0101 type surface (gRPC + multi-party + output-chunk + run-status parity)

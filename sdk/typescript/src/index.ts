@@ -61,6 +61,16 @@ export type {
   MemoryWrittenPayload,
   // RFC 0094 §D — streaming output chunk (`output.chunk` / `ai.message.chunk`)
   OutputChunkPayload,
+  // RFC 0106 — voice.* run-event payloads
+  VoiceSpeechStartPayload,
+  VoiceTranscriptPayload,
+  VoiceEndpointCandidatePayload,
+  VoiceTurnCommitPayload,
+  VoiceSynthesisChunkPayload,
+  VoiceBargeInPayload,
+  VoiceCancelledPayload,
+  // RFC 0110 — channel.presence run-event payload
+  ChannelPresencePayload,
   // RFC 0027 + RFC 0028 — Prompt library (spec/v1/prompts.md)
   GetPromptRequest,
   ListPromptsRequest,
@@ -116,6 +126,14 @@ export {
   isAgentDecided,
   isMemoryWritten,
   isOutputChunk,
+  isVoiceSpeechStart,
+  isVoiceTranscript,
+  isVoiceEndpointCandidate,
+  isVoiceTurnCommit,
+  isVoiceSynthesisChunk,
+  isVoiceBargeIn,
+  isVoiceCancelled,
+  isChannelPresence,
   subscribeToAgentReasoning,
 } from './event-helpers.js';
 export type {

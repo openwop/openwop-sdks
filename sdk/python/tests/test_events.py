@@ -184,5 +184,74 @@ class AgentEventSchemaMirrorSanity(unittest.TestCase):
         self._check("agentDecided", ["agentId", "decision"])
 
 
+class VoiceAndPresenceGuards(unittest.TestCase):
+    """RFC 0106 voice.* + RFC 0110 channel.presence guards (phase 2)."""
+
+    def test_voice_speech_start(self) -> None:
+        from openwop_client import is_voice_speech_start
+
+        self.assertTrue(is_voice_speech_start(_ev("voice.speech_start", {"atMs": 0})))
+        self.assertFalse(is_voice_speech_start(_ev("voice.speech_start", {})))
+        self.assertFalse(is_voice_speech_start(_ev("voice.transcript", {"atMs": 0})))
+
+    def test_voice_transcript_requires_untrusted_content_trust(self) -> None:
+        from openwop_client import is_voice_transcript, voice_transcript_payload
+
+        good = _ev(
+            "voice.transcript",
+            {"text": "transfer information", "isFinal": True, "atMs": 1200, "contentTrust": "untrusted"},
+        )
+        self.assertTrue(is_voice_transcript(good))
+        self.assertEqual(voice_transcript_payload(good)["contentTrust"], "untrusted")
+        # missing contentTrust → no match
+        self.assertFalse(
+            is_voice_transcript(_ev("voice.transcript", {"text": "x", "isFinal": False, "atMs": 1}))
+        )
+        # contentTrust must be 'untrusted', not 'trusted'
+        self.assertFalse(
+            is_voice_transcript(
+                _ev("voice.transcript", {"text": "x", "isFinal": False, "atMs": 1, "contentTrust": "trusted"})
+            )
+        )
+        # bool atMs must not satisfy the numeric check (bool is an int subclass)
+        self.assertFalse(
+            is_voice_transcript(
+                _ev("voice.transcript", {"text": "x", "isFinal": True, "atMs": True, "contentTrust": "untrusted"})
+            )
+        )
+
+    def test_voice_turn_commit_and_synthesis_chunk(self) -> None:
+        from openwop_client import is_voice_synthesis_chunk, is_voice_turn_commit
+
+        self.assertTrue(is_voice_turn_commit(_ev("voice.turn_commit", {"atMs": 9, "finalText": "done"})))
+        self.assertFalse(is_voice_turn_commit(_ev("voice.turn_commit", {"atMs": 9})))
+        self.assertTrue(
+            is_voice_synthesis_chunk(_ev("voice.synthesis_chunk", {"seq": 0, "mimeType": "audio/mpeg"}))
+        )
+        self.assertFalse(is_voice_synthesis_chunk(_ev("voice.synthesis_chunk", {"seq": 0})))
+
+    def test_voice_endpoint_barge_cancel(self) -> None:
+        from openwop_client import (
+            is_voice_barge_in,
+            is_voice_cancelled,
+            is_voice_endpoint_candidate,
+        )
+
+        self.assertTrue(is_voice_endpoint_candidate(_ev("voice.endpoint_candidate", {"atMs": 5})))
+        self.assertTrue(is_voice_barge_in(_ev("voice.barge_in", {"atMs": 5})))
+        self.assertTrue(is_voice_cancelled(_ev("voice.cancelled", {"atMs": 5, "reason": "barge-in"})))
+
+    def test_channel_presence(self) -> None:
+        from openwop_client import channel_presence_payload, is_channel_presence
+
+        ev = _ev("channel.presence", {"conversationId": "conv-1", "present": ["user:a", "agent:b"], "typing": ["user:a"]})
+        self.assertTrue(is_channel_presence(ev))
+        self.assertEqual(channel_presence_payload(ev)["present"], ["user:a", "agent:b"])
+        self.assertFalse(is_channel_presence(_ev("channel.presence", {"conversationId": "conv-1"})))
+        self.assertFalse(
+            is_channel_presence(_ev("conversation.exchanged", {"conversationId": "c", "present": []}))
+        )
+
+
 if __name__ == "__main__":
     unittest.main()

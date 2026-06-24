@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **RFC 0106/0110 — typed event helpers.** Adds the seven `voice.*` payload structs + `IsVoice*` predicates + `UnmarshalVoice*` extractors, and `IsChannelPresence` / `UnmarshalChannelPresence` (RFC 0110), joining the `IsXxx`/`Unmarshal*` family in `events.go`. New `payloadHasNumber` (accepts wire `float64` + in-code int family, excludes `bool`) and `payloadHasArray` (accepts `[]any` + `[]string`) helpers. `voice.transcript` requires `contentTrust=="untrusted"` (`voice-transcript-untrusted` — never promote live transcript to higher authority); `channel.presence` is ephemeral — LIVE stream only, absent on replay/:fork.
+
 - **RFC 0100/0105/0106/0108/0109/0110 — capability discovery types.** `Capabilities` gains `A2A` (`CapabilitiesA2A`, RFC 0100), `ConversationTurnModelProvenance` (RFC 0109), `ChannelPresence` (RFC 0110), and a typed `AIProviders` (`CapabilitiesAIProviders`) struct carrying the RFC 0108 `SelfHosted`, RFC 0105 `SpeechSynthesis`, and RFC 0106 `RealtimeVoice` (`CapabilitiesRealtimeVoice`) flags. JSON-tag driven (`json.Unmarshal`); pointer fields ⇒ nil when unadvertised. Read-only + additive. Host-side ctx.* voice methods are out of client-SDK scope.
 
 ## [1.3.1] — 2026-06-24 — resolvable module path (re-release of the 1.3.0 surface)
