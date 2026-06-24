@@ -35,7 +35,7 @@ const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 const SDK_SOURCES = {
   ts: { label: 'TypeScript', dir: 'sdk/typescript/src', exts: ['.ts'], skip: /\.test\.|__tests__/ },
   py: { label: 'Python', dir: 'sdk/python/src/openwop_client', exts: ['.py'], skip: /(^|\/)test/ },
-  go: { label: 'Go', dir: 'sdk/go', exts: ['.go'], skip: /_test\.go$/ },
+  go: { label: 'Go', dir: 'go', exts: ['.go'], skip: /_test\.go$/ },
 };
 
 function fail(msg, items) {

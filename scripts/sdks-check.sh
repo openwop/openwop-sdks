@@ -36,7 +36,7 @@ echo "[2/5] Python SDK (syntax + import smoke)..."
 
 echo "[3/5] Go SDK (go vet + tests)..."
 (
-  cd "$ROOT/sdk/go"
+  cd "$ROOT/go"
   if ! command -v go >/dev/null 2>&1; then
     echo "  WARN: go binary not found; skipping Go SDK vet/tests."
   else

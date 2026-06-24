@@ -58,7 +58,7 @@ if 'packages = ["src/openwop_client"]' not in pyproject_text:
 for path in [
     root / "sdk/python/README.md",
     root / "sdk/python/src/openwop_client/sse.py",
-    root / "sdk/go/README.md",
+    root / "go/README.md",
 ]:
     text = path.read_text()
     stale_markers = ["v0.1", "v0.2", "Pre-1", "scaffold only", "forthcoming"]
@@ -69,14 +69,14 @@ for path in [
 print("  ok: Python project metadata, __version__, wheel package target, and v1.0 docs are aligned.")
 PY
 
-GO_MODULE_LINE=$(grep -E "^module " "$SPEC_ROOT/sdk/go/go.mod" || true)
+GO_MODULE_LINE=$(grep -E "^module " "$SPEC_ROOT/go/go.mod" || true)
 if [[ "$GO_MODULE_LINE" != "module $EXPECTED_GO_MODULE" ]]; then
-  echo "  FAIL: sdk/go/go.mod declares '$GO_MODULE_LINE', expected 'module $EXPECTED_GO_MODULE'." >&2
+  echo "  FAIL: go/go.mod declares '$GO_MODULE_LINE', expected 'module $EXPECTED_GO_MODULE'." >&2
   exit 1
 fi
-GO_VERSION_LINE=$(grep -E "^go " "$SPEC_ROOT/sdk/go/go.mod" || true)
+GO_VERSION_LINE=$(grep -E "^go " "$SPEC_ROOT/go/go.mod" || true)
 if [[ "$GO_VERSION_LINE" != "go 1.22" ]]; then
-  echo "  FAIL: sdk/go/go.mod declares '$GO_VERSION_LINE', expected 'go 1.22'." >&2
+  echo "  FAIL: go/go.mod declares '$GO_VERSION_LINE', expected 'go 1.22'." >&2
   exit 1
 fi
 echo "  ok: Go module path and language version are v1.0 release-ready."

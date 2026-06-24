@@ -162,9 +162,9 @@ func TestAgent_NonMapPayload_Rejected(t *testing.T) {
 }
 
 func TestSchemaMirror_AgentDefsMatchExpectedRequired(t *testing.T) {
-	// Find the canonical schema. Path: sdk/go/ → sdk/ → repo-root/
+	// Find the canonical schema. Path: go/ → repo-root/
 	// → schemas/run-event-payloads.schema.json.
-	schemaPath := filepath.Join("..", "..", "schemas", "run-event-payloads.schema.json")
+	schemaPath := filepath.Join("..", "schemas", "run-event-payloads.schema.json")
 	raw, err := os.ReadFile(schemaPath)
 	if err != nil {
 		t.Fatalf("read schema: %v", err)

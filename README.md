@@ -9,7 +9,7 @@ stays a lean spec + conformance contract.
 |---|---|---|
 | TypeScript | [`@openwop/openwop`](https://www.npmjs.com/package/@openwop/openwop) | `sdk/typescript/` |
 | Python | [`openwop-client`](https://pypi.org/project/openwop-client/) | `sdk/python/` |
-| Go | `github.com/openwop/openwop-sdks/go` | `sdk/go/` |
+| Go | `github.com/openwop/openwop-sdks/go` | `go/` |
 
 ## ⚠️ Go import path change
 
