@@ -1114,3 +1114,83 @@ type RenderPromptTemplateResponse struct {
 	Composed       string            `json:"composed,omitempty"`
 	ContentTrust   string            `json:"contentTrust,omitempty"`
 }
+
+// ── RFC 0103 Localized content surface (spec/v1/localized-content.md) ─────
+// Mirror schemas/localized-content-*.schema.json. Host-defined structured
+// content (Data, Localizations, SEO) stays open (map[string]any) per the
+// schemas (additionalProperties: true) — it is the host's content model.
+
+// LocalizedContentPage is a content page record
+// (schemas/localized-content-page.schema.json). Status is "draft" | "published".
+type LocalizedContentPage struct {
+	PageID       string         `json:"pageId"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	Status       string         `json:"status"`
+	SectionOrder []string       `json:"sectionOrder"`
+	SEO          map[string]any `json:"seo,omitempty"`
+}
+
+// LocalizedContentSection is a content section record
+// (schemas/localized-content-section.schema.json): a base Data payload + a
+// sparse Localizations map (BCP-47 keys, never the base locale).
+type LocalizedContentSection struct {
+	SectionID     string                    `json:"sectionId"`
+	SectionType   string                    `json:"sectionType"`
+	Data          map[string]any            `json:"data"`
+	Localizations map[string]map[string]any `json:"localizations"`
+	Status        string                    `json:"status"`
+	Enabled       bool                      `json:"enabled"`
+	Order         int                       `json:"order"`
+}
+
+// LocalizedContentPageResponse is the public delivery response for
+// GET /v1/content/pages/{slug} — the negotiated locale's resolved page +
+// sections (the RFC 0103 resolveSection merge is applied host-side).
+type LocalizedContentPageResponse struct {
+	Version     string                    `json:"version"`
+	GeneratedAt string                    `json:"generatedAt"`
+	Locale      string                    `json:"locale"`
+	Slug        string                    `json:"slug"`
+	Page        LocalizedContentPage      `json:"page"`
+	Sections    []LocalizedContentSection `json:"sections"`
+}
+
+// LocalizedContentLanguageSettings mirrors
+// schemas/localized-content-language-settings.schema.json.
+type LocalizedContentLanguageSettings struct {
+	BaseLocale             string   `json:"baseLocale"`
+	SupportedLocales       []string `json:"supportedLocales"`
+	AutoTranslateOnPublish bool     `json:"autoTranslateOnPublish"`
+}
+
+// PutContentSectionRequest is the body for
+// PUT /v1/content/pages/{pageId}/sections/{sectionId}. The baseLocale upserts
+// Data; any other Locale upserts localizations[locale].
+type PutContentSectionRequest struct {
+	Locale string         `json:"locale"`
+	Data   map[string]any `json:"data"`
+}
+
+// ── RFC 0099 Trigger subscription registration (trigger-bridge.md §F) ─────
+
+// TriggerSubscriptionRegistration is the registration body for
+// POST /v1/trigger-subscriptions
+// (schemas/trigger-subscription-registration.schema.json).
+type TriggerSubscriptionRegistration struct {
+	Source       map[string]any `json:"source"`
+	WorkflowID   string         `json:"workflowId"`
+	DedupEnabled *bool          `json:"dedupEnabled,omitempty"`
+	InputMapping map[string]any `json:"inputMapping,omitempty"`
+	RetryPolicy  map[string]any `json:"retryPolicy,omitempty"`
+	Verification map[string]any `json:"verification,omitempty"`
+}
+
+// CreateTriggerSubscriptionResponse is the 201 response for
+// POST /v1/trigger-subscriptions. Binding carries the source-specific wiring
+// the caller needs; the secret is returned ONCE at creation (SR-1) — persist
+// it, it is not retrievable again.
+type CreateTriggerSubscriptionResponse struct {
+	Subscription map[string]any `json:"subscription"`
+	Binding      map[string]any `json:"binding"`
+}

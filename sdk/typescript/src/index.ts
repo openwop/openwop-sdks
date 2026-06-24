@@ -215,6 +215,17 @@ export type {
   SchemaRequestPayload,
   SchemaResponsePayload,
   ValidationDetail,
+  // RFC 0103 — localized content surface
+  LocalizedContentStatus,
+  LocalizedContentPage,
+  LocalizedContentSection,
+  LocalizedContentPageResponse,
+  LocalizedContentLanguageSettings,
+  PutContentSectionRequest,
+  // RFC 0099 — trigger subscription registration
+  TriggerSubscriptionRegistration,
+  TriggerSubscription,
+  CreateTriggerSubscriptionResponse,
 } from './types.js';
 
 // RFC 0030 §A `reasoning` field prompt-directive helper. Hosts that

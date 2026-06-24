@@ -1604,3 +1604,96 @@ export interface AgentDeploymentTransition {
   evalRunId?: string;
   reason?: string;
 }
+
+// ── RFC 0103 Localized content surface (spec/v1/localized-content.md) ──
+// Mirror schemas/localized-content-*.schema.json. Host-defined structured
+// content (`data`, `localizations`, `seo`) is kept open per the schemas
+// (additionalProperties: true) — it is the host's content model, not a
+// fixed wire shape.
+
+export type LocalizedContentStatus = 'draft' | 'published';
+
+/** A content page record (`schemas/localized-content-page.schema.json`). */
+export interface LocalizedContentPage {
+  pageId: string;
+  slug: string;
+  /** Human-facing page name (admin/authoring label). */
+  name: string;
+  status: LocalizedContentStatus;
+  /** Ordered section ids composing the page. */
+  sectionOrder: readonly string[];
+  /** Open SEO metadata object (host-defined). */
+  seo?: Record<string, unknown>;
+}
+
+/** A content section record (`schemas/localized-content-section.schema.json`).
+ *  A section is one record: a base `data` payload + a sparse `localizations`
+ *  map (BCP-47 keys, never the base locale). */
+export interface LocalizedContentSection {
+  sectionId: string;
+  sectionType: string;
+  /** Base-locale field payload (host-defined open shape). */
+  data: Record<string, unknown>;
+  /** Per-locale sparse field overlays, keyed by BCP-47 locale. */
+  localizations: Record<string, Record<string, unknown>>;
+  status: LocalizedContentStatus;
+  enabled: boolean;
+  order: number;
+}
+
+/** Public delivery response for `GET /v1/content/pages/{slug}` — the negotiated
+ *  locale's resolved page + sections (the RFC 0103 `resolveSection` merge is
+ *  applied host-side: exact → language-family → base). */
+export interface LocalizedContentPageResponse {
+  /** Response schema version marker (e.g. `"1"`). */
+  version: string;
+  generatedAt: string;
+  /** The negotiated locale this response was resolved for. */
+  locale: string;
+  slug: string;
+  page: LocalizedContentPage;
+  sections: readonly LocalizedContentSection[];
+}
+
+/** Language settings (`schemas/localized-content-language-settings.schema.json`). */
+export interface LocalizedContentLanguageSettings {
+  baseLocale: string;
+  supportedLocales: readonly string[];
+  autoTranslateOnPublish: boolean;
+}
+
+/** Request body for `PUT /v1/content/pages/{pageId}/sections/{sectionId}`. */
+export interface PutContentSectionRequest {
+  /** Target locale; the baseLocale upserts `data`, else `localizations[locale]`. */
+  locale: string;
+  /** The field overlay for the target locale (host-defined open shape). */
+  data: Record<string, unknown>;
+}
+
+// ── RFC 0099 Trigger subscription registration (spec/v1/trigger-bridge.md §F) ──
+
+/** Registration body for `POST /v1/trigger-subscriptions`
+ *  (`schemas/trigger-subscription-registration.schema.json`). */
+export interface TriggerSubscriptionRegistration {
+  /** External event source descriptor (host-defined: webhook / email / form …). */
+  source: Record<string, unknown>;
+  workflowId: string;
+  dedupEnabled?: boolean;
+  inputMapping?: Record<string, unknown>;
+  retryPolicy?: Record<string, unknown>;
+  verification?: Record<string, unknown>;
+}
+
+/** The persisted trigger subscription the host assigns
+ *  (`schemas/trigger-subscription.schema.json`). Kept open beyond the
+ *  registration fields the host echoes back. */
+export type TriggerSubscription = Record<string, unknown>;
+
+/** `201` response for `POST /v1/trigger-subscriptions`. `binding` carries the
+ *  source-specific wiring the caller needs (e.g. `{ ingestUrl,
+ *  secretFingerprint }` for webhook); the secret is returned ONCE at creation
+ *  (SR-1) — persist it, it is not retrievable again. */
+export interface CreateTriggerSubscriptionResponse {
+  subscription: TriggerSubscription;
+  binding: Record<string, unknown>;
+}

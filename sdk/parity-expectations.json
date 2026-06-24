@@ -445,64 +445,57 @@
       "operationId": "createTriggerSubscription",
       "method": "POST",
       "path": "/v1/trigger-subscriptions",
-      "ts": "excluded",
-      "py": "excluded",
-      "go": "excluded",
-      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed"
     },
     {
       "operationId": "listContentPages",
       "method": "GET",
       "path": "/v1/content/pages",
-      "ts": "excluded",
-      "py": "excluded",
-      "go": "excluded",
-      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed"
     },
     {
       "operationId": "getContentPage",
       "method": "GET",
       "path": "/v1/content/pages/{slug}",
-      "ts": "excluded",
-      "py": "excluded",
-      "go": "excluded",
-      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed"
     },
     {
       "operationId": "createContentPage",
       "method": "POST",
       "path": "/v1/content/pages",
-      "ts": "excluded",
-      "py": "excluded",
-      "go": "excluded",
-      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed"
     },
     {
       "operationId": "putContentSection",
       "method": "PUT",
       "path": "/v1/content/pages/{pageId}/sections/{sectionId}",
-      "ts": "excluded",
-      "py": "excluded",
-      "go": "excluded",
-      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed"
     },
     {
       "operationId": "getContentSettings",
       "method": "GET",
       "path": "/v1/content/settings",
-      "ts": "excluded",
-      "py": "excluded",
-      "go": "excluded",
-      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed"
     },
     {
       "operationId": "putContentSettings",
       "method": "PUT",
       "path": "/v1/content/settings",
-      "ts": "excluded",
-      "py": "excluded",
-      "go": "excluded",
-      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed"
     },
     {
       "operationId": "getA2ATaskState",

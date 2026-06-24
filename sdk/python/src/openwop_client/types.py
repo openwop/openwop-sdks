@@ -1126,3 +1126,98 @@ class RenderPromptResponse:
     variableHashes: dict[str, str]
     composed: str | None = None
     contentTrust: Literal["trusted", "untrusted"] | None = None
+
+
+# ── RFC 0103 Localized content surface (spec/v1/localized-content.md) ─────
+# Mirror schemas/localized-content-*.schema.json. Host-defined structured
+# content (`data`, `localizations`, `seo`) stays open (dict[str, Any]) per the
+# schemas (additionalProperties: true) — it is the host's content model.
+
+LocalizedContentStatus = Literal["draft", "published"]
+
+
+@dataclass(frozen=True)
+class LocalizedContentPage:
+    """A content page record (`schemas/localized-content-page.schema.json`)."""
+
+    pageId: str
+    slug: str
+    name: str
+    status: LocalizedContentStatus
+    sectionOrder: list[str]
+    seo: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class LocalizedContentSection:
+    """A content section record (`schemas/localized-content-section.schema.json`):
+    a base ``data`` payload + a sparse ``localizations`` map (BCP-47 keys,
+    never the base locale)."""
+
+    sectionId: str
+    sectionType: str
+    data: dict[str, Any]
+    localizations: dict[str, dict[str, Any]]
+    status: LocalizedContentStatus
+    enabled: bool
+    order: int
+
+
+@dataclass(frozen=True)
+class LocalizedContentPageResponse:
+    """Public delivery response for ``GET /v1/content/pages/{slug}`` — the
+    negotiated locale's resolved page + sections (the RFC 0103 ``resolveSection``
+    merge is applied host-side: exact → language-family → base)."""
+
+    version: str
+    generatedAt: str
+    locale: str
+    slug: str
+    page: LocalizedContentPage
+    sections: list[LocalizedContentSection]
+
+
+@dataclass(frozen=True)
+class LocalizedContentLanguageSettings:
+    """Language settings
+    (`schemas/localized-content-language-settings.schema.json`)."""
+
+    baseLocale: str
+    supportedLocales: list[str]
+    autoTranslateOnPublish: bool
+
+
+@dataclass(frozen=True)
+class PutContentSectionRequest:
+    """Body for ``PUT /v1/content/pages/{pageId}/sections/{sectionId}``. The
+    baseLocale upserts ``data``; any other locale upserts
+    ``localizations[locale]``."""
+
+    locale: str
+    data: dict[str, Any]
+
+
+# ── RFC 0099 Trigger subscription registration (trigger-bridge.md §F) ─────
+
+
+@dataclass(frozen=True)
+class TriggerSubscriptionRegistration:
+    """Registration body for ``POST /v1/trigger-subscriptions``
+    (`schemas/trigger-subscription-registration.schema.json`)."""
+
+    source: dict[str, Any]
+    workflowId: str
+    dedupEnabled: bool | None = None
+    inputMapping: dict[str, Any] | None = None
+    retryPolicy: dict[str, Any] | None = None
+    verification: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class CreateTriggerSubscriptionResponse:
+    """``201`` response for ``POST /v1/trigger-subscriptions``. ``binding``
+    carries the source-specific wiring the caller needs; the secret is returned
+    ONCE at creation (SR-1) — persist it, it is not retrievable again."""
+
+    subscription: dict[str, Any]
+    binding: dict[str, Any]
