@@ -1,5 +1,9 @@
 # `openwop-client` Changelog
 
+## [Unreleased]
+
+- **RFC 0100/0105/0106/0108/0109/0110 — capability discovery types.** `Capabilities` gains `a2a` (`CapabilitiesA2A`, RFC 0100), `conversationTurnModelProvenance` (`CapabilitiesConversationTurnModelProvenance`, RFC 0109), `channelPresence` (`CapabilitiesChannelPresence`, RFC 0110), and a typed `aiProviders` (`CapabilitiesAIProviders`) block carrying the RFC 0108 `selfHosted`, RFC 0105 `speechSynthesis`, and RFC 0106 `realtimeVoice` (`CapabilitiesRealtimeVoice`) flags. All parsed by `discovery_capabilities()` and re-exported from the package root. Read-only + additive — absent blocks ⇒ `None`. Host-side `ctx.callTranscriber`/`ctx.callSpeechSynthesizer` (node-facing host methods) are out of client-SDK scope.
+
 ## [1.3.0] — 2026-06-24 — RFC 0093/0094/0101 type surface (gRPC + multi-party + output-chunk + run-status parity)
 
 _First release from the post-split `openwop-sdks` repo; the three SDK versions are re-aligned to `1.3.0` (TypeScript was `1.2.0`; Python + Go were `1.1.7` — the agent-platform surface content was already at parity, only the version numbers had drifted)._

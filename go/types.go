@@ -85,6 +85,83 @@ type CapabilitiesMultiPartyConversation struct {
 	MaxParticipants *int `json:"maxParticipants,omitempty"`
 }
 
+// CapabilitiesRealtimeVoice is the RFC 0106 real-time voice profile
+// (capability advertisement). Absent from CapabilitiesAIProviders ⇒ no live
+// voice. The host enforces that TurnDetection / BargeIn require Transcription.
+// The ctx.* voice methods are host-side and not modeled in this client SDK.
+type CapabilitiesRealtimeVoice struct {
+	// Transcription is "streaming" when the host exposes streaming STT.
+	Transcription string `json:"transcription,omitempty"`
+	// Synthesis is "streaming" when ctx.callSpeechSynthesizer honors stream:true.
+	Synthesis string `json:"synthesis,omitempty"`
+	// TurnDetection is "vad" | "semantic"; requires Transcription.
+	TurnDetection string `json:"turnDetection,omitempty"`
+	// BargeIn is "supported" when the host emits voice.barge_in/voice.cancelled.
+	BargeIn string `json:"bargeIn,omitempty"`
+}
+
+// CapabilitiesAIProviders is the host AI-proxy advertisement (aiProviders in
+// capabilities.md). Every field is optional per capabilities.schema.json (the
+// block declares no required fields). The wire object MAY carry additional
+// fields (input, authModes, maxInlineMediaBytes) not modeled here.
+type CapabilitiesAIProviders struct {
+	// Supported lists provider ids the host's AI-proxy can route to.
+	Supported []string `json:"supported,omitempty"`
+	// BYOK is the subset of Supported for which BYOK is permitted.
+	BYOK []string `json:"byok,omitempty"`
+	// Policies is the optional 4-mode policy advertisement (opaque here).
+	Policies map[string]any `json:"policies,omitempty"`
+	// SelfHosted (RFC 0108) is the subset of Supported that are operator-/
+	// tenant-configured OpenAI-compatible endpoints. The id is an OPAQUE label
+	// that MUST NOT encode the endpoint location, and a client MUST NOT infer
+	// model capabilities from it (RFC 0108 §A.3/§B).
+	SelfHosted []string `json:"selfHosted,omitempty"`
+	// SpeechSynthesis (RFC 0105) is "supported" when the host exposes speech
+	// synthesis (host-side ctx.callSpeechSynthesizer). Empty ⇒ no TTS.
+	SpeechSynthesis string `json:"speechSynthesis,omitempty"`
+	// RealtimeVoice (RFC 0106) is the real-time voice profile; nil ⇒ no live voice.
+	RealtimeVoice *CapabilitiesRealtimeVoice `json:"realtimeVoice,omitempty"`
+}
+
+// CapabilitiesA2A is the RFC 0100 A2A (Agent2Agent) advertisement. Supported
+// alone ⇒ the synchronous message/send → poll tasks/get round-trip. The
+// optional flags gate the RFC 0100 async/durable additions. Absent from
+// Capabilities ⇒ no A2A advertisement.
+type CapabilitiesA2A struct {
+	// Supported toggles — true when the host exposes itself as an A2A agent.
+	Supported bool `json:"supported"`
+	// AgentCardURL is the A2A 0.3 well-known agent card URL
+	// (/.well-known/agent-card.json).
+	AgentCardURL string `json:"agentCardUrl"`
+	// Streaming gates message/stream + tasks/resubscribe (RFC 0100 §3).
+	Streaming *bool `json:"streaming,omitempty"`
+	// PushNotifications gates A2A push-notification config (RFC 0100 §4); a
+	// caller-supplied pushConfig.url is SSRF-validated (a2a-push-egress-ssrf).
+	PushNotifications *bool `json:"pushNotifications,omitempty"`
+	// DurableTasks (RFC 0100 §2) ⇒ the host persists the projected A2ATaskState;
+	// tasks/get returns live state after disconnect. nil/false ⇒ synchronous only.
+	DurableTasks *bool `json:"durableTasks,omitempty"`
+}
+
+// CapabilitiesConversationTurnModelProvenance is the RFC 0109 advertisement:
+// the host stamps the optional non-secret agent.model ({provider, model}) on
+// role:"agent" conversation turns, read verbatim on :fork. Absent ⇒ no
+// provenance.
+type CapabilitiesConversationTurnModelProvenance struct {
+	// Supported toggles — true when the host stamps agent.model.
+	Supported bool `json:"supported"`
+}
+
+// CapabilitiesChannelPresence is the RFC 0110 advertisement: the host emits the
+// ephemeral channel.presence RunEvent (online + per-member typing) for
+// type:"channel" conversations. Presence is live state — never persisted to the
+// replayable log, never affects replay/:fork, and membership-gated
+// (default-deny). Absent ⇒ no presence.
+type CapabilitiesChannelPresence struct {
+	// Supported toggles — true when the host emits channel.presence.
+	Supported bool `json:"supported"`
+}
+
 // CapBreachedKind is the `kind` discriminator on a cap.breached event payload
 // (run-event-payloads.schema.json#capBreached): the four engine kinds, the
 // RFC 0008 §K wasm-* runtime caps, and the RFC 0058 run-scoped bounds.
@@ -122,6 +199,16 @@ type Capabilities struct {
 	// MultiPartyConversation is the RFC 0101 multi-party group-conversation
 	// advertisement; nil ⇒ the host does not support multi-party conversations.
 	MultiPartyConversation *CapabilitiesMultiPartyConversation `json:"multiPartyConversation,omitempty"`
+	// AIProviders is the host AI-proxy advertisement; the RFC 0105/0106/0108
+	// self-hosted / speech / real-time-voice flags live here. nil ⇒ no AI-proxy.
+	AIProviders *CapabilitiesAIProviders `json:"aiProviders,omitempty"`
+	// A2A is the RFC 0100 A2A advertisement; nil ⇒ no A2A advertisement.
+	A2A *CapabilitiesA2A `json:"a2a,omitempty"`
+	// ConversationTurnModelProvenance is the RFC 0109 advertisement; nil ⇒ no
+	// model provenance.
+	ConversationTurnModelProvenance *CapabilitiesConversationTurnModelProvenance `json:"conversationTurnModelProvenance,omitempty"`
+	// ChannelPresence is the RFC 0110 advertisement; nil ⇒ no presence.
+	ChannelPresence *CapabilitiesChannelPresence `json:"channelPresence,omitempty"`
 }
 
 // RunSnapshotError mirrors `RunSnapshot.error`.

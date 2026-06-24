@@ -75,6 +75,48 @@ export interface Capabilities {
      *  host-defined / unbounded. */
     maxParticipants?: number;
   };
+  /** RFC 0100. Host exposes itself as an A2A (Agent2Agent) agent. `supported`
+   *  alone ⇒ the synchronous `message/send` → poll `tasks/get` round-trip
+   *  (`a2a-integration.md`). The optional flags gate the RFC 0100 async/durable
+   *  additions. Absent ⇒ no A2A advertisement. */
+  a2a?: {
+    /** Host exposes itself as an A2A agent. */
+    supported: boolean;
+    /** A2A 0.3 well-known agent card URL (`/.well-known/agent-card.json`). */
+    agentCardUrl: string;
+    /** `message/stream` + `tasks/resubscribe` (RFC 0100 §3 resubscribe re-attach). */
+    streaming?: boolean;
+    /** A2A push-notification config (RFC 0100 §4); a caller-supplied
+     *  `pushConfig.url` is SSRF-validated (`a2a-push-egress-ssrf`). */
+    pushNotifications?: boolean;
+    /** RFC 0100 §2. Host persists the projected `A2ATaskState` per backing run;
+     *  `tasks/get` returns live state after disconnect. Absent/false ⇒
+     *  synchronous round-trip only. */
+    durableTasks?: boolean;
+  };
+  /** RFC 0109. Host stamps the optional non-secret `agent.model`
+   *  (`{ provider, model }`) on `role:'agent'` conversation turns, recording
+   *  which model produced the turn (read verbatim on `:fork`). Absent ⇒ no
+   *  provenance; the host omits `agent.model`. */
+  conversationTurnModelProvenance?: {
+    /** Toggle — `true` when the host stamps `agent.model`. */
+    supported: boolean;
+  };
+  /** RFC 0110. Host emits the ephemeral `channel.presence` RunEvent (online +
+   *  per-member typing) for `type:'channel'` conversations. Presence is live
+   *  state — the host never persists it to the replayable event log and it
+   *  never affects replay / `:fork`. Membership-gated (default-deny, CTI-1).
+   *  Absent ⇒ no presence. */
+  channelPresence?: {
+    /** Toggle — `true` when the host emits `channel.presence`. */
+    supported: boolean;
+  };
+  /** Capability advertisement for the host AI-proxy (`aiProviders` in
+   *  `capabilities.md`). Absent ⇒ the host advertises no AI-proxy surface.
+   *  Carries BYOK policy plus the RFC 0105/0106/0108 self-hosted / speech /
+   *  real-time-voice flags. The wire object MAY carry additional fields
+   *  (`input`, `authModes`, `maxInlineMediaBytes`) not modeled here. */
+  aiProviders?: AIProvidersCapability;
   extensions?: Record<string, unknown>;
   // Network-handshake superset (all `(future)` fields per capabilities.md)
   implementation?: { name?: string; version?: string; vendor?: string };
@@ -520,15 +562,45 @@ export type AIPolicyDenyReason =
  * that don't enforce per-provider policies.
  */
 export interface AIProvidersCapability {
-  /** Provider ids the host's AI-proxy can route to. */
-  supported: readonly string[];
+  /** Provider ids the host's AI-proxy can route to. Optional per
+   *  `capabilities.schema.json` (the `aiProviders` block has no required
+   *  fields); a host advertising the block normally lists them. */
+  supported?: readonly string[];
   /** Subset of `supported` for which BYOK is permitted. */
-  byok: readonly string[];
+  byok?: readonly string[];
   /** Optional 4-mode policy enforcement advertisement. */
   policies?: {
     modes: readonly AIPolicyMode[];
     scopes?: readonly string[];
     errorCode?: string;
+  };
+  /** RFC 0108. Subset of `supported` whose entries are operator-/tenant-
+   *  configured OpenAI-compatible endpoints (Ollama / vLLM / LM Studio / any
+   *  `/v1/chat/completions`-compatible server), as opposed to a host-managed
+   *  connection to a known public vendor. Each entry also appears in
+   *  `supported` and MAY also appear in `byok`. The id is an OPAQUE label that
+   *  MUST NOT encode the endpoint's network location (RFC 0108 §A.3), and a
+   *  client MUST NOT infer model capabilities from it (§B) — the authoritative
+   *  sources are `modelCapabilities.advertised[]` and `aiProviders.input`. */
+  selfHosted?: readonly string[];
+  /** RFC 0105. Present (value MUST be `'supported'`) ⇒ the host exposes speech
+   *  synthesis via the host-side `ctx.callSpeechSynthesizer`. Absent ⇒ no TTS
+   *  (a call is rejected with `speech_synthesis_unsupported`). */
+  speechSynthesis?: 'supported';
+  /** RFC 0106. Optional real-time voice profile. Absent ⇒ no live voice. The
+   *  sub-flags gate streaming STT / chunked TTS and turn-taking; the host
+   *  enforces that `turnDetection`/`bargeIn` require `transcription`. */
+  realtimeVoice?: {
+    /** Present (`'streaming'`) ⇒ host exposes streaming `ctx.callTranscriber`. */
+    transcription?: 'streaming';
+    /** Present (`'streaming'`) ⇒ `ctx.callSpeechSynthesizer` honors `stream:true`.
+     *  Requires `aiProviders.speechSynthesis: 'supported'`. */
+    synthesis?: 'streaming';
+    /** Endpointing sophistication; requires `transcription`. */
+    turnDetection?: 'vad' | 'semantic';
+    /** Present (`'supported'`) ⇒ host emits `voice.barge_in`/`voice.cancelled`
+     *  on overlapping speech; requires `transcription`. */
+    bargeIn?: 'supported';
   };
 }
 

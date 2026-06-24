@@ -31,9 +31,14 @@ from .types import (
     BulkCancelRunsRequest,
     BulkCancelRunsResponse,
     Capabilities,
+    CapabilitiesA2A,
+    CapabilitiesAIProviders,
+    CapabilitiesChannelPresence,
+    CapabilitiesConversationTurnModelProvenance,
     CapabilitiesGrpc,
     CapabilitiesLimits,
     CapabilitiesMultiPartyConversation,
+    CapabilitiesRealtimeVoice,
     CancelRunRequest,
     CancelRunResponse,
     CreateRunRequest,
@@ -138,6 +143,61 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         if isinstance(raw_mpc, dict)
         else None
     )
+    raw_aip = d.get("aiProviders")
+    if isinstance(raw_aip, dict):
+        raw_rv = raw_aip.get("realtimeVoice")
+        realtime_voice = (
+            CapabilitiesRealtimeVoice(
+                transcription=raw_rv.get("transcription"),
+                synthesis=raw_rv.get("synthesis"),
+                turnDetection=raw_rv.get("turnDetection"),
+                bargeIn=raw_rv.get("bargeIn"),
+            )
+            if isinstance(raw_rv, dict)
+            else None
+        )
+        ai_providers = CapabilitiesAIProviders(
+            supported=(
+                list(raw_aip["supported"]) if "supported" in raw_aip else None
+            ),
+            byok=list(raw_aip["byok"]) if "byok" in raw_aip else None,
+            policies=raw_aip.get("policies"),
+            selfHosted=(
+                list(raw_aip["selfHosted"]) if "selfHosted" in raw_aip else None
+            ),
+            speechSynthesis=raw_aip.get("speechSynthesis"),
+            realtimeVoice=realtime_voice,
+        )
+    else:
+        ai_providers = None
+    raw_a2a = d.get("a2a")
+    a2a = (
+        CapabilitiesA2A(
+            supported=bool(raw_a2a.get("supported", False)),
+            agentCardUrl=str(raw_a2a.get("agentCardUrl", "")),
+            streaming=raw_a2a.get("streaming"),
+            pushNotifications=raw_a2a.get("pushNotifications"),
+            durableTasks=raw_a2a.get("durableTasks"),
+        )
+        if isinstance(raw_a2a, dict)
+        else None
+    )
+    raw_ctmp = d.get("conversationTurnModelProvenance")
+    conversation_turn_model_provenance = (
+        CapabilitiesConversationTurnModelProvenance(
+            supported=bool(raw_ctmp.get("supported", False)),
+        )
+        if isinstance(raw_ctmp, dict)
+        else None
+    )
+    raw_cp = d.get("channelPresence")
+    channel_presence = (
+        CapabilitiesChannelPresence(
+            supported=bool(raw_cp.get("supported", False)),
+        )
+        if isinstance(raw_cp, dict)
+        else None
+    )
     return Capabilities(
         protocolVersion=str(d["protocolVersion"]),
         supportedEnvelopes=list(d.get("supportedEnvelopes", [])),
@@ -153,6 +213,10 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         minClientVersion=d.get("minClientVersion"),
         grpc=grpc,
         multiPartyConversation=multi_party,
+        aiProviders=ai_providers,
+        a2a=a2a,
+        conversationTurnModelProvenance=conversation_turn_model_provenance,
+        channelPresence=channel_presence,
     )
 
 

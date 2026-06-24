@@ -1,5 +1,9 @@
 # `openwopclient` Changelog
 
+## [Unreleased]
+
+- **RFC 0100/0105/0106/0108/0109/0110 — capability discovery types.** `Capabilities` gains `A2A` (`CapabilitiesA2A`, RFC 0100), `ConversationTurnModelProvenance` (RFC 0109), `ChannelPresence` (RFC 0110), and a typed `AIProviders` (`CapabilitiesAIProviders`) struct carrying the RFC 0108 `SelfHosted`, RFC 0105 `SpeechSynthesis`, and RFC 0106 `RealtimeVoice` (`CapabilitiesRealtimeVoice`) flags. JSON-tag driven (`json.Unmarshal`); pointer fields ⇒ nil when unadvertised. Read-only + additive. Host-side ctx.* voice methods are out of client-SDK scope.
+
 ## [1.3.1] — 2026-06-24 — resolvable module path (re-release of the 1.3.0 surface)
 
 _Identical SDK surface to the (unpublished) 1.3.0 tag — this is a layout-only re-release. The `go/v1.3.0` tag was **unresolvable**: the module directory was `sdk/go/` while the declared path `github.com/openwop/openwop-sdks/go` + the `go/v*` tag scheme require `go.mod` at repo-root `/go/`, so `go get …/openwop-sdks/go@v1.3.0` failed with `missing …/go/go.mod`. The directory was moved to `/go/` (the public import path is unchanged); `go/v1.3.0` remains a tombstone (Go module versions are immutable). The Go SDK is therefore one patch ahead of the TypeScript/Python 1.3.0 release; the next coordinated release re-aligns the family.

@@ -86,6 +86,92 @@ class CapabilitiesMultiPartyConversation:
     maxParticipants: int | None = None
 
 
+@dataclass(frozen=True)
+class CapabilitiesRealtimeVoice:
+    """RFC 0106 real-time voice profile (capability advertisement). Absent from
+    :class:`CapabilitiesAIProviders` ⇒ no live voice. The host enforces that
+    ``turnDetection`` / ``bargeIn`` require ``transcription``. ``ctx.*`` voice
+    methods are host-side and not modeled in this client SDK.
+    """
+
+    # Present ("streaming") ⇒ host exposes streaming ctx.callTranscriber.
+    transcription: Literal["streaming"] | None = None
+    # Present ("streaming") ⇒ ctx.callSpeechSynthesizer honors stream:true.
+    synthesis: Literal["streaming"] | None = None
+    # Endpointing sophistication; requires transcription.
+    turnDetection: Literal["vad", "semantic"] | None = None
+    # Present ("supported") ⇒ host emits voice.barge_in/voice.cancelled.
+    bargeIn: Literal["supported"] | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesAIProviders:
+    """Host AI-proxy capability advertisement (``aiProviders`` in
+    capabilities.md). Every field is optional per ``capabilities.schema.json``
+    (the block declares no required fields). The wire object MAY carry
+    additional fields (``input``, ``authModes``, ``maxInlineMediaBytes``) not
+    modeled here.
+    """
+
+    # Provider ids the host's AI-proxy can route to.
+    supported: list[str] | None = None
+    # Subset of `supported` for which BYOK is permitted.
+    byok: list[str] | None = None
+    # Optional 4-mode policy enforcement advertisement (opaque here).
+    policies: dict[str, Any] | None = None
+    # RFC 0108. Subset of `supported` that are operator-/tenant-configured
+    # OpenAI-compatible endpoints. The id is an OPAQUE label that MUST NOT
+    # encode the endpoint location, and a client MUST NOT infer model
+    # capabilities from it (RFC 0108 §A.3/§B).
+    selfHosted: list[str] | None = None
+    # RFC 0105. "supported" ⇒ host exposes speech synthesis (host-side
+    # ctx.callSpeechSynthesizer). Absent ⇒ no TTS.
+    speechSynthesis: Literal["supported"] | None = None
+    # RFC 0106. Real-time voice profile.
+    realtimeVoice: CapabilitiesRealtimeVoice | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesA2A:
+    """RFC 0100 A2A (Agent2Agent) advertisement. ``supported`` alone ⇒ the
+    synchronous ``message/send`` → poll ``tasks/get`` round-trip. The optional
+    flags gate the RFC 0100 async/durable additions. Absent from
+    :class:`Capabilities` ⇒ no A2A advertisement.
+    """
+
+    supported: bool
+    # A2A 0.3 well-known agent card URL (/.well-known/agent-card.json).
+    agentCardUrl: str
+    # message/stream + tasks/resubscribe (RFC 0100 §3 resubscribe re-attach).
+    streaming: bool | None = None
+    # A2A push-notification config (RFC 0100 §4); pushConfig.url is SSRF-validated.
+    pushNotifications: bool | None = None
+    # RFC 0100 §2. Host persists the projected A2ATaskState; tasks/get returns
+    # live state after disconnect. Absent/false ⇒ synchronous round-trip only.
+    durableTasks: bool | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesConversationTurnModelProvenance:
+    """RFC 0109. Host stamps the optional non-secret ``agent.model``
+    (``{provider, model}``) on ``role:'agent'`` conversation turns, read
+    verbatim on ``:fork``. Absent from :class:`Capabilities` ⇒ no provenance.
+    """
+
+    supported: bool
+
+
+@dataclass(frozen=True)
+class CapabilitiesChannelPresence:
+    """RFC 0110. Host emits the ephemeral ``channel.presence`` RunEvent (online
+    + per-member typing) for ``type:'channel'`` conversations. Presence is live
+    state — never persisted to the replayable log, never affects replay/``:fork``,
+    and membership-gated (default-deny). Absent ⇒ no presence.
+    """
+
+    supported: bool
+
+
 # The `kind` discriminator on a `cap.breached` payload
 # (run-event-payloads.schema.json#capBreached): four engine kinds + RFC 0008 §K
 # wasm-* runtime caps + RFC 0058 run-scoped bounds.
@@ -121,6 +207,16 @@ class Capabilities:
     grpc: CapabilitiesGrpc | None = None
     # RFC 0101 multi-party group-conversation advertisement.
     multiPartyConversation: CapabilitiesMultiPartyConversation | None = None
+    # Host AI-proxy advertisement (RFC 0105/0106/0108 sub-flags live here).
+    aiProviders: CapabilitiesAIProviders | None = None
+    # RFC 0100 A2A (Agent2Agent) advertisement.
+    a2a: CapabilitiesA2A | None = None
+    # RFC 0109 conversation-turn model provenance advertisement.
+    conversationTurnModelProvenance: (
+        CapabilitiesConversationTurnModelProvenance | None
+    ) = None
+    # RFC 0110 channel-presence advertisement.
+    channelPresence: CapabilitiesChannelPresence | None = None
 
 
 # ── RunSnapshot ─────────────────────────────────────────────────────────
