@@ -31,9 +31,16 @@ from .types import (
     BulkCancelRunsRequest,
     BulkCancelRunsResponse,
     Capabilities,
+    CapabilitiesA2A,
+    CapabilitiesAIProviders,
+    CapabilitiesApproverRouting,
+    CapabilitiesChannelPresence,
+    CapabilitiesConversationTurnModelProvenance,
+    CapabilitiesInterrupt,
     CapabilitiesGrpc,
     CapabilitiesLimits,
     CapabilitiesMultiPartyConversation,
+    CapabilitiesRealtimeVoice,
     CancelRunRequest,
     CancelRunResponse,
     CreateRunRequest,
@@ -43,6 +50,13 @@ from .types import (
     ForkRunResponse,
     Annotation,
     CreateAnnotationRequest,
+    CreateTriggerSubscriptionResponse,
+    LocalizedContentLanguageSettings,
+    LocalizedContentPage,
+    LocalizedContentPageResponse,
+    LocalizedContentSection,
+    PutContentSectionRequest,
+    TriggerSubscriptionRegistration,
     WorkspaceFile,
     PutWorkspaceFileRequest,
     InterruptByTokenInspection,
@@ -95,6 +109,56 @@ def _to_jsonable(obj: Any) -> Any:
     return obj
 
 
+def _content_page_from_dict(d: dict[str, Any]) -> LocalizedContentPage:
+    """Map a localized-content-page.schema.json response dict into the dataclass."""
+    return LocalizedContentPage(
+        pageId=str(d["pageId"]),
+        slug=str(d["slug"]),
+        name=str(d["name"]),
+        status=d["status"],
+        sectionOrder=list(d.get("sectionOrder", [])),
+        seo=d.get("seo"),
+    )
+
+
+def _content_section_from_dict(d: dict[str, Any]) -> LocalizedContentSection:
+    """Map a localized-content-section.schema.json response dict into the dataclass."""
+    return LocalizedContentSection(
+        sectionId=str(d["sectionId"]),
+        sectionType=str(d["sectionType"]),
+        data=dict(d.get("data", {})),
+        localizations=dict(d.get("localizations", {})),
+        status=d["status"],
+        enabled=bool(d["enabled"]),
+        order=int(d["order"]),
+    )
+
+
+def _content_page_response_from_dict(
+    d: dict[str, Any],
+) -> LocalizedContentPageResponse:
+    """Map a localized-content-page-response.schema.json dict into the dataclass."""
+    return LocalizedContentPageResponse(
+        version=str(d["version"]),
+        generatedAt=str(d["generatedAt"]),
+        locale=str(d["locale"]),
+        slug=str(d["slug"]),
+        page=_content_page_from_dict(d["page"]),
+        sections=[_content_section_from_dict(s) for s in d.get("sections", [])],
+    )
+
+
+def _content_settings_from_dict(
+    d: dict[str, Any],
+) -> LocalizedContentLanguageSettings:
+    """Map a localized-content-language-settings.schema.json dict into the dataclass."""
+    return LocalizedContentLanguageSettings(
+        baseLocale=str(d["baseLocale"]),
+        supportedLocales=list(d.get("supportedLocales", [])),
+        autoTranslateOnPublish=bool(d["autoTranslateOnPublish"]),
+    )
+
+
 def _to_workspace_file(d: dict[str, Any]) -> WorkspaceFile:
     """Map a workspace-file.schema.json response dict into a WorkspaceFile."""
     return WorkspaceFile(
@@ -138,6 +202,76 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         if isinstance(raw_mpc, dict)
         else None
     )
+    raw_aip = d.get("aiProviders")
+    if isinstance(raw_aip, dict):
+        raw_rv = raw_aip.get("realtimeVoice")
+        realtime_voice = (
+            CapabilitiesRealtimeVoice(
+                transcription=raw_rv.get("transcription"),
+                synthesis=raw_rv.get("synthesis"),
+                turnDetection=raw_rv.get("turnDetection"),
+                bargeIn=raw_rv.get("bargeIn"),
+            )
+            if isinstance(raw_rv, dict)
+            else None
+        )
+        ai_providers = CapabilitiesAIProviders(
+            supported=(
+                list(raw_aip["supported"]) if "supported" in raw_aip else None
+            ),
+            byok=list(raw_aip["byok"]) if "byok" in raw_aip else None,
+            policies=raw_aip.get("policies"),
+            selfHosted=(
+                list(raw_aip["selfHosted"]) if "selfHosted" in raw_aip else None
+            ),
+            speechSynthesis=raw_aip.get("speechSynthesis"),
+            realtimeVoice=realtime_voice,
+        )
+    else:
+        ai_providers = None
+    raw_a2a = d.get("a2a")
+    a2a = (
+        CapabilitiesA2A(
+            supported=bool(raw_a2a.get("supported", False)),
+            agentCardUrl=str(raw_a2a.get("agentCardUrl", "")),
+            streaming=raw_a2a.get("streaming"),
+            pushNotifications=raw_a2a.get("pushNotifications"),
+            durableTasks=raw_a2a.get("durableTasks"),
+        )
+        if isinstance(raw_a2a, dict)
+        else None
+    )
+    raw_ctmp = d.get("conversationTurnModelProvenance")
+    conversation_turn_model_provenance = (
+        CapabilitiesConversationTurnModelProvenance(
+            supported=bool(raw_ctmp.get("supported", False)),
+        )
+        if isinstance(raw_ctmp, dict)
+        else None
+    )
+    raw_cp = d.get("channelPresence")
+    channel_presence = (
+        CapabilitiesChannelPresence(
+            supported=bool(raw_cp.get("supported", False)),
+        )
+        if isinstance(raw_cp, dict)
+        else None
+    )
+    raw_int = d.get("interrupt")
+    if isinstance(raw_int, dict):
+        raw_ar = raw_int.get("approverRouting")
+        approver_routing = (
+            CapabilitiesApproverRouting(
+                supported=bool(raw_ar.get("supported", False)),
+                refKinds=raw_ar.get("refKinds"),
+                audience=raw_ar.get("audience"),
+            )
+            if isinstance(raw_ar, dict)
+            else None
+        )
+        interrupt = CapabilitiesInterrupt(approverRouting=approver_routing)
+    else:
+        interrupt = None
     return Capabilities(
         protocolVersion=str(d["protocolVersion"]),
         supportedEnvelopes=list(d.get("supportedEnvelopes", [])),
@@ -153,6 +287,11 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         minClientVersion=d.get("minClientVersion"),
         grpc=grpc,
         multiPartyConversation=multi_party,
+        aiProviders=ai_providers,
+        a2a=a2a,
+        conversationTurnModelProvenance=conversation_turn_model_provenance,
+        channelPresence=channel_presence,
+        interrupt=interrupt,
     )
 
 
@@ -689,6 +828,94 @@ class OpenwopClient:
             )
             for a in d.get("annotations", [])
         ]
+
+    # ── RFC 0103 Localized content surface (capabilities.content) ──────────
+
+    def content_list_pages(self) -> list[LocalizedContentPage] | None:
+        """`GET /v1/content/pages` — list page records. Returns ``None`` when
+        the host doesn't advertise ``capabilities.content`` (501)."""
+        try:
+            rows = self._request_json_any("GET", "/v1/content/pages")
+        except WopError as err:
+            if err.status == 501:
+                return None
+            raise
+        return [_content_page_from_dict(p) for p in (rows or [])]
+
+    def content_get_page(
+        self, slug: str, *, accept_language: str | None = None
+    ) -> LocalizedContentPageResponse | None:
+        """`GET /v1/content/pages/{slug}` — the negotiated locale's resolved page
+        + sections. ``accept_language`` rides the ``Accept-Language`` header (the
+        Stable i18n.md negotiation; no ``?locale=``). Returns ``None`` on 404
+        (no such published page) or 501 (uncapable)."""
+        headers = {"Accept-Language": accept_language} if accept_language else None
+        try:
+            d = self._request_json(
+                "GET", f"/v1/content/pages/{slug}", headers=headers
+            )
+        except WopError as err:
+            if err.status in (404, 501):
+                return None
+            raise
+        return _content_page_response_from_dict(d)
+
+    def content_create_page(
+        self, page: LocalizedContentPage
+    ) -> LocalizedContentPage:
+        """`POST /v1/content/pages` — create a page record (admin). Raises
+        ``WopError`` on non-2xx (400/401/403)."""
+        d = self._request_json("POST", "/v1/content/pages", body=_to_jsonable(page))
+        return _content_page_from_dict(d)
+
+    def content_put_section(
+        self, page_id: str, section_id: str, body: PutContentSectionRequest
+    ) -> LocalizedContentSection:
+        """`PUT /v1/content/pages/{pageId}/sections/{sectionId}` — upsert a
+        section's field overlay for a locale (admin)."""
+        d = self._request_json(
+            "PUT",
+            f"/v1/content/pages/{page_id}/sections/{section_id}",
+            body=_to_jsonable(body),
+        )
+        return _content_section_from_dict(d)
+
+    def content_get_settings(self) -> LocalizedContentLanguageSettings | None:
+        """`GET /v1/content/settings` — language settings. Returns ``None`` when
+        the host doesn't advertise ``capabilities.content`` (501)."""
+        try:
+            d = self._request_json("GET", "/v1/content/settings")
+        except WopError as err:
+            if err.status == 501:
+                return None
+            raise
+        return _content_settings_from_dict(d)
+
+    def content_put_settings(
+        self, settings: LocalizedContentLanguageSettings
+    ) -> LocalizedContentLanguageSettings:
+        """`PUT /v1/content/settings` — replace language settings (admin)."""
+        d = self._request_json(
+            "PUT", "/v1/content/settings", body=_to_jsonable(settings)
+        )
+        return _content_settings_from_dict(d)
+
+    # ── RFC 0099 Trigger subscriptions (capabilities.triggerBridge) ────────
+
+    def create_trigger_subscription(
+        self, registration: TriggerSubscriptionRegistration
+    ) -> CreateTriggerSubscriptionResponse:
+        """`POST /v1/trigger-subscriptions` — register an external-event trigger.
+        The ``binding`` secret is returned ONCE at creation (SR-1); persist it.
+        Raises ``WopError`` on non-2xx (400/401/403, or 501 when the host
+        doesn't advertise the trigger-bridge ingestion surface)."""
+        d = self._request_json(
+            "POST", "/v1/trigger-subscriptions", body=_to_jsonable(registration)
+        )
+        return CreateTriggerSubscriptionResponse(
+            subscription=dict(d.get("subscription", {})),
+            binding=dict(d.get("binding", {})),
+        )
 
     def agents_list(self) -> list[AgentInventoryEntry] | None:
         """RFC 0072 §A — list installed manifest agents. Read-only; returns

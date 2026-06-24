@@ -39,6 +39,14 @@ import type {
   OutputChunkPayload,
   RunEventDoc,
   TypedRunEvent,
+  VoiceSpeechStartPayload,
+  VoiceTranscriptPayload,
+  VoiceEndpointCandidatePayload,
+  VoiceTurnCommitPayload,
+  VoiceSynthesisChunkPayload,
+  VoiceBargeInPayload,
+  VoiceCancelledPayload,
+  ChannelPresencePayload,
 } from './types.js';
 
 // ─── Type guards ────────────────────────────────────────────────────────
@@ -158,6 +166,97 @@ export function isOutputChunk(
   if (!hasStringField(ev.payload, 'runId')) return false;
   if (!hasStringField(ev.payload, 'chunk')) return false;
   return typeof (ev.payload as Record<string, unknown>).isLast === 'boolean';
+}
+
+function hasNumberField(payload: unknown, field: string): boolean {
+  return (
+    payload !== null &&
+    typeof payload === 'object' &&
+    typeof (payload as Record<string, unknown>)[field] === 'number'
+  );
+}
+
+/** `voice.speech_start` (RFC 0106). */
+export function isVoiceSpeechStart(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<VoiceSpeechStartPayload> {
+  return ev.type === 'voice.speech_start' && hasNumberField(ev.payload, 'atMs');
+}
+
+/** `voice.transcript` (RFC 0106). Narrows when `type` matches AND payload
+ *  carries the required `text` + `isFinal` + `atMs` + `contentTrust`. The
+ *  transcript is untrusted ingress (`voice-transcript-untrusted`). */
+export function isVoiceTranscript(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<VoiceTranscriptPayload> {
+  return (
+    ev.type === 'voice.transcript' &&
+    hasStringField(ev.payload, 'text') &&
+    typeof (ev.payload as Record<string, unknown>).isFinal === 'boolean' &&
+    hasNumberField(ev.payload, 'atMs') &&
+    (ev.payload as Record<string, unknown>).contentTrust === 'untrusted'
+  );
+}
+
+/** `voice.endpoint_candidate` (RFC 0106). */
+export function isVoiceEndpointCandidate(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<VoiceEndpointCandidatePayload> {
+  return (
+    ev.type === 'voice.endpoint_candidate' && hasNumberField(ev.payload, 'atMs')
+  );
+}
+
+/** `voice.turn_commit` (RFC 0106). Narrows when payload carries the required
+ *  `atMs` + `finalText` (the settled transcript). */
+export function isVoiceTurnCommit(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<VoiceTurnCommitPayload> {
+  return (
+    ev.type === 'voice.turn_commit' &&
+    hasNumberField(ev.payload, 'atMs') &&
+    hasStringField(ev.payload, 'finalText')
+  );
+}
+
+/** `voice.synthesis_chunk` (RFC 0106). Narrows when payload carries the
+ *  required `seq` (number) + `mimeType` (string). */
+export function isVoiceSynthesisChunk(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<VoiceSynthesisChunkPayload> {
+  return (
+    ev.type === 'voice.synthesis_chunk' &&
+    hasNumberField(ev.payload, 'seq') &&
+    hasStringField(ev.payload, 'mimeType')
+  );
+}
+
+/** `voice.barge_in` (RFC 0106). */
+export function isVoiceBargeIn(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<VoiceBargeInPayload> {
+  return ev.type === 'voice.barge_in' && hasNumberField(ev.payload, 'atMs');
+}
+
+/** `voice.cancelled` (RFC 0106). */
+export function isVoiceCancelled(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<VoiceCancelledPayload> {
+  return ev.type === 'voice.cancelled' && hasNumberField(ev.payload, 'atMs');
+}
+
+/** `channel.presence` (RFC 0110). EPHEMERAL — observable on the LIVE event
+ *  stream only; ABSENT on replay / `:fork` (the host never persists presence
+ *  to the replayable log). Narrows when payload carries `conversationId` +
+ *  a `present` array. */
+export function isChannelPresence(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<ChannelPresencePayload> {
+  return (
+    ev.type === 'channel.presence' &&
+    hasStringField(ev.payload, 'conversationId') &&
+    Array.isArray((ev.payload as Record<string, unknown>).present)
+  );
 }
 
 // ─── High-level subscription helper ─────────────────────────────────────

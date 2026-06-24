@@ -85,6 +85,106 @@ type CapabilitiesMultiPartyConversation struct {
 	MaxParticipants *int `json:"maxParticipants,omitempty"`
 }
 
+// CapabilitiesRealtimeVoice is the RFC 0106 real-time voice profile
+// (capability advertisement). Absent from CapabilitiesAIProviders ⇒ no live
+// voice. The host enforces that TurnDetection / BargeIn require Transcription.
+// The ctx.* voice methods are host-side and not modeled in this client SDK.
+type CapabilitiesRealtimeVoice struct {
+	// Transcription is "streaming" when the host exposes streaming STT.
+	Transcription string `json:"transcription,omitempty"`
+	// Synthesis is "streaming" when ctx.callSpeechSynthesizer honors stream:true.
+	Synthesis string `json:"synthesis,omitempty"`
+	// TurnDetection is "vad" | "semantic"; requires Transcription.
+	TurnDetection string `json:"turnDetection,omitempty"`
+	// BargeIn is "supported" when the host emits voice.barge_in/voice.cancelled.
+	BargeIn string `json:"bargeIn,omitempty"`
+}
+
+// CapabilitiesAIProviders is the host AI-proxy advertisement (aiProviders in
+// capabilities.md). Every field is optional per capabilities.schema.json (the
+// block declares no required fields). The wire object MAY carry additional
+// fields (input, authModes, maxInlineMediaBytes) not modeled here.
+type CapabilitiesAIProviders struct {
+	// Supported lists provider ids the host's AI-proxy can route to.
+	Supported []string `json:"supported,omitempty"`
+	// BYOK is the subset of Supported for which BYOK is permitted.
+	BYOK []string `json:"byok,omitempty"`
+	// Policies is the optional 4-mode policy advertisement (opaque here).
+	Policies map[string]any `json:"policies,omitempty"`
+	// SelfHosted (RFC 0108) is the subset of Supported that are operator-/
+	// tenant-configured OpenAI-compatible endpoints. The id is an OPAQUE label
+	// that MUST NOT encode the endpoint location, and a client MUST NOT infer
+	// model capabilities from it (RFC 0108 §A.3/§B).
+	SelfHosted []string `json:"selfHosted,omitempty"`
+	// SpeechSynthesis (RFC 0105) is "supported" when the host exposes speech
+	// synthesis (host-side ctx.callSpeechSynthesizer). Empty ⇒ no TTS.
+	SpeechSynthesis string `json:"speechSynthesis,omitempty"`
+	// RealtimeVoice (RFC 0106) is the real-time voice profile; nil ⇒ no live voice.
+	RealtimeVoice *CapabilitiesRealtimeVoice `json:"realtimeVoice,omitempty"`
+}
+
+// CapabilitiesA2A is the RFC 0100 A2A (Agent2Agent) advertisement. Supported
+// alone ⇒ the synchronous message/send → poll tasks/get round-trip. The
+// optional flags gate the RFC 0100 async/durable additions. Absent from
+// Capabilities ⇒ no A2A advertisement.
+type CapabilitiesA2A struct {
+	// Supported toggles — true when the host exposes itself as an A2A agent.
+	Supported bool `json:"supported"`
+	// AgentCardURL is the A2A 0.3 well-known agent card URL
+	// (/.well-known/agent-card.json).
+	AgentCardURL string `json:"agentCardUrl"`
+	// Streaming gates message/stream + tasks/resubscribe (RFC 0100 §3).
+	Streaming *bool `json:"streaming,omitempty"`
+	// PushNotifications gates A2A push-notification config (RFC 0100 §4); a
+	// caller-supplied pushConfig.url is SSRF-validated (a2a-push-egress-ssrf).
+	PushNotifications *bool `json:"pushNotifications,omitempty"`
+	// DurableTasks (RFC 0100 §2) ⇒ the host persists the projected A2ATaskState;
+	// tasks/get returns live state after disconnect. nil/false ⇒ synchronous only.
+	DurableTasks *bool `json:"durableTasks,omitempty"`
+}
+
+// CapabilitiesConversationTurnModelProvenance is the RFC 0109 advertisement:
+// the host stamps the optional non-secret agent.model ({provider, model}) on
+// role:"agent" conversation turns, read verbatim on :fork. Absent ⇒ no
+// provenance.
+type CapabilitiesConversationTurnModelProvenance struct {
+	// Supported toggles — true when the host stamps agent.model.
+	Supported bool `json:"supported"`
+}
+
+// CapabilitiesChannelPresence is the RFC 0110 advertisement: the host emits the
+// ephemeral channel.presence RunEvent (online + per-member typing) for
+// type:"channel" conversations. Presence is live state — never persisted to the
+// replayable log, never affects replay/:fork, and membership-gated
+// (default-deny). Absent ⇒ no presence.
+type CapabilitiesChannelPresence struct {
+	// Supported toggles — true when the host emits channel.presence.
+	Supported bool `json:"supported"`
+}
+
+// CapabilitiesApproverRouting is the RFC 0104 portable HITL approver-routing
+// advertisement. When Supported, the host honors the OPTIONAL advisory
+// approverGroupRefs / approverRoleRefs / audience fields on the kind:"approval"
+// interrupt payload (the SDK carries the interrupt payload opaquely, so those
+// advisory fields ride that opaque object), resolves the advertised RefKinds
+// against its own RBAC, and enforces eligibility at resolve time.
+type CapabilitiesApproverRouting struct {
+	// Supported toggles — true when the host honors the approver-routing fields.
+	Supported bool `json:"supported"`
+	// RefKinds the host resolves: "group" ⇒ approverGroupRefs,
+	// "role" ⇒ approverRoleRefs. nil ⇒ advisory-only passthrough.
+	RefKinds []string `json:"refKinds,omitempty"`
+	// Audience — host honors the audience notification-targeting override;
+	// nil/false ⇒ notifies the resolved eligible union.
+	Audience *bool `json:"audience,omitempty"`
+}
+
+// CapabilitiesInterrupt is the RFC 0104 interrupt capability block. nil ⇒ the
+// host advertises no interrupt-level options.
+type CapabilitiesInterrupt struct {
+	ApproverRouting *CapabilitiesApproverRouting `json:"approverRouting,omitempty"`
+}
+
 // CapBreachedKind is the `kind` discriminator on a cap.breached event payload
 // (run-event-payloads.schema.json#capBreached): the four engine kinds, the
 // RFC 0008 §K wasm-* runtime caps, and the RFC 0058 run-scoped bounds.
@@ -122,6 +222,19 @@ type Capabilities struct {
 	// MultiPartyConversation is the RFC 0101 multi-party group-conversation
 	// advertisement; nil ⇒ the host does not support multi-party conversations.
 	MultiPartyConversation *CapabilitiesMultiPartyConversation `json:"multiPartyConversation,omitempty"`
+	// AIProviders is the host AI-proxy advertisement; the RFC 0105/0106/0108
+	// self-hosted / speech / real-time-voice flags live here. nil ⇒ no AI-proxy.
+	AIProviders *CapabilitiesAIProviders `json:"aiProviders,omitempty"`
+	// A2A is the RFC 0100 A2A advertisement; nil ⇒ no A2A advertisement.
+	A2A *CapabilitiesA2A `json:"a2a,omitempty"`
+	// ConversationTurnModelProvenance is the RFC 0109 advertisement; nil ⇒ no
+	// model provenance.
+	ConversationTurnModelProvenance *CapabilitiesConversationTurnModelProvenance `json:"conversationTurnModelProvenance,omitempty"`
+	// ChannelPresence is the RFC 0110 advertisement; nil ⇒ no presence.
+	ChannelPresence *CapabilitiesChannelPresence `json:"channelPresence,omitempty"`
+	// Interrupt is the RFC 0104 interrupt capability block (approver routing);
+	// nil ⇒ no interrupt-level options advertised.
+	Interrupt *CapabilitiesInterrupt `json:"interrupt,omitempty"`
 }
 
 // RunSnapshotError mirrors `RunSnapshot.error`.
@@ -1026,4 +1139,84 @@ type RenderPromptTemplateResponse struct {
 	VariableHashes map[string]string `json:"variableHashes"`
 	Composed       string            `json:"composed,omitempty"`
 	ContentTrust   string            `json:"contentTrust,omitempty"`
+}
+
+// ── RFC 0103 Localized content surface (spec/v1/localized-content.md) ─────
+// Mirror schemas/localized-content-*.schema.json. Host-defined structured
+// content (Data, Localizations, SEO) stays open (map[string]any) per the
+// schemas (additionalProperties: true) — it is the host's content model.
+
+// LocalizedContentPage is a content page record
+// (schemas/localized-content-page.schema.json). Status is "draft" | "published".
+type LocalizedContentPage struct {
+	PageID       string         `json:"pageId"`
+	Slug         string         `json:"slug"`
+	Name         string         `json:"name"`
+	Status       string         `json:"status"`
+	SectionOrder []string       `json:"sectionOrder"`
+	SEO          map[string]any `json:"seo,omitempty"`
+}
+
+// LocalizedContentSection is a content section record
+// (schemas/localized-content-section.schema.json): a base Data payload + a
+// sparse Localizations map (BCP-47 keys, never the base locale).
+type LocalizedContentSection struct {
+	SectionID     string                    `json:"sectionId"`
+	SectionType   string                    `json:"sectionType"`
+	Data          map[string]any            `json:"data"`
+	Localizations map[string]map[string]any `json:"localizations"`
+	Status        string                    `json:"status"`
+	Enabled       bool                      `json:"enabled"`
+	Order         int                       `json:"order"`
+}
+
+// LocalizedContentPageResponse is the public delivery response for
+// GET /v1/content/pages/{slug} — the negotiated locale's resolved page +
+// sections (the RFC 0103 resolveSection merge is applied host-side).
+type LocalizedContentPageResponse struct {
+	Version     string                    `json:"version"`
+	GeneratedAt string                    `json:"generatedAt"`
+	Locale      string                    `json:"locale"`
+	Slug        string                    `json:"slug"`
+	Page        LocalizedContentPage      `json:"page"`
+	Sections    []LocalizedContentSection `json:"sections"`
+}
+
+// LocalizedContentLanguageSettings mirrors
+// schemas/localized-content-language-settings.schema.json.
+type LocalizedContentLanguageSettings struct {
+	BaseLocale             string   `json:"baseLocale"`
+	SupportedLocales       []string `json:"supportedLocales"`
+	AutoTranslateOnPublish bool     `json:"autoTranslateOnPublish"`
+}
+
+// PutContentSectionRequest is the body for
+// PUT /v1/content/pages/{pageId}/sections/{sectionId}. The baseLocale upserts
+// Data; any other Locale upserts localizations[locale].
+type PutContentSectionRequest struct {
+	Locale string         `json:"locale"`
+	Data   map[string]any `json:"data"`
+}
+
+// ── RFC 0099 Trigger subscription registration (trigger-bridge.md §F) ─────
+
+// TriggerSubscriptionRegistration is the registration body for
+// POST /v1/trigger-subscriptions
+// (schemas/trigger-subscription-registration.schema.json).
+type TriggerSubscriptionRegistration struct {
+	Source       map[string]any `json:"source"`
+	WorkflowID   string         `json:"workflowId"`
+	DedupEnabled *bool          `json:"dedupEnabled,omitempty"`
+	InputMapping map[string]any `json:"inputMapping,omitempty"`
+	RetryPolicy  map[string]any `json:"retryPolicy,omitempty"`
+	Verification map[string]any `json:"verification,omitempty"`
+}
+
+// CreateTriggerSubscriptionResponse is the 201 response for
+// POST /v1/trigger-subscriptions. Binding carries the source-specific wiring
+// the caller needs; the secret is returned ONCE at creation (SR-1) — persist
+// it, it is not retrievable again.
+type CreateTriggerSubscriptionResponse struct {
+	Subscription map[string]any `json:"subscription"`
+	Binding      map[string]any `json:"binding"`
 }

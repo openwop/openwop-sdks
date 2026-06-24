@@ -381,3 +381,69 @@ describe('subscribeToAgentReasoning — high-level helper', () => {
     expect(passedOpts?.streamMode).toBe('updates');
   });
 });
+
+// ─── RFC 0106 voice.* + RFC 0110 channel.presence guards (phase 2) ───────
+import {
+  isVoiceSpeechStart,
+  isVoiceTranscript,
+  isVoiceEndpointCandidate,
+  isVoiceTurnCommit,
+  isVoiceSynthesisChunk,
+  isVoiceBargeIn,
+  isVoiceCancelled,
+  isChannelPresence,
+} from '../event-helpers.js';
+
+describe('voice.* + channel.presence type guards', () => {
+  it('isVoiceSpeechStart matches on type + numeric atMs', () => {
+    expect(isVoiceSpeechStart(makeEvent('voice.speech_start', { atMs: 0 }))).toBe(true);
+    expect(isVoiceSpeechStart(makeEvent('voice.speech_start', {}))).toBe(false);
+    expect(isVoiceSpeechStart(makeEvent('voice.transcript', { atMs: 0 }))).toBe(false);
+  });
+
+  it('isVoiceTranscript requires text+isFinal+atMs+contentTrust:untrusted', () => {
+    const ev = makeEvent('voice.transcript', {
+      text: 'transfer information',
+      isFinal: true,
+      atMs: 1200,
+      contentTrust: 'untrusted',
+    });
+    expect(isVoiceTranscript(ev)).toBe(true);
+    if (isVoiceTranscript(ev)) {
+      // narrows: contentTrust is the 'untrusted' literal
+      expect(ev.payload.contentTrust).toBe('untrusted');
+    }
+    // contentTrust must be present + 'untrusted' (voice-transcript-untrusted)
+    expect(
+      isVoiceTranscript(makeEvent('voice.transcript', { text: 'x', isFinal: false, atMs: 1 })),
+    ).toBe(false);
+    expect(
+      isVoiceTranscript(
+        makeEvent('voice.transcript', { text: 'x', isFinal: false, atMs: 1, contentTrust: 'trusted' }),
+      ),
+    ).toBe(false);
+  });
+
+  it('isVoiceEndpointCandidate / isVoiceBargeIn / isVoiceCancelled match on atMs', () => {
+    expect(isVoiceEndpointCandidate(makeEvent('voice.endpoint_candidate', { atMs: 5 }))).toBe(true);
+    expect(isVoiceBargeIn(makeEvent('voice.barge_in', { atMs: 5 }))).toBe(true);
+    expect(isVoiceCancelled(makeEvent('voice.cancelled', { atMs: 5, reason: 'barge-in' }))).toBe(true);
+  });
+
+  it('isVoiceTurnCommit requires atMs+finalText', () => {
+    expect(isVoiceTurnCommit(makeEvent('voice.turn_commit', { atMs: 9, finalText: 'done' }))).toBe(true);
+    expect(isVoiceTurnCommit(makeEvent('voice.turn_commit', { atMs: 9 }))).toBe(false);
+  });
+
+  it('isVoiceSynthesisChunk requires numeric seq + string mimeType', () => {
+    expect(isVoiceSynthesisChunk(makeEvent('voice.synthesis_chunk', { seq: 0, mimeType: 'audio/mpeg' }))).toBe(true);
+    expect(isVoiceSynthesisChunk(makeEvent('voice.synthesis_chunk', { seq: 0 }))).toBe(false);
+  });
+
+  it('isChannelPresence requires conversationId + present array', () => {
+    const ev = makeEvent('channel.presence', { conversationId: 'conv-1', present: ['user:a', 'agent:b'], typing: ['user:a'] });
+    expect(isChannelPresence(ev)).toBe(true);
+    expect(isChannelPresence(makeEvent('channel.presence', { conversationId: 'conv-1' }))).toBe(false);
+    expect(isChannelPresence(makeEvent('conversation.exchanged', { conversationId: 'c', present: [] }))).toBe(false);
+  });
+});

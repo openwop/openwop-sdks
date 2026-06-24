@@ -12,6 +12,13 @@ import { streamEvents, type EventsStreamOptions } from './sse.js';
 import {
   WopError,
   type AuditVerifyResult,
+  type CreateTriggerSubscriptionResponse,
+  type LocalizedContentLanguageSettings,
+  type LocalizedContentPage,
+  type LocalizedContentPageResponse,
+  type LocalizedContentSection,
+  type PutContentSectionRequest,
+  type TriggerSubscriptionRegistration,
   type BulkCancelRunsRequest,
   type BulkCancelRunsResponse,
   type Capabilities,
@@ -835,6 +842,108 @@ export class OpenwopClient {
         path: `/v1/audit/verify?${search.toString()}`,
       });
     },
+  };
+
+  // ── RFC 0103 Localized content surface (gated on capabilities.content) ──
+  readonly content = {
+    /** `GET /v1/content/pages` — list page records. Returns `null` when the
+     *  host doesn't advertise `capabilities.content` (501). */
+    listPages: async (): Promise<readonly LocalizedContentPage[] | null> => {
+      try {
+        return await this.#request<readonly LocalizedContentPage[]>({
+          method: 'GET',
+          path: '/v1/content/pages',
+        });
+      } catch (err) {
+        if (err instanceof WopError && err.status === 501) return null;
+        throw err;
+      }
+    },
+
+    /** `GET /v1/content/pages/{slug}` — the negotiated locale's resolved page +
+     *  sections. `acceptLanguage` rides the `Accept-Language` header (the Stable
+     *  `i18n.md` negotiation; no `?locale=`). Returns `null` on `404`
+     *  (no such published page) or `501` (uncapable). */
+    getPage: async (
+      slug: string,
+      acceptLanguage?: string,
+    ): Promise<LocalizedContentPageResponse | null> => {
+      try {
+        return await this.#request<LocalizedContentPageResponse>({
+          method: 'GET',
+          path: `/v1/content/pages/${encodeURIComponent(slug)}`,
+          ...(acceptLanguage
+            ? { headers: { 'Accept-Language': acceptLanguage } }
+            : {}),
+        });
+      } catch (err) {
+        if (err instanceof WopError && (err.status === 404 || err.status === 501))
+          return null;
+        throw err;
+      }
+    },
+
+    /** `POST /v1/content/pages` — create a page record (admin). Throws the
+     *  typed `WopError` on `400`/`401`/`403`. */
+    createPage: (body: LocalizedContentPage): Promise<LocalizedContentPage> =>
+      this.#request<LocalizedContentPage>({
+        method: 'POST',
+        path: '/v1/content/pages',
+        body,
+      }),
+
+    /** `PUT /v1/content/pages/{pageId}/sections/{sectionId}` — upsert a
+     *  section's field overlay for a locale (admin). */
+    putSection: (
+      pageId: string,
+      sectionId: string,
+      body: PutContentSectionRequest,
+    ): Promise<LocalizedContentSection> =>
+      this.#request<LocalizedContentSection>({
+        method: 'PUT',
+        path: `/v1/content/pages/${encodeURIComponent(pageId)}/sections/${encodeURIComponent(sectionId)}`,
+        body,
+      }),
+
+    /** `GET /v1/content/settings` — language settings. Returns `null` when the
+     *  host doesn't advertise `capabilities.content` (501). */
+    getSettings: async (): Promise<LocalizedContentLanguageSettings | null> => {
+      try {
+        return await this.#request<LocalizedContentLanguageSettings>({
+          method: 'GET',
+          path: '/v1/content/settings',
+        });
+      } catch (err) {
+        if (err instanceof WopError && err.status === 501) return null;
+        throw err;
+      }
+    },
+
+    /** `PUT /v1/content/settings` — replace language settings (admin). */
+    putSettings: (
+      body: LocalizedContentLanguageSettings,
+    ): Promise<LocalizedContentLanguageSettings> =>
+      this.#request<LocalizedContentLanguageSettings>({
+        method: 'PUT',
+        path: '/v1/content/settings',
+        body,
+      }),
+  };
+
+  // ── RFC 0099 Trigger subscriptions (gated on capabilities.triggerBridge) ──
+  readonly triggerSubscriptions = {
+    /** `POST /v1/trigger-subscriptions` — register an external-event trigger.
+     *  The `binding.secret*` is returned ONCE at creation (SR-1); persist it.
+     *  Throws the typed `WopError` on `400`/`401`/`403`, or `501` when the host
+     *  doesn't advertise the trigger-bridge ingestion surface. */
+    create: (
+      body: TriggerSubscriptionRegistration,
+    ): Promise<CreateTriggerSubscriptionResponse> =>
+      this.#request<CreateTriggerSubscriptionResponse>({
+        method: 'POST',
+        path: '/v1/trigger-subscriptions',
+        body,
+      }),
   };
 
   // ── Agent workspace files (RFC 0059; gated on capabilities.workspace) ──

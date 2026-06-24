@@ -75,6 +75,68 @@ export interface Capabilities {
      *  host-defined / unbounded. */
     maxParticipants?: number;
   };
+  /** RFC 0100. Host exposes itself as an A2A (Agent2Agent) agent. `supported`
+   *  alone ⇒ the synchronous `message/send` → poll `tasks/get` round-trip
+   *  (`a2a-integration.md`). The optional flags gate the RFC 0100 async/durable
+   *  additions. Absent ⇒ no A2A advertisement. */
+  a2a?: {
+    /** Host exposes itself as an A2A agent. */
+    supported: boolean;
+    /** A2A 0.3 well-known agent card URL (`/.well-known/agent-card.json`). */
+    agentCardUrl: string;
+    /** `message/stream` + `tasks/resubscribe` (RFC 0100 §3 resubscribe re-attach). */
+    streaming?: boolean;
+    /** A2A push-notification config (RFC 0100 §4); a caller-supplied
+     *  `pushConfig.url` is SSRF-validated (`a2a-push-egress-ssrf`). */
+    pushNotifications?: boolean;
+    /** RFC 0100 §2. Host persists the projected `A2ATaskState` per backing run;
+     *  `tasks/get` returns live state after disconnect. Absent/false ⇒
+     *  synchronous round-trip only. */
+    durableTasks?: boolean;
+  };
+  /** RFC 0109. Host stamps the optional non-secret `agent.model`
+   *  (`{ provider, model }`) on `role:'agent'` conversation turns, recording
+   *  which model produced the turn (read verbatim on `:fork`). Absent ⇒ no
+   *  provenance; the host omits `agent.model`. */
+  conversationTurnModelProvenance?: {
+    /** Toggle — `true` when the host stamps `agent.model`. */
+    supported: boolean;
+  };
+  /** RFC 0110. Host emits the ephemeral `channel.presence` RunEvent (online +
+   *  per-member typing) for `type:'channel'` conversations. Presence is live
+   *  state — the host never persists it to the replayable event log and it
+   *  never affects replay / `:fork`. Membership-gated (default-deny, CTI-1).
+   *  Absent ⇒ no presence. */
+  channelPresence?: {
+    /** Toggle — `true` when the host emits `channel.presence`. */
+    supported: boolean;
+  };
+  /** Capability advertisement for the host AI-proxy (`aiProviders` in
+   *  `capabilities.md`). Absent ⇒ the host advertises no AI-proxy surface.
+   *  Carries BYOK policy plus the RFC 0105/0106/0108 self-hosted / speech /
+   *  real-time-voice flags. The wire object MAY carry additional fields
+   *  (`input`, `authModes`, `maxInlineMediaBytes`) not modeled here. */
+  aiProviders?: AIProvidersCapability;
+  /** RFC 0104. Portable HITL approver-routing advertisement. When
+   *  `approverRouting.supported`, the host honors the OPTIONAL, ADVISORY
+   *  `approverGroupRefs` / `approverRoleRefs` / `audience` fields on the
+   *  `kind:'approval'` interrupt payload (the SDK carries the interrupt
+   *  payload opaquely as `data`, so those advisory fields ride that opaque
+   *  object), resolves the advertised `refKinds` against its own RBAC, and
+   *  ENFORCES eligibility at resolve time. Absent ⇒ the host ignores them. */
+  interrupt?: {
+    approverRouting?: {
+      /** Host honors the RFC 0104 approver-routing fields. */
+      supported: boolean;
+      /** Ref kinds the host actually resolves: `'group'` ⇒ honors
+       *  `approverGroupRefs`, `'role'` ⇒ honors `approverRoleRefs`. Absent ⇒
+       *  advisory-only passthrough (the host resolves neither). */
+      refKinds?: readonly ('group' | 'role')[];
+      /** Host honors the `audience` notification-targeting override.
+       *  Absent/`false` ⇒ the host notifies the resolved eligible union. */
+      audience?: boolean;
+    };
+  };
   extensions?: Record<string, unknown>;
   // Network-handshake superset (all `(future)` fields per capabilities.md)
   implementation?: { name?: string; version?: string; vendor?: string };
@@ -520,15 +582,45 @@ export type AIPolicyDenyReason =
  * that don't enforce per-provider policies.
  */
 export interface AIProvidersCapability {
-  /** Provider ids the host's AI-proxy can route to. */
-  supported: readonly string[];
+  /** Provider ids the host's AI-proxy can route to. Optional per
+   *  `capabilities.schema.json` (the `aiProviders` block has no required
+   *  fields); a host advertising the block normally lists them. */
+  supported?: readonly string[];
   /** Subset of `supported` for which BYOK is permitted. */
-  byok: readonly string[];
+  byok?: readonly string[];
   /** Optional 4-mode policy enforcement advertisement. */
   policies?: {
     modes: readonly AIPolicyMode[];
     scopes?: readonly string[];
     errorCode?: string;
+  };
+  /** RFC 0108. Subset of `supported` whose entries are operator-/tenant-
+   *  configured OpenAI-compatible endpoints (Ollama / vLLM / LM Studio / any
+   *  `/v1/chat/completions`-compatible server), as opposed to a host-managed
+   *  connection to a known public vendor. Each entry also appears in
+   *  `supported` and MAY also appear in `byok`. The id is an OPAQUE label that
+   *  MUST NOT encode the endpoint's network location (RFC 0108 §A.3), and a
+   *  client MUST NOT infer model capabilities from it (§B) — the authoritative
+   *  sources are `modelCapabilities.advertised[]` and `aiProviders.input`. */
+  selfHosted?: readonly string[];
+  /** RFC 0105. Present (value MUST be `'supported'`) ⇒ the host exposes speech
+   *  synthesis via the host-side `ctx.callSpeechSynthesizer`. Absent ⇒ no TTS
+   *  (a call is rejected with `speech_synthesis_unsupported`). */
+  speechSynthesis?: 'supported';
+  /** RFC 0106. Optional real-time voice profile. Absent ⇒ no live voice. The
+   *  sub-flags gate streaming STT / chunked TTS and turn-taking; the host
+   *  enforces that `turnDetection`/`bargeIn` require `transcription`. */
+  realtimeVoice?: {
+    /** Present (`'streaming'`) ⇒ host exposes streaming `ctx.callTranscriber`. */
+    transcription?: 'streaming';
+    /** Present (`'streaming'`) ⇒ `ctx.callSpeechSynthesizer` honors `stream:true`.
+     *  Requires `aiProviders.speechSynthesis: 'supported'`. */
+    synthesis?: 'streaming';
+    /** Endpointing sophistication; requires `transcription`. */
+    turnDetection?: 'vad' | 'semantic';
+    /** Present (`'supported'`) ⇒ host emits `voice.barge_in`/`voice.cancelled`
+     *  on overlapping speech; requires `transcription`. */
+    bargeIn?: 'supported';
   };
 }
 
@@ -787,6 +879,104 @@ export interface OutputChunkPayload {
   [key: string]: unknown;
 }
 
+// ─── RFC 0106 voice.* run-event payloads ────────────────────────────────
+// Mirror `run-event-payloads.schema.json`. These events are emitted on the
+// durable event log by the host-side `ctx.callTranscriber` /
+// `ctx.callSpeechSynthesizer(stream:true)` methods (out of client-SDK scope);
+// a client tails them off the run event stream.
+
+/** `voice.speech_start` (RFC 0106). Host detected start of speech. */
+export interface VoiceSpeechStartPayload {
+  /** Milliseconds since the turn/session epoch. */
+  atMs: number;
+  [key: string]: unknown;
+}
+
+/** `voice.transcript` (RFC 0106). An interim or final transcript fragment.
+ *  `contentTrust` is REQUIRED and always `'untrusted'` — live transcript is
+ *  untrusted ingress (`voice-transcript-untrusted`); consumers MUST NOT
+ *  promote it to higher authority. */
+export interface VoiceTranscriptPayload {
+  text: string;
+  /** `true` once the fragment is finalized (committed at `voice.turn_commit`). */
+  isFinal: boolean;
+  atMs: number;
+  /** Always `'untrusted'`. */
+  contentTrust: 'untrusted';
+  /** Stable prefix carried across interim revisions. */
+  committedPrefix?: string;
+  /** Provider-formatted variant (punctuation/casing). */
+  formatted?: string;
+  /** Provider stability score for an interim fragment. */
+  stability?: number;
+  [key: string]: unknown;
+}
+
+/** `voice.endpoint_candidate` (RFC 0106). A `semantic` turn detector's
+ *  candidate end-of-turn, distinct from the committed `voice.turn_commit`. */
+export interface VoiceEndpointCandidatePayload {
+  atMs: number;
+  /** Detector confidence in the candidate endpoint. */
+  confidence?: number;
+  [key: string]: unknown;
+}
+
+/** `voice.turn_commit` (RFC 0106). The turn is committed; `finalText` is the
+ *  settled transcript the `ctx.callTranscriber` Promise resolves with. */
+export interface VoiceTurnCommitPayload {
+  atMs: number;
+  finalText: string;
+  [key: string]: unknown;
+}
+
+/** `voice.synthesis_chunk` (RFC 0106). Metadata for a streamed-synthesis
+ *  clause-boundary chunk; bytes ride `url`/`streamRef` (or inline `base64`
+ *  only under the host cap), never inlined past the cap. */
+export interface VoiceSynthesisChunkPayload {
+  /** Monotonic chunk sequence within the synthesis. */
+  seq: number;
+  mimeType: string;
+  /** Host-served URL for the chunk bytes. */
+  url?: string;
+  /** Live-conduit handle for the chunk bytes. */
+  streamRef?: string;
+  /** Inline bytes — present only under the host's inline cap. */
+  base64?: string;
+  durationMs?: number;
+  /** `true` for the final chunk of the synthesis. */
+  final?: boolean;
+  [key: string]: unknown;
+}
+
+/** `voice.barge_in` (RFC 0106). Overlapping speech detected during playback. */
+export interface VoiceBargeInPayload {
+  atMs: number;
+  [key: string]: unknown;
+}
+
+/** `voice.cancelled` (RFC 0106). Downstream work cancelled (e.g. after a
+ *  barge-in); no synthesis chunk follows. */
+export interface VoiceCancelledPayload {
+  atMs: number;
+  /** Host-defined cancellation reason. */
+  reason?: string;
+  [key: string]: unknown;
+}
+
+/** `channel.presence` (RFC 0110). EPHEMERAL online + typing presence for a
+ *  `type:'channel'` conversation. Observable on the LIVE run-event stream
+ *  only — the host MUST NOT persist it to the replayable event log, so it is
+ *  ABSENT on replay / `POST /v1/runs/{runId}:fork`. Membership-gated: every
+ *  ref is a current participant (opaque RFC 0041 subject refs, non-PII). */
+export interface ChannelPresencePayload {
+  conversationId: string;
+  /** Subject refs of members currently present (subset of participants). */
+  present: readonly string[];
+  /** Subset of `present` currently typing (boolean-by-presence; no free text). */
+  typing?: readonly string[];
+  [key: string]: unknown;
+}
+
 /** A `RunEventDoc` narrowed to a specific event-type discriminator +
  *  payload shape. Returned by the `isAgent*` type guards in
  *  `event-helpers.ts`. */
@@ -940,6 +1130,39 @@ export interface AIEnvelopeErrorPayload {
   code: string;
   message: string;
   details?: Record<string, unknown>;
+}
+
+/**
+ * Payload of the core `ui.a2ui-surface` envelope kind (RFC 0102 — A2UI
+ * agent-authored interface surfaces, `schemas/envelopes/ui.a2ui-surface.schema.json`).
+ * An advertised, optional core kind beside the `media.*` family: a declarative
+ * interactive UI a consumer renders with native widgets, routing user actions
+ * back **without executing agent-supplied code**.
+ *
+ * `surface` is the closed component tree, kept loose here (`Record<string,
+ * unknown>`) — it is rendered by a dedicated A2UI renderer the SDK does not
+ * provide, and matches the SDK convention of keeping complex nested shapes
+ * structural (cf. `ClarificationRequestPayload.questions[].schema`).
+ *
+ * NOTE: the broader AI-envelope surface (`AIEnvelope`, `EnvelopeMeta`, the
+ * universal payloads) is currently modeled only in this TypeScript SDK; the
+ * Python and Go SDKs do not yet model AI envelopes. `A2UISurfacePayload`
+ * therefore lands here only; cross-SDK AI-envelope modeling is a separate
+ * follow-on (tracked in PARITY.md), not part of RFC 0102.
+ */
+export interface A2UISurfacePayload {
+  /** The A2UI catalog version the surface targets. A host-enumerated,
+   *  growing set (currently `'0.9.1'`); a consumer MUST refuse an unknown /
+   *  higher version with `unknown_schema_version`. Typed as `string` (not a
+   *  pinned literal) so the read-type stays forward-compatible as the host's
+   *  supported set grows; the consumer enforces refuse-unknown at runtime. */
+  catalogVersion: string;
+  /** The A2UI surface document — a closed component tree, self-contained and
+   *  renderable from the payload alone (never a live reference into an
+   *  external catalog). Kept structural; rendered by an A2UI renderer. */
+  surface: Record<string, unknown>;
+  /** OPTIONAL model reasoning (RFC 0030 §A), conventionally first. */
+  reasoning?: string;
 }
 
 // ── RFC 0027 + RFC 0028 — Prompt library (spec/v1/prompts.md) ──
@@ -1400,4 +1623,97 @@ export interface AgentDeploymentTransition {
   canaryPercent?: number;
   evalRunId?: string;
   reason?: string;
+}
+
+// ── RFC 0103 Localized content surface (spec/v1/localized-content.md) ──
+// Mirror schemas/localized-content-*.schema.json. Host-defined structured
+// content (`data`, `localizations`, `seo`) is kept open per the schemas
+// (additionalProperties: true) — it is the host's content model, not a
+// fixed wire shape.
+
+export type LocalizedContentStatus = 'draft' | 'published';
+
+/** A content page record (`schemas/localized-content-page.schema.json`). */
+export interface LocalizedContentPage {
+  pageId: string;
+  slug: string;
+  /** Human-facing page name (admin/authoring label). */
+  name: string;
+  status: LocalizedContentStatus;
+  /** Ordered section ids composing the page. */
+  sectionOrder: readonly string[];
+  /** Open SEO metadata object (host-defined). */
+  seo?: Record<string, unknown>;
+}
+
+/** A content section record (`schemas/localized-content-section.schema.json`).
+ *  A section is one record: a base `data` payload + a sparse `localizations`
+ *  map (BCP-47 keys, never the base locale). */
+export interface LocalizedContentSection {
+  sectionId: string;
+  sectionType: string;
+  /** Base-locale field payload (host-defined open shape). */
+  data: Record<string, unknown>;
+  /** Per-locale sparse field overlays, keyed by BCP-47 locale. */
+  localizations: Record<string, Record<string, unknown>>;
+  status: LocalizedContentStatus;
+  enabled: boolean;
+  order: number;
+}
+
+/** Public delivery response for `GET /v1/content/pages/{slug}` — the negotiated
+ *  locale's resolved page + sections (the RFC 0103 `resolveSection` merge is
+ *  applied host-side: exact → language-family → base). */
+export interface LocalizedContentPageResponse {
+  /** Response schema version marker (e.g. `"1"`). */
+  version: string;
+  generatedAt: string;
+  /** The negotiated locale this response was resolved for. */
+  locale: string;
+  slug: string;
+  page: LocalizedContentPage;
+  sections: readonly LocalizedContentSection[];
+}
+
+/** Language settings (`schemas/localized-content-language-settings.schema.json`). */
+export interface LocalizedContentLanguageSettings {
+  baseLocale: string;
+  supportedLocales: readonly string[];
+  autoTranslateOnPublish: boolean;
+}
+
+/** Request body for `PUT /v1/content/pages/{pageId}/sections/{sectionId}`. */
+export interface PutContentSectionRequest {
+  /** Target locale; the baseLocale upserts `data`, else `localizations[locale]`. */
+  locale: string;
+  /** The field overlay for the target locale (host-defined open shape). */
+  data: Record<string, unknown>;
+}
+
+// ── RFC 0099 Trigger subscription registration (spec/v1/trigger-bridge.md §F) ──
+
+/** Registration body for `POST /v1/trigger-subscriptions`
+ *  (`schemas/trigger-subscription-registration.schema.json`). */
+export interface TriggerSubscriptionRegistration {
+  /** External event source descriptor (host-defined: webhook / email / form …). */
+  source: Record<string, unknown>;
+  workflowId: string;
+  dedupEnabled?: boolean;
+  inputMapping?: Record<string, unknown>;
+  retryPolicy?: Record<string, unknown>;
+  verification?: Record<string, unknown>;
+}
+
+/** The persisted trigger subscription the host assigns
+ *  (`schemas/trigger-subscription.schema.json`). Kept open beyond the
+ *  registration fields the host echoes back. */
+export type TriggerSubscription = Record<string, unknown>;
+
+/** `201` response for `POST /v1/trigger-subscriptions`. `binding` carries the
+ *  source-specific wiring the caller needs (e.g. `{ ingestUrl,
+ *  secretFingerprint }` for webhook); the secret is returned ONCE at creation
+ *  (SR-1) — persist it, it is not retrievable again. */
+export interface CreateTriggerSubscriptionResponse {
+  subscription: TriggerSubscription;
+  binding: Record<string, unknown>;
 }

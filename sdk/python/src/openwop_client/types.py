@@ -86,6 +86,119 @@ class CapabilitiesMultiPartyConversation:
     maxParticipants: int | None = None
 
 
+@dataclass(frozen=True)
+class CapabilitiesRealtimeVoice:
+    """RFC 0106 real-time voice profile (capability advertisement). Absent from
+    :class:`CapabilitiesAIProviders` ⇒ no live voice. The host enforces that
+    ``turnDetection`` / ``bargeIn`` require ``transcription``. ``ctx.*`` voice
+    methods are host-side and not modeled in this client SDK.
+    """
+
+    # Present ("streaming") ⇒ host exposes streaming ctx.callTranscriber.
+    transcription: Literal["streaming"] | None = None
+    # Present ("streaming") ⇒ ctx.callSpeechSynthesizer honors stream:true.
+    synthesis: Literal["streaming"] | None = None
+    # Endpointing sophistication; requires transcription.
+    turnDetection: Literal["vad", "semantic"] | None = None
+    # Present ("supported") ⇒ host emits voice.barge_in/voice.cancelled.
+    bargeIn: Literal["supported"] | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesAIProviders:
+    """Host AI-proxy capability advertisement (``aiProviders`` in
+    capabilities.md). Every field is optional per ``capabilities.schema.json``
+    (the block declares no required fields). The wire object MAY carry
+    additional fields (``input``, ``authModes``, ``maxInlineMediaBytes``) not
+    modeled here.
+    """
+
+    # Provider ids the host's AI-proxy can route to.
+    supported: list[str] | None = None
+    # Subset of `supported` for which BYOK is permitted.
+    byok: list[str] | None = None
+    # Optional 4-mode policy enforcement advertisement (opaque here).
+    policies: dict[str, Any] | None = None
+    # RFC 0108. Subset of `supported` that are operator-/tenant-configured
+    # OpenAI-compatible endpoints. The id is an OPAQUE label that MUST NOT
+    # encode the endpoint location, and a client MUST NOT infer model
+    # capabilities from it (RFC 0108 §A.3/§B).
+    selfHosted: list[str] | None = None
+    # RFC 0105. "supported" ⇒ host exposes speech synthesis (host-side
+    # ctx.callSpeechSynthesizer). Absent ⇒ no TTS.
+    speechSynthesis: Literal["supported"] | None = None
+    # RFC 0106. Real-time voice profile.
+    realtimeVoice: CapabilitiesRealtimeVoice | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesA2A:
+    """RFC 0100 A2A (Agent2Agent) advertisement. ``supported`` alone ⇒ the
+    synchronous ``message/send`` → poll ``tasks/get`` round-trip. The optional
+    flags gate the RFC 0100 async/durable additions. Absent from
+    :class:`Capabilities` ⇒ no A2A advertisement.
+    """
+
+    supported: bool
+    # A2A 0.3 well-known agent card URL (/.well-known/agent-card.json).
+    agentCardUrl: str
+    # message/stream + tasks/resubscribe (RFC 0100 §3 resubscribe re-attach).
+    streaming: bool | None = None
+    # A2A push-notification config (RFC 0100 §4); pushConfig.url is SSRF-validated.
+    pushNotifications: bool | None = None
+    # RFC 0100 §2. Host persists the projected A2ATaskState; tasks/get returns
+    # live state after disconnect. Absent/false ⇒ synchronous round-trip only.
+    durableTasks: bool | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesConversationTurnModelProvenance:
+    """RFC 0109. Host stamps the optional non-secret ``agent.model``
+    (``{provider, model}``) on ``role:'agent'`` conversation turns, read
+    verbatim on ``:fork``. Absent from :class:`Capabilities` ⇒ no provenance.
+    """
+
+    supported: bool
+
+
+@dataclass(frozen=True)
+class CapabilitiesChannelPresence:
+    """RFC 0110. Host emits the ephemeral ``channel.presence`` RunEvent (online
+    + per-member typing) for ``type:'channel'`` conversations. Presence is live
+    state — never persisted to the replayable log, never affects replay/``:fork``,
+    and membership-gated (default-deny). Absent ⇒ no presence.
+    """
+
+    supported: bool
+
+
+@dataclass(frozen=True)
+class CapabilitiesApproverRouting:
+    """RFC 0104 portable HITL approver-routing advertisement. When
+    ``supported``, the host honors the OPTIONAL advisory ``approverGroupRefs`` /
+    ``approverRoleRefs`` / ``audience`` fields on the ``kind:'approval'``
+    interrupt payload (the SDK carries the interrupt payload opaquely, so those
+    advisory fields ride that opaque object), resolves the advertised
+    ``refKinds`` against its own RBAC, and enforces eligibility at resolve time.
+    """
+
+    supported: bool
+    # Ref kinds the host resolves: "group" ⇒ approverGroupRefs,
+    # "role" ⇒ approverRoleRefs. None ⇒ advisory-only passthrough.
+    refKinds: list[Literal["group", "role"]] | None = None
+    # Host honors the `audience` notification-targeting override; None/False ⇒
+    # notifies the resolved eligible union.
+    audience: bool | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesInterrupt:
+    """RFC 0104 interrupt capability block. Absent from :class:`Capabilities` ⇒
+    the host advertises no interrupt-level options."""
+
+    approverRouting: CapabilitiesApproverRouting | None = None
+
+
 # The `kind` discriminator on a `cap.breached` payload
 # (run-event-payloads.schema.json#capBreached): four engine kinds + RFC 0008 §K
 # wasm-* runtime caps + RFC 0058 run-scoped bounds.
@@ -121,6 +234,18 @@ class Capabilities:
     grpc: CapabilitiesGrpc | None = None
     # RFC 0101 multi-party group-conversation advertisement.
     multiPartyConversation: CapabilitiesMultiPartyConversation | None = None
+    # Host AI-proxy advertisement (RFC 0105/0106/0108 sub-flags live here).
+    aiProviders: CapabilitiesAIProviders | None = None
+    # RFC 0100 A2A (Agent2Agent) advertisement.
+    a2a: CapabilitiesA2A | None = None
+    # RFC 0109 conversation-turn model provenance advertisement.
+    conversationTurnModelProvenance: (
+        CapabilitiesConversationTurnModelProvenance | None
+    ) = None
+    # RFC 0110 channel-presence advertisement.
+    channelPresence: CapabilitiesChannelPresence | None = None
+    # RFC 0104 interrupt capability block (approver routing).
+    interrupt: CapabilitiesInterrupt | None = None
 
 
 # ── RunSnapshot ─────────────────────────────────────────────────────────
@@ -1030,3 +1155,98 @@ class RenderPromptResponse:
     variableHashes: dict[str, str]
     composed: str | None = None
     contentTrust: Literal["trusted", "untrusted"] | None = None
+
+
+# ── RFC 0103 Localized content surface (spec/v1/localized-content.md) ─────
+# Mirror schemas/localized-content-*.schema.json. Host-defined structured
+# content (`data`, `localizations`, `seo`) stays open (dict[str, Any]) per the
+# schemas (additionalProperties: true) — it is the host's content model.
+
+LocalizedContentStatus = Literal["draft", "published"]
+
+
+@dataclass(frozen=True)
+class LocalizedContentPage:
+    """A content page record (`schemas/localized-content-page.schema.json`)."""
+
+    pageId: str
+    slug: str
+    name: str
+    status: LocalizedContentStatus
+    sectionOrder: list[str]
+    seo: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class LocalizedContentSection:
+    """A content section record (`schemas/localized-content-section.schema.json`):
+    a base ``data`` payload + a sparse ``localizations`` map (BCP-47 keys,
+    never the base locale)."""
+
+    sectionId: str
+    sectionType: str
+    data: dict[str, Any]
+    localizations: dict[str, dict[str, Any]]
+    status: LocalizedContentStatus
+    enabled: bool
+    order: int
+
+
+@dataclass(frozen=True)
+class LocalizedContentPageResponse:
+    """Public delivery response for ``GET /v1/content/pages/{slug}`` — the
+    negotiated locale's resolved page + sections (the RFC 0103 ``resolveSection``
+    merge is applied host-side: exact → language-family → base)."""
+
+    version: str
+    generatedAt: str
+    locale: str
+    slug: str
+    page: LocalizedContentPage
+    sections: list[LocalizedContentSection]
+
+
+@dataclass(frozen=True)
+class LocalizedContentLanguageSettings:
+    """Language settings
+    (`schemas/localized-content-language-settings.schema.json`)."""
+
+    baseLocale: str
+    supportedLocales: list[str]
+    autoTranslateOnPublish: bool
+
+
+@dataclass(frozen=True)
+class PutContentSectionRequest:
+    """Body for ``PUT /v1/content/pages/{pageId}/sections/{sectionId}``. The
+    baseLocale upserts ``data``; any other locale upserts
+    ``localizations[locale]``."""
+
+    locale: str
+    data: dict[str, Any]
+
+
+# ── RFC 0099 Trigger subscription registration (trigger-bridge.md §F) ─────
+
+
+@dataclass(frozen=True)
+class TriggerSubscriptionRegistration:
+    """Registration body for ``POST /v1/trigger-subscriptions``
+    (`schemas/trigger-subscription-registration.schema.json`)."""
+
+    source: dict[str, Any]
+    workflowId: str
+    dedupEnabled: bool | None = None
+    inputMapping: dict[str, Any] | None = None
+    retryPolicy: dict[str, Any] | None = None
+    verification: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class CreateTriggerSubscriptionResponse:
+    """``201`` response for ``POST /v1/trigger-subscriptions``. ``binding``
+    carries the source-specific wiring the caller needs; the secret is returned
+    ONCE at creation (SR-1) — persist it, it is not retrievable again."""
+
+    subscription: dict[str, Any]
+    binding: dict[str, Any]

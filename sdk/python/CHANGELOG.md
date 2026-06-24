@@ -1,5 +1,17 @@
 # `openwop-client` Changelog
 
+## [1.4.0] — 2026-06-24 — RFC 0099–0110 client-surface catch-up (capabilities, voice/presence events, A2UI, content+trigger REST, approver routing)
+
+_Re-aligns the three SDKs to a common `1.4.0` (TypeScript + Python were `1.3.0`; Go was `1.3.1` after its resolvable-path re-cut). Lands the RFC 0099–0110 client surface the corpus shipped in conformance `1.25.0 → 1.37.0`._
+
+- **RFC 0104 — portable HITL approver-routing capability.** `Capabilities` gains `interrupt` (`CapabilitiesInterrupt` → `CapabilitiesApproverRouting` `{supported, refKinds?, audience?}`), parsed by `discovery_capabilities()` and re-exported. The advisory `approverGroupRefs`/`approverRoleRefs`/`audience` fields ride the SDK's opaque interrupt payload (interrupts stay untyped by convention) — no `ApprovalData` dataclass. Read-only + additive.
+
+- **RFC 0099 + 0103 — typed REST helpers (content + trigger subscriptions).** New methods `content_list_pages()` / `content_get_page(slug, accept_language=...)` / `content_create_page(page)` / `content_put_section(page_id, section_id, body)` / `content_get_settings()` / `content_put_settings(settings)` (RFC 0103; reads return `None` on 404/501) and `create_trigger_subscription(registration)` (RFC 0099). New frozen dataclasses `LocalizedContent{Page,Section,PageResponse,LanguageSettings}` + `PutContentSectionRequest` + `TriggerSubscriptionRegistration`/`CreateTriggerSubscriptionResponse`, re-exported from the package root; host-defined `data`/`localizations`/`seo`/`source`/`binding` kept open (`dict[str, Any]`) per the schemas. Flips 7 ops `excluded` → `typed` (51/56).
+
+- **RFC 0106/0110 — typed event helpers.** Adds the seven `voice.*` payload `TypedDict`s + `is_voice_*` predicates + `voice_*_payload` extractors, and `is_channel_presence` / `channel_presence_payload` (RFC 0110), joining the event-helper family in `openwop_client.events` (re-exported from the package root). `voice.transcript` requires `contentTrust="untrusted"` (`voice-transcript-untrusted`); numeric checks exclude `bool` (an `int` subclass). `channel.presence` is ephemeral — LIVE stream only, absent on replay/`:fork`.
+
+- **RFC 0100/0105/0106/0108/0109/0110 — capability discovery types.** `Capabilities` gains `a2a` (`CapabilitiesA2A`, RFC 0100), `conversationTurnModelProvenance` (`CapabilitiesConversationTurnModelProvenance`, RFC 0109), `channelPresence` (`CapabilitiesChannelPresence`, RFC 0110), and a typed `aiProviders` (`CapabilitiesAIProviders`) block carrying the RFC 0108 `selfHosted`, RFC 0105 `speechSynthesis`, and RFC 0106 `realtimeVoice` (`CapabilitiesRealtimeVoice`) flags. All parsed by `discovery_capabilities()` and re-exported from the package root. Read-only + additive — absent blocks ⇒ `None`. Host-side `ctx.callTranscriber`/`ctx.callSpeechSynthesizer` (node-facing host methods) are out of client-SDK scope.
+
 ## [1.3.0] — 2026-06-24 — RFC 0093/0094/0101 type surface (gRPC + multi-party + output-chunk + run-status parity)
 
 _First release from the post-split `openwop-sdks` repo; the three SDK versions are re-aligned to `1.3.0` (TypeScript was `1.2.0`; Python + Go were `1.1.7` — the agent-platform surface content was already at parity, only the version numbers had drifted)._

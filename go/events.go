@@ -380,3 +380,279 @@ func UnmarshalOutputChunk(ev RunEventDoc) (OutputChunkPayload, error) {
 	}
 	return p, nil
 }
+
+// payloadHasNumber reports whether the payload is a map with `field` set to a
+// JSON number. Accepts float64 (the wire form via json.Unmarshal into `any`)
+// AND the Go int family (in-code map[string]any construction); bool is
+// excluded (it is not a number).
+func payloadHasNumber(payload any, field string) bool {
+	m, ok := payloadAsMap(payload)
+	if !ok {
+		return false
+	}
+	switch m[field].(type) {
+	case float64, float32,
+		int, int8, int16, int32, int64,
+		uint, uint8, uint16, uint32, uint64:
+		return true
+	default:
+		return false
+	}
+}
+
+func payloadHasArray(payload any, field string) bool {
+	m, ok := payloadAsMap(payload)
+	if !ok {
+		return false
+	}
+	switch m[field].(type) {
+	case []any, []string:
+		return true
+	default:
+		return false
+	}
+}
+
+// ── RFC 0106 voice.* + RFC 0110 channel.presence ─────────────────────────
+// Mirror run-event-payloads.schema.json. These events are emitted on the
+// durable event log by the host-side ctx.callTranscriber /
+// ctx.callSpeechSynthesizer(stream:true) methods (out of client-SDK scope); a
+// client tails them off the run event stream.
+
+// VoiceSpeechStartPayload mirrors `voice.speech_start` (RFC 0106).
+type VoiceSpeechStartPayload struct {
+	AtMs int64 `json:"atMs"`
+}
+
+// VoiceTranscriptPayload mirrors `voice.transcript` (RFC 0106). ContentTrust
+// is always "untrusted" — live transcript is untrusted ingress
+// (voice-transcript-untrusted); never promote it to higher authority.
+type VoiceTranscriptPayload struct {
+	Text            string  `json:"text"`
+	IsFinal         bool    `json:"isFinal"`
+	AtMs            int64   `json:"atMs"`
+	ContentTrust    string  `json:"contentTrust"`
+	CommittedPrefix string  `json:"committedPrefix,omitempty"`
+	Formatted       string  `json:"formatted,omitempty"`
+	Stability       float64 `json:"stability,omitempty"`
+}
+
+// VoiceEndpointCandidatePayload mirrors `voice.endpoint_candidate` (RFC 0106).
+type VoiceEndpointCandidatePayload struct {
+	AtMs       int64   `json:"atMs"`
+	Confidence float64 `json:"confidence,omitempty"`
+}
+
+// VoiceTurnCommitPayload mirrors `voice.turn_commit` (RFC 0106). FinalText is
+// the settled transcript the ctx.callTranscriber Promise resolves with.
+type VoiceTurnCommitPayload struct {
+	AtMs      int64  `json:"atMs"`
+	FinalText string `json:"finalText"`
+}
+
+// VoiceSynthesisChunkPayload mirrors `voice.synthesis_chunk` (RFC 0106). Bytes
+// ride URL/StreamRef (or inline Base64 only under the host cap).
+type VoiceSynthesisChunkPayload struct {
+	Seq        int    `json:"seq"`
+	MimeType   string `json:"mimeType"`
+	URL        string `json:"url,omitempty"`
+	StreamRef  string `json:"streamRef,omitempty"`
+	Base64     string `json:"base64,omitempty"`
+	DurationMs int64  `json:"durationMs,omitempty"`
+	Final      bool   `json:"final,omitempty"`
+}
+
+// VoiceBargeInPayload mirrors `voice.barge_in` (RFC 0106).
+type VoiceBargeInPayload struct {
+	AtMs int64 `json:"atMs"`
+}
+
+// VoiceCancelledPayload mirrors `voice.cancelled` (RFC 0106).
+type VoiceCancelledPayload struct {
+	AtMs   int64  `json:"atMs"`
+	Reason string `json:"reason,omitempty"`
+}
+
+// ChannelPresencePayload mirrors `channel.presence` (RFC 0110). EPHEMERAL —
+// observable on the LIVE event stream only; ABSENT on replay / :fork (the host
+// never persists presence to the replayable log). Membership-gated; opaque
+// RFC 0041 subject refs (non-PII).
+type ChannelPresencePayload struct {
+	ConversationID string   `json:"conversationId"`
+	Present        []string `json:"present"`
+	Typing         []string `json:"typing,omitempty"`
+}
+
+// IsVoiceSpeechStart reports whether the event is a well-formed
+// `voice.speech_start` (RFC 0106).
+func IsVoiceSpeechStart(ev RunEventDoc) bool {
+	return ev.Type == "voice.speech_start" && payloadHasNumber(ev.Payload, "atMs")
+}
+
+// IsVoiceTranscript reports whether the event is a well-formed
+// `voice.transcript` (RFC 0106): type + text/isFinal/atMs + contentTrust
+// "untrusted" (voice-transcript-untrusted).
+func IsVoiceTranscript(ev RunEventDoc) bool {
+	if ev.Type != "voice.transcript" {
+		return false
+	}
+	if !payloadHasString(ev.Payload, "text") || !payloadHasNumber(ev.Payload, "atMs") {
+		return false
+	}
+	m, ok := payloadAsMap(ev.Payload)
+	if !ok {
+		return false
+	}
+	if _, ok := m["isFinal"].(bool); !ok {
+		return false
+	}
+	ct, _ := m["contentTrust"].(string)
+	return ct == "untrusted"
+}
+
+// IsVoiceEndpointCandidate reports whether the event is a well-formed
+// `voice.endpoint_candidate` (RFC 0106).
+func IsVoiceEndpointCandidate(ev RunEventDoc) bool {
+	return ev.Type == "voice.endpoint_candidate" && payloadHasNumber(ev.Payload, "atMs")
+}
+
+// IsVoiceTurnCommit reports whether the event is a well-formed
+// `voice.turn_commit` (RFC 0106): type + atMs + finalText.
+func IsVoiceTurnCommit(ev RunEventDoc) bool {
+	return ev.Type == "voice.turn_commit" &&
+		payloadHasNumber(ev.Payload, "atMs") &&
+		payloadHasString(ev.Payload, "finalText")
+}
+
+// IsVoiceSynthesisChunk reports whether the event is a well-formed
+// `voice.synthesis_chunk` (RFC 0106): type + seq + mimeType.
+func IsVoiceSynthesisChunk(ev RunEventDoc) bool {
+	return ev.Type == "voice.synthesis_chunk" &&
+		payloadHasNumber(ev.Payload, "seq") &&
+		payloadHasString(ev.Payload, "mimeType")
+}
+
+// IsVoiceBargeIn reports whether the event is a well-formed `voice.barge_in`
+// (RFC 0106).
+func IsVoiceBargeIn(ev RunEventDoc) bool {
+	return ev.Type == "voice.barge_in" && payloadHasNumber(ev.Payload, "atMs")
+}
+
+// IsVoiceCancelled reports whether the event is a well-formed
+// `voice.cancelled` (RFC 0106).
+func IsVoiceCancelled(ev RunEventDoc) bool {
+	return ev.Type == "voice.cancelled" && payloadHasNumber(ev.Payload, "atMs")
+}
+
+// IsChannelPresence reports whether the event is a well-formed
+// `channel.presence` (RFC 0110). EPHEMERAL — present on the LIVE stream only,
+// absent on replay/:fork.
+func IsChannelPresence(ev RunEventDoc) bool {
+	return ev.Type == "channel.presence" &&
+		payloadHasString(ev.Payload, "conversationId") &&
+		payloadHasArray(ev.Payload, "present")
+}
+
+// UnmarshalVoiceSpeechStart extracts the typed payload from a
+// `voice.speech_start` event.
+func UnmarshalVoiceSpeechStart(ev RunEventDoc) (VoiceSpeechStartPayload, error) {
+	var p VoiceSpeechStartPayload
+	if !IsVoiceSpeechStart(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// UnmarshalVoiceTranscript extracts the typed payload from a
+// `voice.transcript` event.
+func UnmarshalVoiceTranscript(ev RunEventDoc) (VoiceTranscriptPayload, error) {
+	var p VoiceTranscriptPayload
+	if !IsVoiceTranscript(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// UnmarshalVoiceEndpointCandidate extracts the typed payload from a
+// `voice.endpoint_candidate` event.
+func UnmarshalVoiceEndpointCandidate(ev RunEventDoc) (VoiceEndpointCandidatePayload, error) {
+	var p VoiceEndpointCandidatePayload
+	if !IsVoiceEndpointCandidate(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// UnmarshalVoiceTurnCommit extracts the typed payload from a
+// `voice.turn_commit` event.
+func UnmarshalVoiceTurnCommit(ev RunEventDoc) (VoiceTurnCommitPayload, error) {
+	var p VoiceTurnCommitPayload
+	if !IsVoiceTurnCommit(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// UnmarshalVoiceSynthesisChunk extracts the typed payload from a
+// `voice.synthesis_chunk` event.
+func UnmarshalVoiceSynthesisChunk(ev RunEventDoc) (VoiceSynthesisChunkPayload, error) {
+	var p VoiceSynthesisChunkPayload
+	if !IsVoiceSynthesisChunk(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// UnmarshalVoiceBargeIn extracts the typed payload from a `voice.barge_in`
+// event.
+func UnmarshalVoiceBargeIn(ev RunEventDoc) (VoiceBargeInPayload, error) {
+	var p VoiceBargeInPayload
+	if !IsVoiceBargeIn(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// UnmarshalVoiceCancelled extracts the typed payload from a `voice.cancelled`
+// event.
+func UnmarshalVoiceCancelled(ev RunEventDoc) (VoiceCancelledPayload, error) {
+	var p VoiceCancelledPayload
+	if !IsVoiceCancelled(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// UnmarshalChannelPresence extracts the typed payload from a
+// `channel.presence` event.
+func UnmarshalChannelPresence(ev RunEventDoc) (ChannelPresencePayload, error) {
+	var p ChannelPresencePayload
+	if !IsChannelPresence(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}

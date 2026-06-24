@@ -359,6 +359,113 @@ func (c *OpenwopClient) ListAnnotations(
 	return out.Annotations, nil
 }
 
+// ── RFC 0103 Localized content surface (capabilities.content) ─────────────
+
+// ListContentPages calls GET /v1/content/pages — lists page records. Returns
+// (nil, nil) when the host doesn't advertise capabilities.content (501).
+func (c *OpenwopClient) ListContentPages(ctx context.Context) ([]LocalizedContentPage, error) {
+	var out []LocalizedContentPage
+	if err := c.requestJSON(ctx, http.MethodGet, "/v1/content/pages", nil, nil, true, &out); err != nil {
+		var werr *WopError
+		if errors.As(err, &werr) && werr.Status == 501 {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return out, nil
+}
+
+// GetContentPage calls GET /v1/content/pages/{slug} — the negotiated locale's
+// resolved page + sections. acceptLanguage rides the Accept-Language header
+// (the Stable i18n.md negotiation; no ?locale=); empty ⇒ omit it. Returns
+// (nil, nil) on 404 (no such published page) or 501 (uncapable).
+func (c *OpenwopClient) GetContentPage(
+	ctx context.Context, slug, acceptLanguage string,
+) (*LocalizedContentPageResponse, error) {
+	var headers map[string]string
+	if acceptLanguage != "" {
+		headers = map[string]string{"Accept-Language": acceptLanguage}
+	}
+	var out LocalizedContentPageResponse
+	if err := c.requestJSON(
+		ctx, http.MethodGet, "/v1/content/pages/"+url.PathEscape(slug), nil, headers, true, &out,
+	); err != nil {
+		var werr *WopError
+		if errors.As(err, &werr) && (werr.Status == 404 || werr.Status == 501) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &out, nil
+}
+
+// CreateContentPage calls POST /v1/content/pages — create a page record
+// (admin). Returns a *WopError on non-2xx (400/401/403).
+func (c *OpenwopClient) CreateContentPage(
+	ctx context.Context, page LocalizedContentPage,
+) (*LocalizedContentPage, error) {
+	var out LocalizedContentPage
+	if err := c.requestJSON(ctx, http.MethodPost, "/v1/content/pages", page, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// PutContentSection calls PUT /v1/content/pages/{pageID}/sections/{sectionID} —
+// upsert a section's field overlay for a locale (admin).
+func (c *OpenwopClient) PutContentSection(
+	ctx context.Context, pageID, sectionID string, body PutContentSectionRequest,
+) (*LocalizedContentSection, error) {
+	var out LocalizedContentSection
+	path := "/v1/content/pages/" + url.PathEscape(pageID) + "/sections/" + url.PathEscape(sectionID)
+	if err := c.requestJSON(ctx, http.MethodPut, path, body, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// GetContentSettings calls GET /v1/content/settings — language settings.
+// Returns (nil, nil) when the host doesn't advertise capabilities.content (501).
+func (c *OpenwopClient) GetContentSettings(ctx context.Context) (*LocalizedContentLanguageSettings, error) {
+	var out LocalizedContentLanguageSettings
+	if err := c.requestJSON(ctx, http.MethodGet, "/v1/content/settings", nil, nil, true, &out); err != nil {
+		var werr *WopError
+		if errors.As(err, &werr) && werr.Status == 501 {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &out, nil
+}
+
+// PutContentSettings calls PUT /v1/content/settings — replace language settings
+// (admin).
+func (c *OpenwopClient) PutContentSettings(
+	ctx context.Context, settings LocalizedContentLanguageSettings,
+) (*LocalizedContentLanguageSettings, error) {
+	var out LocalizedContentLanguageSettings
+	if err := c.requestJSON(ctx, http.MethodPut, "/v1/content/settings", settings, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ── RFC 0099 Trigger subscriptions (capabilities.triggerBridge) ───────────
+
+// CreateTriggerSubscription calls POST /v1/trigger-subscriptions — register an
+// external-event trigger. The Binding secret is returned ONCE at creation
+// (SR-1); persist it. Returns a *WopError on non-2xx (400/401/403, or 501 when
+// the host doesn't advertise the trigger-bridge ingestion surface).
+func (c *OpenwopClient) CreateTriggerSubscription(
+	ctx context.Context, registration TriggerSubscriptionRegistration,
+) (*CreateTriggerSubscriptionResponse, error) {
+	var out CreateTriggerSubscriptionResponse
+	if err := c.requestJSON(ctx, http.MethodPost, "/v1/trigger-subscriptions", registration, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // ListWorkspaceFilesOptions controls GET /v1/host/workspace/files query.
 type ListWorkspaceFilesOptions struct {
 	// Prefix filters the flat path namespace; empty = no filter.

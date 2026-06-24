@@ -1,5 +1,17 @@
 # `openwopclient` Changelog
 
+## [1.4.0] — 2026-06-24 — RFC 0099–0110 client-surface catch-up (capabilities, voice/presence events, A2UI, content+trigger REST, approver routing)
+
+_Re-aligns the three SDKs to a common `1.4.0` (TypeScript + Python were `1.3.0`; Go was `1.3.1` after its resolvable-path re-cut). Lands the RFC 0099–0110 client surface the corpus shipped in conformance `1.25.0 → 1.37.0`._
+
+- **RFC 0104 — portable HITL approver-routing capability.** `Capabilities` gains `Interrupt` (`*CapabilitiesInterrupt` → `*CapabilitiesApproverRouting` `{Supported, RefKinds, Audience}`), JSON-tag driven. The advisory approverGroupRefs/approverRoleRefs/audience fields ride the opaque interrupt payload (interrupts stay untyped by convention) — no ApprovalData struct. Read-only + additive.
+
+- **RFC 0099 + 0103 — typed REST helpers (content + trigger subscriptions).** New methods `ListContentPages` / `GetContentPage(ctx, slug, acceptLanguage)` / `CreateContentPage` / `PutContentSection` / `GetContentSettings` / `PutContentSettings` (RFC 0103; reads return `(nil, nil)` on 404/501) and `CreateTriggerSubscription` (RFC 0099). New structs `LocalizedContent{Page,Section,PageResponse,LanguageSettings}` + `PutContentSectionRequest` + `TriggerSubscriptionRegistration`/`CreateTriggerSubscriptionResponse`; host-defined Data/Localizations/SEO/Source/Binding kept open (`map[string]any`) per the schemas. Flips 7 ops `excluded` → `typed` (51/56).
+
+- **RFC 0106/0110 — typed event helpers.** Adds the seven `voice.*` payload structs + `IsVoice*` predicates + `UnmarshalVoice*` extractors, and `IsChannelPresence` / `UnmarshalChannelPresence` (RFC 0110), joining the `IsXxx`/`Unmarshal*` family in `events.go`. New `payloadHasNumber` (accepts wire `float64` + in-code int family, excludes `bool`) and `payloadHasArray` (accepts `[]any` + `[]string`) helpers. `voice.transcript` requires `contentTrust=="untrusted"` (`voice-transcript-untrusted` — never promote live transcript to higher authority); `channel.presence` is ephemeral — LIVE stream only, absent on replay/:fork.
+
+- **RFC 0100/0105/0106/0108/0109/0110 — capability discovery types.** `Capabilities` gains `A2A` (`CapabilitiesA2A`, RFC 0100), `ConversationTurnModelProvenance` (RFC 0109), `ChannelPresence` (RFC 0110), and a typed `AIProviders` (`CapabilitiesAIProviders`) struct carrying the RFC 0108 `SelfHosted`, RFC 0105 `SpeechSynthesis`, and RFC 0106 `RealtimeVoice` (`CapabilitiesRealtimeVoice`) flags. JSON-tag driven (`json.Unmarshal`); pointer fields ⇒ nil when unadvertised. Read-only + additive. Host-side ctx.* voice methods are out of client-SDK scope.
+
 ## [1.3.1] — 2026-06-24 — resolvable module path (re-release of the 1.3.0 surface)
 
 _Identical SDK surface to the (unpublished) 1.3.0 tag — this is a layout-only re-release. The `go/v1.3.0` tag was **unresolvable**: the module directory was `sdk/go/` while the declared path `github.com/openwop/openwop-sdks/go` + the `go/v*` tag scheme require `go.mod` at repo-root `/go/`, so `go get …/openwop-sdks/go@v1.3.0` failed with `missing …/go/go.mod`. The directory was moved to `/go/` (the public import path is unchanged); `go/v1.3.0` remains a tombstone (Go module versions are immutable). The Go SDK is therefore one patch ahead of the TypeScript/Python 1.3.0 release; the next coordinated release re-aligns the family.

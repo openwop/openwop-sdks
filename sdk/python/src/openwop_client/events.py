@@ -130,12 +130,99 @@ class OutputChunkPayload(TypedDict, total=False):
     meta: dict[str, Any]
 
 
+# ── RFC 0106 voice.* + RFC 0110 channel.presence payloads ───────────────
+# Mirror run-event-payloads.schema.json. Emitted on the durable event log by
+# the host-side ctx.callTranscriber / ctx.callSpeechSynthesizer(stream=True)
+# methods (out of client-SDK scope); a client tails them off the run stream.
+
+
+class VoiceSpeechStartPayload(TypedDict, total=False):
+    """`voice.speech_start` payload (RFC 0106). Required: `atMs`."""
+
+    atMs: int
+
+
+class VoiceTranscriptPayload(TypedDict, total=False):
+    """`voice.transcript` payload (RFC 0106). Required: `text`, `isFinal`,
+    `atMs`, `contentTrust` (always "untrusted" — voice-transcript-untrusted;
+    never promote live transcript to higher authority)."""
+
+    text: str
+    isFinal: bool
+    atMs: int
+    contentTrust: Literal["untrusted"]
+    committedPrefix: str
+    formatted: str
+    stability: float
+
+
+class VoiceEndpointCandidatePayload(TypedDict, total=False):
+    """`voice.endpoint_candidate` payload (RFC 0106). Required: `atMs`."""
+
+    atMs: int
+    confidence: float
+
+
+class VoiceTurnCommitPayload(TypedDict, total=False):
+    """`voice.turn_commit` payload (RFC 0106). Required: `atMs`, `finalText`
+    (the settled transcript the ctx.callTranscriber Promise resolves with)."""
+
+    atMs: int
+    finalText: str
+
+
+class VoiceSynthesisChunkPayload(TypedDict, total=False):
+    """`voice.synthesis_chunk` payload (RFC 0106). Required: `seq`, `mimeType`.
+    Bytes ride `url`/`streamRef` (or inline `base64` only under the host cap)."""
+
+    seq: int
+    mimeType: str
+    url: str
+    streamRef: str
+    base64: str
+    durationMs: int
+    final: bool
+
+
+class VoiceBargeInPayload(TypedDict, total=False):
+    """`voice.barge_in` payload (RFC 0106). Required: `atMs`."""
+
+    atMs: int
+
+
+class VoiceCancelledPayload(TypedDict, total=False):
+    """`voice.cancelled` payload (RFC 0106). Required: `atMs`."""
+
+    atMs: int
+    reason: str
+
+
+class ChannelPresencePayload(TypedDict, total=False):
+    """`channel.presence` payload (RFC 0110). EPHEMERAL — observable on the
+    LIVE event stream only; ABSENT on replay / :fork (the host never persists
+    presence to the replayable log). Required: `conversationId`, `present`.
+    Membership-gated; opaque RFC 0041 subject refs (non-PII)."""
+
+    conversationId: str
+    present: list[str]
+    typing: list[str]
+
+
 # ── Predicates ──────────────────────────────────────────────────────────
 
 
 def _payload_has_str(payload: Any, field: str) -> bool:
     """Internal: payload is a dict-like with `field` set to a string."""
     return isinstance(payload, dict) and isinstance(payload.get(field), str)
+
+
+def _payload_has_number(payload: Any, field: str) -> bool:
+    """Internal: payload is a dict-like with `field` set to a number
+    (int/float, excluding bool which is an int subclass in Python)."""
+    if not isinstance(payload, dict):
+        return False
+    v = payload.get(field)
+    return isinstance(v, (int, float)) and not isinstance(v, bool)
 
 
 def is_agent_reasoned(ev: RunEventDoc) -> bool:
@@ -272,6 +359,115 @@ def output_chunk_payload(ev: RunEventDoc) -> OutputChunkPayload | None:
     return ev.payload if is_output_chunk(ev) else None
 
 
+def is_voice_speech_start(ev: RunEventDoc) -> bool:
+    """`voice.speech_start` discriminator + required `atMs` (RFC 0106)."""
+    return ev.type == "voice.speech_start" and _payload_has_number(ev.payload, "atMs")
+
+
+def is_voice_transcript(ev: RunEventDoc) -> bool:
+    """`voice.transcript` discriminator + required `text`/`isFinal`/`atMs`/
+    `contentTrust` (RFC 0106). `contentTrust` MUST be "untrusted" — live
+    transcript is untrusted ingress (`voice-transcript-untrusted`)."""
+    if ev.type != "voice.transcript":
+        return False
+    if not _payload_has_str(ev.payload, "text"):
+        return False
+    if not isinstance(ev.payload, dict) or not isinstance(ev.payload.get("isFinal"), bool):
+        return False
+    if not _payload_has_number(ev.payload, "atMs"):
+        return False
+    return ev.payload.get("contentTrust") == "untrusted"
+
+
+def is_voice_endpoint_candidate(ev: RunEventDoc) -> bool:
+    """`voice.endpoint_candidate` discriminator + required `atMs` (RFC 0106)."""
+    return ev.type == "voice.endpoint_candidate" and _payload_has_number(ev.payload, "atMs")
+
+
+def is_voice_turn_commit(ev: RunEventDoc) -> bool:
+    """`voice.turn_commit` discriminator + required `atMs`/`finalText` (RFC 0106)."""
+    return (
+        ev.type == "voice.turn_commit"
+        and _payload_has_number(ev.payload, "atMs")
+        and _payload_has_str(ev.payload, "finalText")
+    )
+
+
+def is_voice_synthesis_chunk(ev: RunEventDoc) -> bool:
+    """`voice.synthesis_chunk` discriminator + required `seq`/`mimeType` (RFC 0106)."""
+    return (
+        ev.type == "voice.synthesis_chunk"
+        and _payload_has_number(ev.payload, "seq")
+        and _payload_has_str(ev.payload, "mimeType")
+    )
+
+
+def is_voice_barge_in(ev: RunEventDoc) -> bool:
+    """`voice.barge_in` discriminator + required `atMs` (RFC 0106)."""
+    return ev.type == "voice.barge_in" and _payload_has_number(ev.payload, "atMs")
+
+
+def is_voice_cancelled(ev: RunEventDoc) -> bool:
+    """`voice.cancelled` discriminator + required `atMs` (RFC 0106)."""
+    return ev.type == "voice.cancelled" and _payload_has_number(ev.payload, "atMs")
+
+
+def is_channel_presence(ev: RunEventDoc) -> bool:
+    """`channel.presence` discriminator + required `conversationId`/`present`
+    (RFC 0110). EPHEMERAL — observable on the LIVE stream only; absent on
+    replay/:fork."""
+    return (
+        ev.type == "channel.presence"
+        and _payload_has_str(ev.payload, "conversationId")
+        and isinstance(ev.payload, dict)
+        and isinstance(ev.payload.get("present"), list)
+    )
+
+
+def voice_speech_start_payload(ev: RunEventDoc) -> VoiceSpeechStartPayload | None:
+    """Return the payload as `VoiceSpeechStartPayload` if matched, else `None`."""
+    return ev.payload if is_voice_speech_start(ev) else None
+
+
+def voice_transcript_payload(ev: RunEventDoc) -> VoiceTranscriptPayload | None:
+    """Return the payload as `VoiceTranscriptPayload` if matched, else `None`."""
+    return ev.payload if is_voice_transcript(ev) else None
+
+
+def voice_endpoint_candidate_payload(
+    ev: RunEventDoc,
+) -> VoiceEndpointCandidatePayload | None:
+    """Return the payload as `VoiceEndpointCandidatePayload` if matched, else `None`."""
+    return ev.payload if is_voice_endpoint_candidate(ev) else None
+
+
+def voice_turn_commit_payload(ev: RunEventDoc) -> VoiceTurnCommitPayload | None:
+    """Return the payload as `VoiceTurnCommitPayload` if matched, else `None`."""
+    return ev.payload if is_voice_turn_commit(ev) else None
+
+
+def voice_synthesis_chunk_payload(
+    ev: RunEventDoc,
+) -> VoiceSynthesisChunkPayload | None:
+    """Return the payload as `VoiceSynthesisChunkPayload` if matched, else `None`."""
+    return ev.payload if is_voice_synthesis_chunk(ev) else None
+
+
+def voice_barge_in_payload(ev: RunEventDoc) -> VoiceBargeInPayload | None:
+    """Return the payload as `VoiceBargeInPayload` if matched, else `None`."""
+    return ev.payload if is_voice_barge_in(ev) else None
+
+
+def voice_cancelled_payload(ev: RunEventDoc) -> VoiceCancelledPayload | None:
+    """Return the payload as `VoiceCancelledPayload` if matched, else `None`."""
+    return ev.payload if is_voice_cancelled(ev) else None
+
+
+def channel_presence_payload(ev: RunEventDoc) -> ChannelPresencePayload | None:
+    """Return the payload as `ChannelPresencePayload` if matched, else `None`."""
+    return ev.payload if is_channel_presence(ev) else None
+
+
 __all__ = [
     "ReasoningVerbosity",
     "AgentReasonedPayload",
@@ -282,6 +478,14 @@ __all__ = [
     "AgentDecidedPayload",
     "MemoryWrittenPayload",
     "OutputChunkPayload",
+    "VoiceSpeechStartPayload",
+    "VoiceTranscriptPayload",
+    "VoiceEndpointCandidatePayload",
+    "VoiceTurnCommitPayload",
+    "VoiceSynthesisChunkPayload",
+    "VoiceBargeInPayload",
+    "VoiceCancelledPayload",
+    "ChannelPresencePayload",
     "is_agent_reasoned",
     "is_agent_reasoning_delta",
     "is_agent_tool_called",
@@ -290,8 +494,24 @@ __all__ = [
     "is_agent_decided",
     "is_memory_written",
     "is_output_chunk",
+    "is_voice_speech_start",
+    "is_voice_transcript",
+    "is_voice_endpoint_candidate",
+    "is_voice_turn_commit",
+    "is_voice_synthesis_chunk",
+    "is_voice_barge_in",
+    "is_voice_cancelled",
+    "is_channel_presence",
     "memory_written_payload",
     "output_chunk_payload",
+    "voice_speech_start_payload",
+    "voice_transcript_payload",
+    "voice_endpoint_candidate_payload",
+    "voice_turn_commit_payload",
+    "voice_synthesis_chunk_payload",
+    "voice_barge_in_payload",
+    "voice_cancelled_payload",
+    "channel_presence_payload",
     "agent_reasoned_payload",
     "agent_reasoning_delta_payload",
     "agent_tool_called_payload",

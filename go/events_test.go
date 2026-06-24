@@ -206,3 +206,74 @@ func TestSchemaMirror_AgentDefsMatchExpectedRequired(t *testing.T) {
 		})
 	}
 }
+
+// ── RFC 0106 voice.* + RFC 0110 channel.presence guards (phase 2) ────────
+
+func TestVoiceAndPresenceGuards(t *testing.T) {
+	if !IsVoiceSpeechStart(makeEvent("voice.speech_start", map[string]any{"atMs": 0})) {
+		t.Error("voice.speech_start with atMs should match")
+	}
+	if IsVoiceSpeechStart(makeEvent("voice.speech_start", map[string]any{})) {
+		t.Error("voice.speech_start without atMs must not match")
+	}
+
+	// voice.transcript: requires text+isFinal+atMs+contentTrust=="untrusted"
+	good := makeEvent("voice.transcript", map[string]any{
+		"text": "transfer information", "isFinal": true, "atMs": 1200, "contentTrust": "untrusted",
+	})
+	if !IsVoiceTranscript(good) {
+		t.Error("well-formed voice.transcript should match")
+	}
+	p, err := UnmarshalVoiceTranscript(good)
+	if err != nil || p.ContentTrust != "untrusted" || p.Text != "transfer information" {
+		t.Errorf("UnmarshalVoiceTranscript: %+v err=%v", p, err)
+	}
+	if IsVoiceTranscript(makeEvent("voice.transcript", map[string]any{"text": "x", "isFinal": false, "atMs": 1})) {
+		t.Error("voice.transcript without contentTrust must not match")
+	}
+	if IsVoiceTranscript(makeEvent("voice.transcript", map[string]any{"text": "x", "isFinal": false, "atMs": 1, "contentTrust": "trusted"})) {
+		t.Error("voice.transcript with contentTrust!=untrusted must not match")
+	}
+	// bool must not satisfy the numeric atMs check
+	if IsVoiceTranscript(makeEvent("voice.transcript", map[string]any{"text": "x", "isFinal": true, "atMs": true, "contentTrust": "untrusted"})) {
+		t.Error("bool atMs must not satisfy payloadHasNumber")
+	}
+
+	if !IsVoiceTurnCommit(makeEvent("voice.turn_commit", map[string]any{"atMs": 9, "finalText": "done"})) {
+		t.Error("voice.turn_commit with atMs+finalText should match")
+	}
+	if IsVoiceTurnCommit(makeEvent("voice.turn_commit", map[string]any{"atMs": 9})) {
+		t.Error("voice.turn_commit without finalText must not match")
+	}
+	if !IsVoiceSynthesisChunk(makeEvent("voice.synthesis_chunk", map[string]any{"seq": 0, "mimeType": "audio/mpeg"})) {
+		t.Error("voice.synthesis_chunk with seq+mimeType should match")
+	}
+	if !IsVoiceEndpointCandidate(makeEvent("voice.endpoint_candidate", map[string]any{"atMs": 5})) {
+		t.Error("voice.endpoint_candidate should match")
+	}
+	if !IsVoiceBargeIn(makeEvent("voice.barge_in", map[string]any{"atMs": 5})) {
+		t.Error("voice.barge_in should match")
+	}
+	if !IsVoiceCancelled(makeEvent("voice.cancelled", map[string]any{"atMs": 5, "reason": "barge-in"})) {
+		t.Error("voice.cancelled should match")
+	}
+
+	// channel.presence: requires conversationId + present array (test uses []string)
+	pres := makeEvent("channel.presence", map[string]any{
+		"conversationId": "conv-1", "present": []string{"user:a", "agent:b"}, "typing": []string{"user:a"},
+	})
+	if !IsChannelPresence(pres) {
+		t.Error("well-formed channel.presence should match")
+	}
+	cp, err := UnmarshalChannelPresence(pres)
+	if err != nil || len(cp.Present) != 2 {
+		t.Errorf("UnmarshalChannelPresence: %+v err=%v", cp, err)
+	}
+	// also accepts []any (wire form)
+	if !IsChannelPresence(makeEvent("channel.presence", map[string]any{"conversationId": "c", "present": []any{"user:a"}})) {
+		t.Error("channel.presence with []any present should match")
+	}
+	if IsChannelPresence(makeEvent("channel.presence", map[string]any{"conversationId": "conv-1"})) {
+		t.Error("channel.presence without present must not match")
+	}
+}
