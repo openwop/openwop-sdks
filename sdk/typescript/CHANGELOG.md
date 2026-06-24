@@ -1,6 +1,8 @@
 # `@openwop/openwop` Changelog
 
-## [Unreleased]
+## [1.3.0] — 2026-06-24 — RFC 0093/0094/0101 type surface (gRPC + multi-party + output-chunk + run-status parity)
+
+_First release from the post-split `openwop-sdks` repo; the three SDK versions are re-aligned to `1.3.0` (TypeScript was `1.2.0`; Python + Go were `1.1.7` — the agent-platform surface content was already at parity, only the version numbers had drifted)._
 
 - **RFC 0101 — multi-party group-conversation capability advertisement.** `Capabilities` gains the optional `multiPartyConversation` block (`{supported: boolean, maxParticipants?: number}`) by which a host advertises support for N agents co-participating in one shared transcript. When `supported: true`, the host honors the additive `participants: AgentRef[]` roster on `conversation.opened` and the conditionally-required per-turn `speakerId` on `role: 'agent'` conversation turns. Additive — absent ⇒ the single user + single driving agent shape of RFC 0005 remains. (The SDK does not model the `conversation.opened` payload or a `ConversationTurn` type, so the capability block is the full SDK surface for this RFC.)
 - **RFC 0094 §B — `'cancelling'` run status.** `RunStatus` gains `'cancelling'`, the transitional state between a cancel request being accepted and the terminal `'cancelled'` (a snapshot read during the cancel cascade carries it). It is classified as active (non-terminal): `ACTIVE_RUN_STATUSES` includes it and `isTerminalRunStatus('cancelling')` returns `false`. Additive — mirrors the canonical 10-member enum in the re-vendored `schemas/run-snapshot.schema.json`.

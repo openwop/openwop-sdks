@@ -1,6 +1,8 @@
 # `openwopclient` Changelog
 
-## [Unreleased]
+## [1.3.0] — 2026-06-24 — RFC 0093/0094/0101 type surface (gRPC + multi-party + output-chunk + run-status parity)
+
+_First release from the post-split `openwop-sdks` repo; the three SDK versions are re-aligned to `1.3.0` (TypeScript was `1.2.0`; Python + Go were `1.1.7` — the agent-platform surface content was already at parity, only the version numbers had drifted)._
 
 - **RFC 0101 — multi-party group-conversation capability advertisement.** New `CapabilitiesMultiPartyConversation` struct (`Supported bool` / optional `MaxParticipants *int`) wired as the optional `Capabilities.MultiPartyConversation` pointer field. A host advertises support for N agents co-participating in one shared transcript; when `Supported` is true it honors the additive `participants` (`[]AgentRef`) roster on `conversation.opened` and the conditionally-required per-turn `speakerId` on `role:"agent"` conversation turns. Additive — nil ⇒ the single user + single driving agent shape of RFC 0005 remains. (The SDK does not model the `conversation.opened` payload or a conversation-turn type, so the capability struct is the full SDK surface for this RFC.)
 - **RFC 0094 §B + parity — `"cancelling"` and `"waiting-external"` run statuses.** New constants `StatusWaitingExternal` (external-event waits, distinguished from HITL waits at the wire level — the TS SDK already had it; closes a cross-SDK parity gap) and `StatusCancelling` (RFC 0094 §B — the transitional state between a cancel request being accepted and the terminal `"cancelled"`). Both are classified as active (non-terminal): `ActiveRunStatuses` includes them and `IsTerminalRunStatus(...)` returns `false` for both. Additive — mirrors the canonical 10-member enum in `schemas/run-snapshot.schema.json`.

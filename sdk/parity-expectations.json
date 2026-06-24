@@ -440,6 +440,78 @@
       "ts": "typed",
       "py": "typed",
       "go": "typed"
+    },
+    {
+      "operationId": "createTriggerSubscription",
+      "method": "POST",
+      "path": "/v1/trigger-subscriptions",
+      "ts": "excluded",
+      "py": "excluded",
+      "go": "excluded",
+      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+    },
+    {
+      "operationId": "listContentPages",
+      "method": "GET",
+      "path": "/v1/content/pages",
+      "ts": "excluded",
+      "py": "excluded",
+      "go": "excluded",
+      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+    },
+    {
+      "operationId": "getContentPage",
+      "method": "GET",
+      "path": "/v1/content/pages/{slug}",
+      "ts": "excluded",
+      "py": "excluded",
+      "go": "excluded",
+      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+    },
+    {
+      "operationId": "createContentPage",
+      "method": "POST",
+      "path": "/v1/content/pages",
+      "ts": "excluded",
+      "py": "excluded",
+      "go": "excluded",
+      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+    },
+    {
+      "operationId": "putContentSection",
+      "method": "PUT",
+      "path": "/v1/content/pages/{pageId}/sections/{sectionId}",
+      "ts": "excluded",
+      "py": "excluded",
+      "go": "excluded",
+      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+    },
+    {
+      "operationId": "getContentSettings",
+      "method": "GET",
+      "path": "/v1/content/settings",
+      "ts": "excluded",
+      "py": "excluded",
+      "go": "excluded",
+      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+    },
+    {
+      "operationId": "putContentSettings",
+      "method": "PUT",
+      "path": "/v1/content/settings",
+      "ts": "excluded",
+      "py": "excluded",
+      "go": "excluded",
+      "note": "RFC 0099 trigger-ingestion / RFC 0103 localized-content operator + public-delivery surface, vendored into the SDK OpenAPI by the schema re-sync. No typed SDK helper yet — consumers compose against the SDK raw-HTTP request method; a first-class helper is a tracked follow-on (this is a pending gap, not a permanent omission)."
+    },
+    {
+      "operationId": "getA2ATaskState",
+      "method": "GET",
+      "path": "/v1/host/sample/a2a/tasks/{taskId}",
+      "ts": "excluded",
+      "py": "excluded",
+      "go": "excluded",
+      "note": "Host-sample conformance seam (/v1/host/sample/*), a server-side affordance the conformance suite drives — not a client surface, like the packs-test write mirrors. The reference SDKs intentionally omit it."
     }
   ]
 }
