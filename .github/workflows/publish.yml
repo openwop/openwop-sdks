@@ -76,7 +76,11 @@ jobs:
           node-version: '24'
           registry-url: 'https://registry.npmjs.org'
       - run: npm install -g npm@latest
-      - run: cd sdk/typescript && npm ci
+      # `npm install` (not `npm ci`): the lockfile's platform-gated optional deps
+      # (@emnapi/*) resolve differently on macOS dev vs the Linux runner, so a
+      # macOS-authored lockfile fails strict `npm ci` here. `npm install` tolerates
+      # it the way the `sdks:check` gate already does, keeping publish cross-platform.
+      - run: cd sdk/typescript && npm install --no-audit --no-fund
       - run: cd sdk/typescript && npm run build
       - name: Publish to npm (skip if already published)
         run: |
