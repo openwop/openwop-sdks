@@ -1,5 +1,9 @@
 # `openwopclient` Changelog
 
+## [1.3.1] — 2026-06-24 — resolvable module path (re-release of the 1.3.0 surface)
+
+_Identical SDK surface to the (unpublished) 1.3.0 tag — this is a layout-only re-release. The `go/v1.3.0` tag was **unresolvable**: the module directory was `sdk/go/` while the declared path `github.com/openwop/openwop-sdks/go` + the `go/v*` tag scheme require `go.mod` at repo-root `/go/`, so `go get …/openwop-sdks/go@v1.3.0` failed with `missing …/go/go.mod`. The directory was moved to `/go/` (the public import path is unchanged); `go/v1.3.0` remains a tombstone (Go module versions are immutable). The Go SDK is therefore one patch ahead of the TypeScript/Python 1.3.0 release; the next coordinated release re-aligns the family.
+
 ## [1.3.0] — 2026-06-24 — RFC 0093/0094/0101 type surface (gRPC + multi-party + output-chunk + run-status parity)
 
 _First release from the post-split `openwop-sdks` repo; the three SDK versions are re-aligned to `1.3.0` (TypeScript was `1.2.0`; Python + Go were `1.1.7` — the agent-platform surface content was already at parity, only the version numbers had drifted)._
