@@ -23,11 +23,20 @@ This matrix records per-protocol-surface feature parity across the three referen
 
 ## Headline
 
-The three SDKs are at **full operation-level parity across every OpenAPI
-operation, except the four intentionally-excluded `packs-test` write-mirror
-operations** (a server-side conformance affordance, not a client surface — the
-reference SDKs cover registry *reads* only). Of the 48 OpenAPI operations, 44
-have a first-class typed helper in TypeScript, Python, and Go; 4 are excluded.
+The three SDKs have a first-class typed helper for **44 of the 56 OpenAPI
+operations** in TypeScript, Python, and Go. The 12 excluded ops split into two
+honest categories:
+
+- **4 `packs-test` write-mirror ops** — a server-side conformance affordance,
+  not a client surface (the reference SDKs cover registry *reads* only).
+- **8 RFC 0099 / 0100 / 0103 surfaces** (trigger-subscription registration, the
+  localized-content operator + public-delivery API, and the A2A host-sample
+  task-state seam) **vendored into the SDK OpenAPI by the schema re-sync**. The
+  A2A op is a `/v1/host/sample/*` conformance seam (intentionally omitted like
+  the `packs-test` mirrors); the trigger + content ops are a **pending helper
+  gap** — reachable today via the SDK's raw-HTTP request method, with a typed
+  helper tracked as a follow-on, not a permanent omission.
+
 This is enforced by `scripts/check-sdk-parity.mjs` against
 `sdk/parity-expectations.json`.
 
@@ -35,9 +44,9 @@ Per-operation parity counts (from `sdk/parity-expectations.json`):
 
 | SDK | ✅ typed | excluded | ❌ undeclared gap |
 |---|---:|---:|---:|
-| TypeScript (`@openwop/openwop`) | 44 | 4 | 0 |
-| Python (`openwop-client`) | 44 | 4 | 0 |
-| Go (`github.com/openwop/openwop-sdks/go`) | 44 | 4 | 0 |
+| TypeScript (`@openwop/openwop`) | 44 | 12 | 0 |
+| Python (`openwop-client`) | 44 | 12 | 0 |
+| Go (`github.com/openwop/openwop-sdks/go`) | 44 | 12 | 0 |
 
 **2026-06-02 full port.** A parity audit found `sdk/PARITY.md`'s prior
 "34/34/34 as of 2026-05-15" headline was stale: the agent-platform surfaces
