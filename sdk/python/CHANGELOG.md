@@ -1,5 +1,9 @@
 # `openwop-client` Changelog
 
+## [1.4.1] — 2026-06-24 — AI-envelope surface parity (Python + Go)
+
+- **AI-envelope surface parity.** Adds the full `ai-envelope.md` client surface that was previously TypeScript-only: `AIEnvelope`, `EnvelopeMeta`, `PartialInfo`, `EnvelopeContract`, `EnvelopeContractRefusal`, `ValidationDetail`, `EnvelopeOutcome` (status-tagged), `EnvelopeContractsCapability`, `EnvelopeStrictness`, and the per-kind payloads (`ClarificationRequestPayload`/`Question`, `SchemaRequestPayload`, `SchemaResponsePayload`, `AIEnvelopeErrorPayload`, `A2UISurfacePayload` — RFC 0102). Frozen dataclasses, re-exported from the package root; `AIEnvelope.payload` is `Any` (narrow per `type`). Closes the `PARITY.md` §"Known cross-SDK asymmetry". Additive.
+
 ## [1.4.0] — 2026-06-24 — RFC 0099–0110 client-surface catch-up (capabilities, voice/presence events, A2UI, content+trigger REST, approver routing)
 
 _Re-aligns the three SDKs to a common `1.4.0` (TypeScript + Python were `1.3.0`; Go was `1.3.1` after its resolvable-path re-cut). Lands the RFC 0099–0110 client surface the corpus shipped in conformance `1.25.0 → 1.37.0`._
