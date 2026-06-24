@@ -33,8 +33,10 @@ from .types import (
     Capabilities,
     CapabilitiesA2A,
     CapabilitiesAIProviders,
+    CapabilitiesApproverRouting,
     CapabilitiesChannelPresence,
     CapabilitiesConversationTurnModelProvenance,
+    CapabilitiesInterrupt,
     CapabilitiesGrpc,
     CapabilitiesLimits,
     CapabilitiesMultiPartyConversation,
@@ -255,6 +257,21 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         if isinstance(raw_cp, dict)
         else None
     )
+    raw_int = d.get("interrupt")
+    if isinstance(raw_int, dict):
+        raw_ar = raw_int.get("approverRouting")
+        approver_routing = (
+            CapabilitiesApproverRouting(
+                supported=bool(raw_ar.get("supported", False)),
+                refKinds=raw_ar.get("refKinds"),
+                audience=raw_ar.get("audience"),
+            )
+            if isinstance(raw_ar, dict)
+            else None
+        )
+        interrupt = CapabilitiesInterrupt(approverRouting=approver_routing)
+    else:
+        interrupt = None
     return Capabilities(
         protocolVersion=str(d["protocolVersion"]),
         supportedEnvelopes=list(d.get("supportedEnvelopes", [])),
@@ -274,6 +291,7 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         a2a=a2a,
         conversationTurnModelProvenance=conversation_turn_model_provenance,
         channelPresence=channel_presence,
+        interrupt=interrupt,
     )
 
 

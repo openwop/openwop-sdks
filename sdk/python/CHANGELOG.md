@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **RFC 0104 — portable HITL approver-routing capability.** `Capabilities` gains `interrupt` (`CapabilitiesInterrupt` → `CapabilitiesApproverRouting` `{supported, refKinds?, audience?}`), parsed by `discovery_capabilities()` and re-exported. The advisory `approverGroupRefs`/`approverRoleRefs`/`audience` fields ride the SDK's opaque interrupt payload (interrupts stay untyped by convention) — no `ApprovalData` dataclass. Read-only + additive.
+
 - **RFC 0099 + 0103 — typed REST helpers (content + trigger subscriptions).** New methods `content_list_pages()` / `content_get_page(slug, accept_language=...)` / `content_create_page(page)` / `content_put_section(page_id, section_id, body)` / `content_get_settings()` / `content_put_settings(settings)` (RFC 0103; reads return `None` on 404/501) and `create_trigger_subscription(registration)` (RFC 0099). New frozen dataclasses `LocalizedContent{Page,Section,PageResponse,LanguageSettings}` + `PutContentSectionRequest` + `TriggerSubscriptionRegistration`/`CreateTriggerSubscriptionResponse`, re-exported from the package root; host-defined `data`/`localizations`/`seo`/`source`/`binding` kept open (`dict[str, Any]`) per the schemas. Flips 7 ops `excluded` → `typed` (51/56).
 
 - **RFC 0106/0110 — typed event helpers.** Adds the seven `voice.*` payload `TypedDict`s + `is_voice_*` predicates + `voice_*_payload` extractors, and `is_channel_presence` / `channel_presence_payload` (RFC 0110), joining the event-helper family in `openwop_client.events` (re-exported from the package root). `voice.transcript` requires `contentTrust="untrusted"` (`voice-transcript-untrusted`); numeric checks exclude `bool` (an `int` subclass). `channel.presence` is ephemeral — LIVE stream only, absent on replay/`:fork`.

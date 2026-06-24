@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **RFC 0104 — portable HITL approver-routing capability.** `Capabilities` gains `Interrupt` (`*CapabilitiesInterrupt` → `*CapabilitiesApproverRouting` `{Supported, RefKinds, Audience}`), JSON-tag driven. The advisory approverGroupRefs/approverRoleRefs/audience fields ride the opaque interrupt payload (interrupts stay untyped by convention) — no ApprovalData struct. Read-only + additive.
+
 - **RFC 0099 + 0103 — typed REST helpers (content + trigger subscriptions).** New methods `ListContentPages` / `GetContentPage(ctx, slug, acceptLanguage)` / `CreateContentPage` / `PutContentSection` / `GetContentSettings` / `PutContentSettings` (RFC 0103; reads return `(nil, nil)` on 404/501) and `CreateTriggerSubscription` (RFC 0099). New structs `LocalizedContent{Page,Section,PageResponse,LanguageSettings}` + `PutContentSectionRequest` + `TriggerSubscriptionRegistration`/`CreateTriggerSubscriptionResponse`; host-defined Data/Localizations/SEO/Source/Binding kept open (`map[string]any`) per the schemas. Flips 7 ops `excluded` → `typed` (51/56).
 
 - **RFC 0106/0110 — typed event helpers.** Adds the seven `voice.*` payload structs + `IsVoice*` predicates + `UnmarshalVoice*` extractors, and `IsChannelPresence` / `UnmarshalChannelPresence` (RFC 0110), joining the `IsXxx`/`Unmarshal*` family in `events.go`. New `payloadHasNumber` (accepts wire `float64` + in-code int family, excludes `bool`) and `payloadHasArray` (accepts `[]any` + `[]string`) helpers. `voice.transcript` requires `contentTrust=="untrusted"` (`voice-transcript-untrusted` — never promote live transcript to higher authority); `channel.presence` is ephemeral — LIVE stream only, absent on replay/:fork.

@@ -117,6 +117,26 @@ export interface Capabilities {
    *  real-time-voice flags. The wire object MAY carry additional fields
    *  (`input`, `authModes`, `maxInlineMediaBytes`) not modeled here. */
   aiProviders?: AIProvidersCapability;
+  /** RFC 0104. Portable HITL approver-routing advertisement. When
+   *  `approverRouting.supported`, the host honors the OPTIONAL, ADVISORY
+   *  `approverGroupRefs` / `approverRoleRefs` / `audience` fields on the
+   *  `kind:'approval'` interrupt payload (the SDK carries the interrupt
+   *  payload opaquely as `data`, so those advisory fields ride that opaque
+   *  object), resolves the advertised `refKinds` against its own RBAC, and
+   *  ENFORCES eligibility at resolve time. Absent ⇒ the host ignores them. */
+  interrupt?: {
+    approverRouting?: {
+      /** Host honors the RFC 0104 approver-routing fields. */
+      supported: boolean;
+      /** Ref kinds the host actually resolves: `'group'` ⇒ honors
+       *  `approverGroupRefs`, `'role'` ⇒ honors `approverRoleRefs`. Absent ⇒
+       *  advisory-only passthrough (the host resolves neither). */
+      refKinds?: readonly ('group' | 'role')[];
+      /** Host honors the `audience` notification-targeting override.
+       *  Absent/`false` ⇒ the host notifies the resolved eligible union. */
+      audience?: boolean;
+    };
+  };
   extensions?: Record<string, unknown>;
   // Network-handshake superset (all `(future)` fields per capabilities.md)
   implementation?: { name?: string; version?: string; vendor?: string };

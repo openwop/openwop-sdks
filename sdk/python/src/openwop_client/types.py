@@ -172,6 +172,33 @@ class CapabilitiesChannelPresence:
     supported: bool
 
 
+@dataclass(frozen=True)
+class CapabilitiesApproverRouting:
+    """RFC 0104 portable HITL approver-routing advertisement. When
+    ``supported``, the host honors the OPTIONAL advisory ``approverGroupRefs`` /
+    ``approverRoleRefs`` / ``audience`` fields on the ``kind:'approval'``
+    interrupt payload (the SDK carries the interrupt payload opaquely, so those
+    advisory fields ride that opaque object), resolves the advertised
+    ``refKinds`` against its own RBAC, and enforces eligibility at resolve time.
+    """
+
+    supported: bool
+    # Ref kinds the host resolves: "group" ⇒ approverGroupRefs,
+    # "role" ⇒ approverRoleRefs. None ⇒ advisory-only passthrough.
+    refKinds: list[Literal["group", "role"]] | None = None
+    # Host honors the `audience` notification-targeting override; None/False ⇒
+    # notifies the resolved eligible union.
+    audience: bool | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesInterrupt:
+    """RFC 0104 interrupt capability block. Absent from :class:`Capabilities` ⇒
+    the host advertises no interrupt-level options."""
+
+    approverRouting: CapabilitiesApproverRouting | None = None
+
+
 # The `kind` discriminator on a `cap.breached` payload
 # (run-event-payloads.schema.json#capBreached): four engine kinds + RFC 0008 §K
 # wasm-* runtime caps + RFC 0058 run-scoped bounds.
@@ -217,6 +244,8 @@ class Capabilities:
     ) = None
     # RFC 0110 channel-presence advertisement.
     channelPresence: CapabilitiesChannelPresence | None = None
+    # RFC 0104 interrupt capability block (approver routing).
+    interrupt: CapabilitiesInterrupt | None = None
 
 
 # ── RunSnapshot ─────────────────────────────────────────────────────────

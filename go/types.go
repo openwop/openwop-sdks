@@ -162,6 +162,29 @@ type CapabilitiesChannelPresence struct {
 	Supported bool `json:"supported"`
 }
 
+// CapabilitiesApproverRouting is the RFC 0104 portable HITL approver-routing
+// advertisement. When Supported, the host honors the OPTIONAL advisory
+// approverGroupRefs / approverRoleRefs / audience fields on the kind:"approval"
+// interrupt payload (the SDK carries the interrupt payload opaquely, so those
+// advisory fields ride that opaque object), resolves the advertised RefKinds
+// against its own RBAC, and enforces eligibility at resolve time.
+type CapabilitiesApproverRouting struct {
+	// Supported toggles — true when the host honors the approver-routing fields.
+	Supported bool `json:"supported"`
+	// RefKinds the host resolves: "group" ⇒ approverGroupRefs,
+	// "role" ⇒ approverRoleRefs. nil ⇒ advisory-only passthrough.
+	RefKinds []string `json:"refKinds,omitempty"`
+	// Audience — host honors the audience notification-targeting override;
+	// nil/false ⇒ notifies the resolved eligible union.
+	Audience *bool `json:"audience,omitempty"`
+}
+
+// CapabilitiesInterrupt is the RFC 0104 interrupt capability block. nil ⇒ the
+// host advertises no interrupt-level options.
+type CapabilitiesInterrupt struct {
+	ApproverRouting *CapabilitiesApproverRouting `json:"approverRouting,omitempty"`
+}
+
 // CapBreachedKind is the `kind` discriminator on a cap.breached event payload
 // (run-event-payloads.schema.json#capBreached): the four engine kinds, the
 // RFC 0008 §K wasm-* runtime caps, and the RFC 0058 run-scoped bounds.
@@ -209,6 +232,9 @@ type Capabilities struct {
 	ConversationTurnModelProvenance *CapabilitiesConversationTurnModelProvenance `json:"conversationTurnModelProvenance,omitempty"`
 	// ChannelPresence is the RFC 0110 advertisement; nil ⇒ no presence.
 	ChannelPresence *CapabilitiesChannelPresence `json:"channelPresence,omitempty"`
+	// Interrupt is the RFC 0104 interrupt capability block (approver routing);
+	// nil ⇒ no interrupt-level options advertised.
+	Interrupt *CapabilitiesInterrupt `json:"interrupt,omitempty"`
 }
 
 // RunSnapshotError mirrors `RunSnapshot.error`.
