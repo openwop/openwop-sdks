@@ -1220,3 +1220,125 @@ type CreateTriggerSubscriptionResponse struct {
 	Subscription map[string]any `json:"subscription"`
 	Binding      map[string]any `json:"binding"`
 }
+
+// ── AI Envelope surface (spec/v1/ai-envelope.md) ──────────────────────────
+// Inbound LLM-emission envelope + per-kind payloads. Mirrors the TypeScript
+// SDK's envelope surface (previously TS-only; see sdk/PARITY.md). Distinct from
+// RunEventDoc (outbound event log) and ErrorEnvelope (host HTTP error response).
+
+// EnvelopeMeta is the wire metadata on every AI Envelope.
+type EnvelopeMeta struct {
+	// Source: "ai-generation" | "user" | "system".
+	Source string `json:"source"`
+	// Ts is an ISO 8601 UTC timestamp.
+	Ts string `json:"ts"`
+	// ContentTrust mirrors RunEventDoc.contentTrust ("trusted"|"untrusted");
+	// hosts MUST set "untrusted" for MCP/A2A origin.
+	ContentTrust string `json:"contentTrust,omitempty"`
+	Traceparent  string `json:"traceparent,omitempty"`
+	Label        string `json:"label,omitempty"`
+}
+
+// PartialInfo is present when an envelope is one fragment of a streamed emission.
+type PartialInfo struct {
+	IsPartial bool `json:"isPartial"`
+	Index     int  `json:"index"`
+	// Total is -1 when unknown (streaming without precount).
+	Total int `json:"total"`
+}
+
+// AIEnvelope is the canonical inbound LLM-emission wire shape. The payload
+// shape is selected by Type; it is kept as `any` here (consumers narrow per
+// kind, unmarshaling into the payload structs below).
+type AIEnvelope struct {
+	Type          string       `json:"type"`
+	EnvelopeID    string       `json:"envelopeId"`
+	CorrelationID string       `json:"correlationId"`
+	Payload       any          `json:"payload"`
+	Meta          EnvelopeMeta `json:"meta"`
+	SchemaVersion *int         `json:"schemaVersion,omitempty"`
+	NodeID        string       `json:"nodeId,omitempty"`
+	Partial       *PartialInfo `json:"partial,omitempty"`
+}
+
+// EnvelopeContract is the per-typeId envelope-kind permission set.
+type EnvelopeContract struct {
+	Accepts []string `json:"accepts"`
+	// RefusalMode: "fail-node" | "discard-and-warn".
+	RefusalMode string `json:"refusalMode"`
+}
+
+// EnvelopeContractRefusal describes a refused envelope kind.
+type EnvelopeContractRefusal struct {
+	RefusedType   string   `json:"refusedType"`
+	AcceptedTypes []string `json:"acceptedTypes"`
+	RefusalMode   string   `json:"refusalMode"`
+}
+
+// ValidationDetail is one schema-validation failure.
+type ValidationDetail struct {
+	Path    string `json:"path"`
+	Message string `json:"message"`
+}
+
+// EnvelopeOutcome is the result of the engine's acceptEnvelope path. Status
+// ("accepted"|"gated"|"invalid"|"breached") discriminates which optional
+// fields are set (Go has no sum types; this mirrors the TS discriminated union).
+type EnvelopeOutcome struct {
+	Status           string                   `json:"status"`
+	RecordedEventIDs []string                 `json:"recordedEventIds,omitempty"` // accepted
+	Reason           string                   `json:"reason,omitempty"`           // gated/invalid/breached
+	Gate             *EnvelopeContractRefusal `json:"gate,omitempty"`             // gated
+	Details          []ValidationDetail       `json:"details,omitempty"`          // invalid
+	CapKind          string                   `json:"capKind,omitempty"`          // breached
+}
+
+// EnvelopeContractsCapability is the optional capability advertisement.
+type EnvelopeContractsCapability struct {
+	Advertised bool `json:"advertised"`
+}
+
+// ClarificationRequestQuestion is one question in a clarification.request payload.
+type ClarificationRequestQuestion struct {
+	ID       string         `json:"id"`
+	Question string         `json:"question"`
+	Schema   map[string]any `json:"schema,omitempty"`
+}
+
+// ClarificationRequestPayload is the universal clarification.request kind payload.
+type ClarificationRequestPayload struct {
+	Questions   []ClarificationRequestQuestion `json:"questions"`
+	ContextType string                         `json:"contextType,omitempty"`
+}
+
+// SchemaRequestPayload is the universal schema.request kind payload.
+type SchemaRequestPayload struct {
+	EnvelopeType string `json:"envelopeType"`
+	Reason       string `json:"reason,omitempty"`
+}
+
+// SchemaResponsePayload is the universal schema.response kind payload (LLM ack).
+type SchemaResponsePayload struct {
+	EnvelopeType string `json:"envelopeType"`
+	// Ack is always true.
+	Ack bool `json:"ack"`
+}
+
+// AIEnvelopeErrorPayload is the universal error kind payload (the LLM's
+// deliberate error report). Distinct from ErrorEnvelope (host HTTP error).
+type AIEnvelopeErrorPayload struct {
+	Code    string         `json:"code"`
+	Message string         `json:"message"`
+	Details map[string]any `json:"details,omitempty"`
+}
+
+// A2UISurfacePayload is the core ui.a2ui-surface envelope kind payload (RFC
+// 0102). CatalogVersion is a host-enumerated growing set (currently "0.9.1";
+// a consumer MUST refuse an unknown/higher version) — typed string for
+// forward-compat. Surface is the closed component tree, kept structural
+// (rendered by a dedicated A2UI renderer the SDK does not ship).
+type A2UISurfacePayload struct {
+	CatalogVersion string         `json:"catalogVersion"`
+	Surface        map[string]any `json:"surface"`
+	Reasoning      string         `json:"reasoning,omitempty"`
+}

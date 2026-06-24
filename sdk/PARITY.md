@@ -160,11 +160,11 @@ These landed during Track 1 / T1.1 / T1.2 / T1.4 / T1.7 work. Audit-log verifica
 | Feedback: `POST /v1/runs/{id}/annotations` create (RFC 0056, 2026-05-25) | ✅ `client.runs.createAnnotation(id, body, opts?)` | ✅ `client.create_annotation(id, body, idempotency_key=...)` | ✅ `client.CreateAnnotation(ctx, id, body, opts)` |
 | Feedback: `GET /v1/runs/{id}/annotations` list (RFC 0056, 2026-05-25) | ✅ `client.runs.listAnnotations(id)` (→ `null` when uncapable) | ✅ `client.list_annotations(id)` (→ `None` when uncapable) | ✅ `client.ListAnnotations(ctx, id)` (→ `nil` when uncapable) |
 
-### Known cross-SDK asymmetry — AI-envelope surface (TypeScript-only)
+### AI-envelope surface — at full parity (resolved 2026-06-24, SDK 1.4.1)
 
-The inbound AI-envelope surface from `ai-envelope.md` (`AIEnvelope<TPayload>`, `EnvelopeMeta`, `EnvelopeContract`, and the per-kind payload types — the universal `clarification.request` / `schema.request` / `schema.response` / `error` kinds, plus **`A2UISurfacePayload`** for the RFC 0102 `ui.a2ui-surface` core kind) is modeled **only in the TypeScript SDK**. The Python and Go SDKs model only the unrelated HTTP `ErrorEnvelope`, not the AI-envelope surface.
+The inbound AI-envelope surface from `ai-envelope.md` (`AIEnvelope`, `EnvelopeMeta`, `PartialInfo`, `EnvelopeContract`, `EnvelopeContractRefusal`, `ValidationDetail`, `EnvelopeOutcome`, `EnvelopeContractsCapability`, `EnvelopeStrictness`, and the per-kind payload types — the universal `clarification.request` / `schema.request` / `schema.response` / `error` kinds, plus **`A2UISurfacePayload`** for the RFC 0102 `ui.a2ui-surface` core kind) is now modeled in **all three SDKs**. This closed the prior TypeScript-only gap (the AI-envelope types predated the 2026-06 split; Python + Go landed them in 1.4.1).
 
-This is a **pre-existing** gap (the AI-envelope types predate the 2026-06 split) — not introduced by RFC 0102. RFC 0102's `A2UISurfacePayload` therefore lands on the TS envelope surface only. Bringing the full AI-envelope surface to Python + Go is a **tracked follow-on**, scoped separately from the RFC 0102 client-surface work, because it requires modeling the entire `ai-envelope.md` type family (not one payload) in two languages.
+Two language adaptations: TypeScript's generic `AIEnvelope<TPayload>` is `payload: Any` in Python / `Payload any` in Go (the consumer narrows by `type`); TypeScript's `EnvelopeOutcome` discriminated union is a status-tagged dataclass/struct in Python/Go (neither has native sum types). These are *type-surface* parity, not OpenAPI operations, so they sit outside the operation-parity count above.
 
 ---
 

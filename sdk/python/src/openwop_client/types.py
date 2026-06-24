@@ -1250,3 +1250,145 @@ class CreateTriggerSubscriptionResponse:
 
     subscription: dict[str, Any]
     binding: dict[str, Any]
+
+
+# ── AI Envelope surface (spec/v1/ai-envelope.md) ──────────────────────────
+# Inbound LLM-emission envelope + per-kind payloads. Mirrors the TypeScript
+# SDK's envelope surface (previously TS-only; see sdk/PARITY.md). Distinct from
+# RunEventDoc (outbound event log) and ErrorEnvelope (host HTTP error response).
+
+EnvelopeStrictness = Literal["warn", "strict"]
+
+
+@dataclass(frozen=True)
+class EnvelopeMeta:
+    """Wire metadata on every AI Envelope (`ai-envelope.md`)."""
+
+    source: Literal["ai-generation", "user", "system"]
+    ts: str  # ISO 8601 UTC
+    # Mirrors RunEventDoc.contentTrust; hosts MUST set "untrusted" for MCP/A2A origin.
+    contentTrust: Literal["trusted", "untrusted"] | None = None
+    traceparent: str | None = None
+    label: str | None = None
+
+
+@dataclass(frozen=True)
+class PartialInfo:
+    """Present when an envelope is one fragment of a streamed emission."""
+
+    isPartial: bool
+    index: int
+    total: int  # -1 when unknown (streaming without precount)
+
+
+@dataclass(frozen=True)
+class AIEnvelope:
+    """Canonical inbound LLM-emission wire shape (`ai-envelope.md`). The payload
+    shape is selected by ``type``; it is kept as ``Any`` here (the consumer
+    narrows per kind, using the payload TypedDicts/dataclasses below)."""
+
+    type: str
+    envelopeId: str
+    correlationId: str
+    payload: Any
+    meta: EnvelopeMeta
+    schemaVersion: int | None = None
+    nodeId: str | None = None
+    partial: PartialInfo | None = None
+
+
+@dataclass(frozen=True)
+class EnvelopeContract:
+    """Per-typeId envelope-kind permission set (`ai-envelope.md` §"Envelope Contract")."""
+
+    accepts: list[str]
+    refusalMode: Literal["fail-node", "discard-and-warn"]
+
+
+@dataclass(frozen=True)
+class EnvelopeContractRefusal:
+    refusedType: str
+    acceptedTypes: list[str]
+    refusalMode: Literal["fail-node", "discard-and-warn"]
+
+
+@dataclass(frozen=True)
+class ValidationDetail:
+    path: str
+    message: str
+
+
+@dataclass(frozen=True)
+class EnvelopeOutcome:
+    """Result of the engine's ``acceptEnvelope`` path. ``status`` discriminates
+    which optional fields are set (mirrors the TS discriminated union)."""
+
+    status: Literal["accepted", "gated", "invalid", "breached"]
+    recordedEventIds: list[str] | None = None  # status == "accepted"
+    reason: str | None = None  # gated / invalid / breached
+    gate: EnvelopeContractRefusal | None = None  # status == "gated"
+    details: list[ValidationDetail] | None = None  # status == "invalid"
+    capKind: Literal["envelopes", "schema", "clarification"] | None = None  # breached
+
+
+@dataclass(frozen=True)
+class EnvelopeContractsCapability:
+    """Optional capability advertisement (`ai-envelope.md`)."""
+
+    advertised: bool
+
+
+@dataclass(frozen=True)
+class ClarificationRequestQuestion:
+    id: str
+    question: str
+    schema: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class ClarificationRequestPayload:
+    """Payload of the universal ``clarification.request`` envelope kind."""
+
+    questions: list[ClarificationRequestQuestion]
+    contextType: str | None = None
+
+
+@dataclass(frozen=True)
+class SchemaRequestPayload:
+    """Payload of the universal ``schema.request`` envelope kind."""
+
+    envelopeType: str
+    reason: str | None = None
+
+
+@dataclass(frozen=True)
+class SchemaResponsePayload:
+    """Payload of the universal ``schema.response`` envelope kind (LLM ack)."""
+
+    envelopeType: str
+    ack: Literal[True] = True
+
+
+@dataclass(frozen=True)
+class AIEnvelopeErrorPayload:
+    """Payload of the universal ``error`` envelope kind (the LLM's deliberate
+    error report). Distinct from :class:`ErrorEnvelope` (host HTTP error)."""
+
+    code: str
+    message: str
+    details: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class A2UISurfacePayload:
+    """Payload of the core ``ui.a2ui-surface`` envelope kind (RFC 0102). A
+    declarative interactive UI a consumer renders with native widgets, routing
+    user actions back WITHOUT executing agent-supplied code. ``catalogVersion``
+    is a host-enumerated, growing set (currently "0.9.1"; a consumer MUST refuse
+    an unknown/higher version with ``unknown_schema_version``) — typed ``str``
+    for forward-compat. ``surface`` is the closed component tree, kept
+    structural (rendered by a dedicated A2UI renderer the SDK does not ship)."""
+
+    catalogVersion: str
+    surface: dict[str, Any]
+    reasoning: str | None = None
