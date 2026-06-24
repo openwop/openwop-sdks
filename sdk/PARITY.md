@@ -3,7 +3,7 @@
 > **Status:** Living document. Last reviewed 2026-06-02 against:
 > - `@openwop/openwop` TypeScript SDK (5 files under `sdk/typescript/src/`)
 > - `openwop-client` Python SDK (5 files under `sdk/python/src/openwop_client/`)
-> - `github.com/openwop/openwop-sdks/go` Go SDK (`sdk/go/`)
+> - `github.com/openwop/openwop-sdks/go` Go SDK (`go/`)
 >
 > **Now machine-enforced.** `sdk/parity-expectations.json` declares a per-SDK
 > status for every OpenAPI operation, and `scripts/check-sdk-parity.mjs`
@@ -214,6 +214,6 @@ The release-note section of each SDK's `CHANGELOG.md` SHOULD cite this matrix wh
 
 ## See also
 
-- `sdk/typescript/README.md`, `sdk/python/README.md`, `sdk/go/README.md` — per-SDK usage docs (each links back here).
+- `sdk/typescript/README.md`, `sdk/python/README.md`, `go/README.md` — per-SDK usage docs (each links back here).
 - `conformance/coverage.md` — protocol-surface coverage by the black-box conformance suite (orthogonal axis: black-box behavior, not SDK ergonomics).
 - `INTEROP-MATRIX.md` — host-side conformance evidence (also orthogonal — hosts vs SDKs).

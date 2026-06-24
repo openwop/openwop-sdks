@@ -1,7 +1,7 @@
 // Package openwopclient implements a Go client for OpenWOP-compliant servers.
 //
 // Types mirror the OpenAPI 3.1 spec (../../api/openapi.yaml) and JSON
-// Schemas (../../schemas/). Hand-authored — see README.md §rationale.
+// Schemas (../schemas/). Hand-authored — see README.md §rationale.
 package openwopclient
 
 import "encoding/json"
