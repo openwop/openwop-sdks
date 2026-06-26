@@ -720,6 +720,22 @@ export interface MemoryListOptions {
   limit?: number;
   /** Filter to entries carrying this tag. */
   tag?: string;
+  /**
+   * RFC 0113. Max cumulative tokens across returned entries, denominated in
+   * `capabilities.memory.injectionBudget.tokenCounter`. The adapter returns a
+   * prefix of the ranked list whose cumulative tokens do not exceed this; a
+   * single over-budget entry is omitted (not truncated). Requires the host to
+   * advertise `memory.injectionBudget.supported`.
+   */
+  tokenBudget?: number;
+  /**
+   * RFC 0113. Selection order. `recency` (default) is most-recent-first;
+   * `relevance` DELEGATES to `memory.search` semantic mode (RFC 0080) — it
+   * requires `query` and that the host advertise `memory.search` semantic.
+   */
+  rank?: 'recency' | 'relevance';
+  /** RFC 0113. Free-text relevance anchor; REQUIRED when `rank: 'relevance'`. */
+  query?: string;
 }
 
 /** Capability advertisement shape per capabilities.md §`memory`. */
@@ -1592,25 +1608,6 @@ export interface ToolDescriptor {
   safetyTier: 'pure' | 'read' | 'write' | 'exec';
   costHint?: string;
   latencyHint?: string;
-}
-
-/**
- * RFC 0112 — a compact, model-facing projection of `ToolDescriptor`, returned by
- * `GET /v1/tools?view=compact` (envelope `{ tools: CompactToolDescriptor[] }`) +
- * `GET /v1/tools/{toolId}?view=compact` when the host advertises
- * `capabilities.toolCatalog.compactView`. The heavy descriptor fields
- * (`outputSchema`/`auth`/`egress`/`approval`/`replayPolicy`/`costHint`/`latencyHint`)
- * are dropped, and any `inputSchema` is bounded to the compact structural subset
- * (top-level `type: "object"` with `properties`; no
- * `$ref`/`oneOf`/`allOf`/`anyOf`/`not`/`patternProperties`/`dependentSchemas`).
- */
-export interface CompactToolDescriptor {
-  toolId: string;
-  source: 'node-pack' | 'workflow' | 'mcp' | 'connector' | 'host-extension';
-  safetyTier: 'pure' | 'read' | 'write' | 'exec';
-  title?: string;
-  description?: string;
-  inputSchema?: Record<string, unknown>;
 }
 
 /**
