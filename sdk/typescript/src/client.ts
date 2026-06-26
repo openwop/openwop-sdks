@@ -64,6 +64,7 @@ import {
   type OrgChartResponsibilityView,
   type EvalSummary,
   type ToolDescriptor,
+  type CompactToolDescriptor,
   type AgentDeployment,
   type AgentDeploymentTransition,
   type CreateUserAgentRequest,
@@ -537,14 +538,39 @@ export class OpenwopClient {
     },
 
     /**
-     * RFC 0078 §B — return one `ToolDescriptor` by its stable `toolId`. Returns
-     * `null` on 404 (no such tool, or the capability is unadvertised).
+     * RFC 0112 — list the `CompactToolDescriptor`s via `GET /v1/tools?view=compact`
+     * when the host advertises `capabilities.toolCatalog.compactView`. Unwraps the
+     * `{ tools: CompactToolDescriptor[] }` envelope. Returns `null` when the host
+     * doesn't advertise the catalog (the endpoint 404s).
      */
-    get: async (toolId: string): Promise<ToolDescriptor | null> => {
+    listCompact: async (): Promise<readonly CompactToolDescriptor[] | null> => {
       try {
-        return await this.#request<ToolDescriptor>({
+        const res = await this.#request<{ tools?: readonly CompactToolDescriptor[] }>({
           method: 'GET',
-          path: `/v1/tools/${encodeURIComponent(toolId)}`,
+          path: '/v1/tools?view=compact',
+        });
+        return res.tools ?? [];
+      } catch (err) {
+        if (err instanceof WopError && err.status === 404) return null;
+        throw err;
+      }
+    },
+
+    /**
+     * RFC 0078 §B — return one `ToolDescriptor` by its stable `toolId`. Returns
+     * `null` on 404 (no such tool, or the capability is unadvertised). Pass
+     * `{ view: 'compact' }` (RFC 0112) to receive the `CompactToolDescriptor`
+     * projection instead.
+     */
+    get: async (
+      toolId: string,
+      opts: { readonly view?: 'standard' | 'compact' } = {},
+    ): Promise<ToolDescriptor | CompactToolDescriptor | null> => {
+      const query = opts.view === 'compact' ? '?view=compact' : '';
+      try {
+        return await this.#request<ToolDescriptor | CompactToolDescriptor>({
+          method: 'GET',
+          path: `/v1/tools/${encodeURIComponent(toolId)}${query}`,
         });
       } catch (err) {
         if (err instanceof WopError && err.status === 404) return null;
