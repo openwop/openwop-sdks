@@ -111,22 +111,6 @@ export interface Capabilities {
     /** Toggle — `true` when the host emits `channel.presence`. */
     supported: boolean;
   };
-  /** RFC 0115. Conditional-GET + Content-Encoding negotiation on run reads
-   *  (`GET /v1/runs/{runId}`). Absent ⇒ the host returns today's `200` +
-   *  identity body. Distinct from the file-egress `fileHandling.transport`
-   *  (ftp/sftp/ssh) sub-capability — this advertises HTTP-layer poll economy
-   *  on the run-read REST surface. */
-  restTransport?: {
-    /** Host emits a strong, event-log-sequence-derived `ETag` on
-     *  `GET /v1/runs/{runId}` and honors `If-None-Match` with a `304 Not
-     *  Modified` (empty body) when the validator matches the current state. */
-    conditionalRunGet?: boolean;
-    /** Content-Encoding values the host will negotiate on run reads. `gzip`
-     *  is the baseline; `br`/`zstd` are optional — the host advertises only
-     *  the subset it can serve. For each advertised value the decoded body is
-     *  byte-identical to the identity body. */
-    contentEncodings?: readonly ('gzip' | 'br' | 'zstd')[];
-  };
   /** Capability advertisement for the host AI-proxy (`aiProviders` in
    *  `capabilities.md`). Absent ⇒ the host advertises no AI-proxy surface.
    *  Carries BYOK policy plus the RFC 0105/0106/0108 self-hosted / speech /
@@ -1608,6 +1592,25 @@ export interface ToolDescriptor {
   safetyTier: 'pure' | 'read' | 'write' | 'exec';
   costHint?: string;
   latencyHint?: string;
+}
+
+/**
+ * RFC 0112 — a compact, model-facing projection of `ToolDescriptor`, returned by
+ * `GET /v1/tools?view=compact` (envelope `{ tools: CompactToolDescriptor[] }`) +
+ * `GET /v1/tools/{toolId}?view=compact` when the host advertises
+ * `capabilities.toolCatalog.compactView`. The heavy descriptor fields
+ * (`outputSchema`/`auth`/`egress`/`approval`/`replayPolicy`/`costHint`/`latencyHint`)
+ * are dropped, and any `inputSchema` is bounded to the compact structural subset
+ * (top-level `type: "object"` with `properties`; no
+ * `$ref`/`oneOf`/`allOf`/`anyOf`/`not`/`patternProperties`/`dependentSchemas`).
+ */
+export interface CompactToolDescriptor {
+  toolId: string;
+  source: 'node-pack' | 'workflow' | 'mcp' | 'connector' | 'host-extension';
+  safetyTier: 'pure' | 'read' | 'write' | 'exec';
+  title?: string;
+  description?: string;
+  inputSchema?: Record<string, unknown>;
 }
 
 /**
