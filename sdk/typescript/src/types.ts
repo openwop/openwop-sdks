@@ -720,22 +720,6 @@ export interface MemoryListOptions {
   limit?: number;
   /** Filter to entries carrying this tag. */
   tag?: string;
-  /**
-   * RFC 0113. Max cumulative tokens across returned entries, denominated in
-   * `capabilities.memory.injectionBudget.tokenCounter`. The adapter returns a
-   * prefix of the ranked list whose cumulative tokens do not exceed this; a
-   * single over-budget entry is omitted (not truncated). Requires the host to
-   * advertise `memory.injectionBudget.supported`.
-   */
-  tokenBudget?: number;
-  /**
-   * RFC 0113. Selection order. `recency` (default) is most-recent-first;
-   * `relevance` DELEGATES to `memory.search` semantic mode (RFC 0080) — it
-   * requires `query` and that the host advertise `memory.search` semantic.
-   */
-  rank?: 'recency' | 'relevance';
-  /** RFC 0113. Free-text relevance anchor; REQUIRED when `rank: 'relevance'`. */
-  query?: string;
 }
 
 /** Capability advertisement shape per capabilities.md §`memory`. */
@@ -990,6 +974,32 @@ export interface ChannelPresencePayload {
   present: readonly string[];
   /** Subset of `present` currently typing (boolean-by-presence; no free text). */
   typing?: readonly string[];
+  [key: string]: unknown;
+}
+
+/** `context.summarized` (RFC 0111). Emitted when the host replaces older
+ *  in-window orchestrator-loop transcript turns with a host-produced summary
+ *  to honor `multiAgent.executionModel.contextBudget.transcriptTokenBudget`.
+ *  CONTENT-FREE: the summary text never rides the wire — `summaryRef` is an
+ *  artifactId resolved via `GET /v1/runs/{runId}/artifacts/{artifactId}`. The
+ *  summary is nondeterministic host output governed like an RFC 0041 envelope:
+ *  on `:fork mode:replay` the host MUST reuse this recorded `summaryRef` and
+ *  MUST NOT re-summarize. `replacedTurns` lists the event ids the summary
+ *  stands in for, so a replay engine reconstructs the exact transcript. */
+export interface ContextSummarizedPayload {
+  /** The orchestrator-loop iteration whose transcript assembly triggered this. */
+  iteration: number;
+  /** Event ids the summary stands in for (a contiguous most-recent-replaced range). */
+  replacedTurns: readonly string[];
+  /** ArtifactId of the persisted summary (the summary text is NOT inlined). */
+  summaryRef: string;
+  /** Unit `tokensBefore`/`tokensAfter` are denominated in; equals the advertised
+   *  `contextBudget.tokenCounter`. */
+  tokenCounter: 'o200k_base' | 'cl100k_base' | 'chars' | 'host-defined';
+  /** Token count of the replaced range before summarization. */
+  tokensBefore: number;
+  /** Token count of the summary that replaced the range (expected ≤ tokensBefore). */
+  tokensAfter: number;
   [key: string]: unknown;
 }
 
