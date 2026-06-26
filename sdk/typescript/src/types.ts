@@ -622,6 +622,23 @@ export interface AIProvidersCapability {
      *  on overlapping speech; requires `transcription`. */
     bargeIn?: 'supported';
   };
+  /** RFC 0116. Provider-scoped advert that the host honors the AI-envelope
+   *  `generate` request's optional `cachePrefixId` (a tenant-namespaced,
+   *  secret-free label) as a routing hint into the routed provider's
+   *  server-side context cache. Absent ⇒ the host ignores `cachePrefixId`
+   *  (no error). The cache MUST be keyed by `(resolved tenant, cachePrefixId)`
+   *  (SECURITY invariant `prompt-prefix-cache-cross-tenant-isolation`) and a
+   *  hit/miss MUST NOT change the recorded envelope or
+   *  `provider.usage.inputTokens`/`outputTokens` (replay-invariant). NOT a
+   *  universal claim — `providers` scopes it per routed provider. */
+  promptPrefixCache?: {
+    /** Whether the host honors `cachePrefixId`. */
+    supported: boolean;
+    /** Subset of `supported` for which `cachePrefixId` is honored (prefix
+     *  caching is provider-specific, e.g. Anthropic ephemeral). A request
+     *  whose routed provider is not listed has `cachePrefixId` ignored. */
+    providers?: readonly string[];
+  };
 }
 
 /**
@@ -1163,50 +1180,6 @@ export interface A2UISurfacePayload {
   surface: Record<string, unknown>;
   /** OPTIONAL model reasoning (RFC 0030 §A), conventionally first. */
   reasoning?: string;
-}
-
-/**
- * RFC 0114 — a single RFC 6902 (JSON-Patch) operation inside an
- * {@link A2uiSurfaceDeltaFrame}. The `test` op is deliberately EXCLUDED (a
- * fire-and-forget transport frame cannot act on a failed conditional);
- * `move`/`copy` are permitted but OPTIONAL for a host to emit.
- */
-export interface A2uiSurfacePatchOp {
-  /** RFC 6902 operation. `test` is excluded by RFC 0114. */
-  op: 'add' | 'remove' | 'replace' | 'move' | 'copy';
-  /** RFC 6901 JSON-Pointer into the target surface. */
-  path: string;
-  /** RFC 6901 JSON-Pointer source for `move`/`copy`. */
-  from?: string;
-  /** The value for `add`/`replace`. Walked by the SR-1 redaction harness
-   *  exactly like a full-surface value. */
-  value?: unknown;
-}
-
-/**
- * RFC 0114 — a HOST-SIDE TRANSPORT frame carrying an RFC 6902 delta over a
- * recorded `ui.a2ui-surface` envelope ({@link A2UISurfacePayload}). Delivered
- * ONLY over the run event stream (`GET /v1/runs/{runId}/events`) to a subscriber
- * that negotiated `?a2uiDelta=1`; every other consumer (the event-log read,
- * replay, `:fork`, any non-negotiating subscriber) receives the materialized
- * FULL surface. This is NOT a recorded-envelope shape — the recorded
- * `ui.a2ui-surface` payload is unchanged and always full. The consumer applies
- * `patch` to the surface last delivered under `surfaceRef`, then re-validates
- * the result against the closed `catalogVersion` catalog before render; on any
- * apply/validation failure it falls back fail-closed and the host
- * re-materializes the full surface. Per
- * `schemas/a2ui-surface-delta-frame.schema.json`. A host advertises support via
- * the `a2uiSurface.deltaTransport` capability flag.
- */
-export interface A2uiSurfaceDeltaFrame {
-  /** The recorded `ui.a2ui-surface` envelope id this delta patches. */
-  surfaceRef: string;
-  /** MUST equal the referenced full surface's `catalogVersion`; a
-   *  catalog-version change MUST start from a fresh full surface. */
-  catalogVersion: string;
-  /** A non-empty RFC 6902 document applied over the surface last delivered
-   *  under `surfaceRef`. */
-  patch: A2uiSurfacePatchOp[];
 }
 
 // ── RFC 0027 + RFC 0028 — Prompt library (spec/v1/prompts.md) ──
