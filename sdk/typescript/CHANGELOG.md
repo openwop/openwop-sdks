@@ -1,5 +1,17 @@
 # `@openwop/openwop` Changelog
 
+## [1.5.0] — 2026-06-30 — RFC 0111–0116 token/transport-economy client surface
+
+_TypeScript-only. Lands the client surface for the corpus's RFC 0111–0116 cycle (spec `v1.2.0`, conformance `1.38.0 → 1.43.0`). Additive + read-only — every new field/type is optional and absent ⇒ today's behavior. Python + Go stay at `1.4.1` (no pending client surface for this cycle)._
+
+- **RFC 0112 — compact tool projection.** New `CompactToolDescriptor` type (the lossy `toolId`/`source`/`safetyTier` (+ optional `title`/`description`/`inputSchema`) projection of `ToolDescriptor`) + `client.tools.listCompact()` (`GET /v1/tools?view=compact`, `{ tools: CompactToolDescriptor[] }`, returns `null` when the host doesn't advertise `toolCatalog.compactView`) + a `view` param on `client.tools.get()`.
+- **RFC 0113 — memory injection budget.** `MemoryListOptions` gains the optional `tokenBudget` / `rank` (`'recency' | 'relevance'`) / `query` fields that token-bound the live injection read; `rank:'relevance'` delegates to the existing `memory.search` semantic mode (no new ranking primitive).
+- **RFC 0114 — A2UI surface deltas.** New `A2uiSurfaceDeltaFrame` + `A2uiSurfacePatchOp` types (the host-side RFC 6902 delta-frame transport over the unchanged recorded `ui.a2ui-surface` envelope; the `test` op is excluded by the RFC).
+- **RFC 0111 — context economy.** New `ContextSummarizedPayload` event type + `isContextSummarized` guard (the content-free `context.summarized` run-event; `summaryRef` is an artifactId, the summary text never rides the wire).
+- **RFC 0115 — run transport economy.** `Capabilities` gains the optional `restTransport` block (`conditionalRunGet` + `contentEncodings[]`) advertising the `ETag`/`If-None-Match`/`304` + `Content-Encoding` poll economy on `GET /v1/runs/{runId}`.
+- **RFC 0116 — portable prompt-prefix cache.** `Capabilities` gains the provider-scoped `aiProviders.promptPrefixCache` advertisement (the secret-free `cachePrefixId` cost hint is host-side; the SDK surface is the capability discovery type).
+- **Build fix — restore merge-clobbered types.** A merge cascade across the RFC 0111–0116 PRs had dropped the `CompactToolDescriptor` (RFC 0112) and `A2uiSurfaceDeltaFrame` / `A2uiSurfacePatchOp` (RFC 0114) definitions from `types.ts` while leaving them referenced from `client.ts` / `index.ts` — `main` did not compile. The definitions are restored verbatim from their authoring commits; `npm run build` and the `sdks:check` parity gate are green.
+
 ## [1.4.0] — 2026-06-24 — RFC 0099–0110 client-surface catch-up (capabilities, voice/presence events, A2UI, content+trigger REST, approver routing)
 
 _Re-aligns the three SDKs to a common `1.4.0` (TypeScript + Python were `1.3.0`; Go was `1.3.1` after its resolvable-path re-cut). Lands the RFC 0099–0110 client surface the corpus shipped in conformance `1.25.0 → 1.37.0`._
