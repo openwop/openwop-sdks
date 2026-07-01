@@ -49,6 +49,7 @@ import type {
   ChannelPresencePayload,
   DispatchFanOutPayload,
   DispatchJoinPayload,
+  ContextSummarizedPayload,
 } from './types.js';
 
 // ─── Type guards ────────────────────────────────────────────────────────
@@ -284,6 +285,20 @@ export function isDispatchJoin(
     ev.type === 'core.dispatch.join' &&
     hasStringField(ev.payload, 'joinOutcome') &&
     Array.isArray((ev.payload as Record<string, unknown>).mergeOrder)
+  );
+}
+
+/** `context.summarized` (RFC 0111). Emitted when the host summarizes evicted
+ *  orchestrator-loop transcript turns under a `contextBudget`. Narrows when
+ *  `type` matches AND payload carries the `summaryRef` string + a numeric
+ *  `iteration`. The summary text is never inlined (`summaryRef` is an artifactId). */
+export function isContextSummarized(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<ContextSummarizedPayload> {
+  return (
+    ev.type === 'context.summarized' &&
+    hasStringField(ev.payload, 'summaryRef') &&
+    hasNumberField(ev.payload, 'iteration')
   );
 }
 

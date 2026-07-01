@@ -78,6 +78,8 @@ export type {
   // RFC 0118 — core.dispatch.fanOut / core.dispatch.join run-event payloads
   DispatchFanOutPayload,
   DispatchJoinPayload,
+  // RFC 0111 — context.summarized run-event payload
+  ContextSummarizedPayload,
   // RFC 0027 + RFC 0028 — Prompt library (spec/v1/prompts.md)
   GetPromptRequest,
   ListPromptsRequest,
@@ -143,6 +145,7 @@ export {
   isChannelPresence,
   isDispatchFanOut,
   isDispatchJoin,
+  isContextSummarized,
   subscribeToAgentReasoning,
 } from './event-helpers.js';
 export type {

@@ -155,6 +155,37 @@ export interface Capabilities {
    *  A2UI `surface` and RFC 0071 pack manifests). Absent ⇒ the host loads no
    *  plugin packs (graceful degradation to RFC 0071 host rendering). Read-only. */
   uiPlugins?: UiPluginsCapability;
+  /** RFC 0113. Agent-memory capability descriptors. `injectionBudget` advertises
+   *  that the host honors `MemoryListOptions.tokenBudget` (a token-bounded
+   *  prefix of the ranked, SR-1-redacted, single-tenant entry list). Absent ⇒
+   *  a supplied `tokenBudget` is ignored (today's `limit`/`tag` behavior).
+   *  Read-only; the wire `memory` block MAY carry other descriptors not modeled
+   *  here (e.g. `search`). */
+  memory?: {
+    injectionBudget?: {
+      /** Host honors `MemoryListOptions.tokenBudget` (RFC 0113). */
+      supported: boolean;
+      /** Unit `tokenBudget` is denominated in. `chars` counts UTF-8/Unicode
+       *  characters of the entry `content` (tokenizer-free). */
+      tokenCounter?: 'o200k_base' | 'cl100k_base' | 'chars' | 'host-defined';
+    };
+  };
+  /** RFC 0115. Conditional-GET + Content-Encoding negotiation on run reads
+   *  (`GET /v1/runs/{runId}`). Absent ⇒ the host returns today's `200` +
+   *  identity body. Distinct from the file-egress `fileHandling.transport`
+   *  (ftp/sftp/ssh) sub-capability — this advertises HTTP-layer poll economy
+   *  on the run-read REST surface. Read-only. */
+  restTransport?: {
+    /** Host emits a strong, event-log-sequence-derived `ETag` on
+     *  `GET /v1/runs/{runId}` and honors `If-None-Match` with a `304 Not
+     *  Modified` (empty body) when the validator matches the current state. */
+    conditionalRunGet?: boolean;
+    /** Content-Encoding values the host will negotiate on run reads. `gzip`
+     *  is the baseline; `br`/`zstd` are optional — the host advertises only
+     *  the subset it can serve. For each advertised value the decoded body is
+     *  byte-identical to the identity body. */
+    contentEncodings?: readonly ('gzip' | 'br' | 'zstd')[];
+  };
   extensions?: Record<string, unknown>;
   // Network-handshake superset (all `(future)` fields per capabilities.md)
   implementation?: { name?: string; version?: string; vendor?: string };
@@ -755,6 +786,18 @@ export interface MemoryListOptions {
   limit?: number;
   /** Filter to entries carrying this tag. */
   tag?: string;
+  /** RFC 0113. Max cumulative tokens across returned entries, denominated in
+   *  `capabilities.memory.injectionBudget.tokenCounter`. The adapter returns a
+   *  prefix of the ranked list whose cumulative tokens do not exceed this; a
+   *  single over-budget entry is omitted (not truncated). Requires the host to
+   *  advertise `memory.injectionBudget.supported`. */
+  tokenBudget?: number;
+  /** RFC 0113. Selection order. `recency` (default) is most-recent-first;
+   *  `relevance` DELEGATES to `memory.search` semantic mode (RFC 0080) — it
+   *  requires `query` and that the host advertise `memory.search` semantic. */
+  rank?: 'recency' | 'relevance';
+  /** RFC 0113. Free-text relevance anchor; REQUIRED when `rank: 'relevance'`. */
+  query?: string;
 }
 
 /** Capability advertisement shape per capabilities.md §`memory`. */
@@ -1136,6 +1179,32 @@ export interface DispatchJoinPayload {
    *  the replay-deterministic tiebreak for colliding `outputMapping` keys.
    *  Recorded at terminal-fold time; never recomputed from child timestamps. */
   mergeOrder: readonly string[];
+  [key: string]: unknown;
+}
+
+/** `context.summarized` (RFC 0111). Emitted when the host replaces older
+ *  in-window orchestrator-loop transcript turns with a host-produced summary to
+ *  honor `multiAgent.executionModel.contextBudget.transcriptTokenBudget`.
+ *  CONTENT-FREE: the summary text never rides the wire — `summaryRef` is an
+ *  artifactId resolved via `GET /v1/runs/{runId}/artifacts/{artifactId}`. The
+ *  summary is nondeterministic host output governed like an RFC 0041 envelope:
+ *  on `:fork mode:replay` the host MUST reuse this recorded `summaryRef` and
+ *  MUST NOT re-summarize. `replacedTurns` lists the event ids the summary stands
+ *  in for, so a replay engine reconstructs the exact transcript. */
+export interface ContextSummarizedPayload {
+  /** The orchestrator-loop iteration whose transcript assembly triggered this. */
+  iteration: number;
+  /** Event ids the summary stands in for (a contiguous most-recent-replaced range). */
+  replacedTurns: readonly string[];
+  /** ArtifactId of the persisted summary (the summary text is NOT inlined). */
+  summaryRef: string;
+  /** Unit `tokensBefore`/`tokensAfter` are denominated in; equals the advertised
+   *  `contextBudget.tokenCounter`. */
+  tokenCounter: 'o200k_base' | 'cl100k_base' | 'chars' | 'host-defined';
+  /** Token count of the replaced range before summarization. */
+  tokensBefore: number;
+  /** Token count of the summary that replaced the range (expected ≤ tokensBefore). */
+  tokensAfter: number;
   [key: string]: unknown;
 }
 
