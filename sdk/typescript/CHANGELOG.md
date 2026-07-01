@@ -1,5 +1,13 @@
 # `@openwop/openwop` Changelog
 
+## [1.6.0] — 2026-06-30 — RFC 0117–0120 client surface (front-end plugins, parallel dispatch)
+
+_TypeScript-only. Completes the corpus RFC 0109–0120 (spec `v1.2.0`) client-surface catch-up. Additive + read-only. Python + Go stay at `1.4.1` (no pending client surface for this cycle)._
+
+- **RFC 0118 — parallel sub-workflow fan-out/join.** New `DispatchCapability` (top-level `Capabilities.dispatch`, `capabilities.md` §dispatch: `supported`/`fanOutSupported`/`fanOutPolicies`/`joinModes`/`onChildFailureModes`/`maxFanOut`) — distinct from and cross-referenced with the legacy boolean `AgentsCapability.dispatch`. New `DispatchFanOutPayload` (`core.dispatch.fanOut`) + `DispatchJoinPayload` (`core.dispatch.join`) event payload types (`mergeOrder` carried for replay determinism) + `isDispatchFanOut` / `isDispatchJoin` type guards. The authoring-side `DispatchConfig` (`fanOutPolicy`/`joinPolicy`/`maxConcurrency`) stays out of scope — a workflow-node-definition shape this read-only client SDK does not model.
+- **RFC 0117 + RFC 0119 — front-end plugin packs.** New `UiPluginsCapability` (`Capabilities.uiPlugins`, `capabilities.md` §uiPlugins: `supported`/`isolation`/`surfaces`/`hostApi`/`maxEntryBytes`). RFC 0119 folds into the `isolation` field, typed as the five named mechanisms plus an open `(string & {})` to admit the vendor `x-host-<host>-<key>` form without discarding autocomplete for the known set (a closed union would be dishonest for a genuinely vendor-extensible, read-only advertisement). Scope: the discovery block only — the `ui-plugin/1` host-RPC envelope + the `frontend-plugin` manifest are a renderer/registry concern the SDK does not model (as with the RFC 0102 A2UI `surface` and RFC 0071 pack manifests).
+- **RFC 0120 — connection-pack `apiHosts`: no client surface.** `provider.apiHosts` is confined to the Ed25519-signed `connection-pack-manifest.schema.json` (registry-side) and consumed by the host loader + the RFC 0045 binding-site egress validator; it appears in zero client REST endpoints and mints no new event, capability descriptor, or client-observable run-error code (it AND-composes with the existing RFC 0079 egress guard). The client SDK therefore models nothing for it — recorded here for traceability.
+
 ## [1.5.0] — 2026-06-30 — RFC 0111–0116 token/transport-economy client surface
 
 _TypeScript-only. Lands the client surface for the corpus's RFC 0111–0116 cycle (spec `v1.2.0`, conformance `1.38.0 → 1.43.0`). Additive + read-only — every new field/type is optional and absent ⇒ today's behavior. Python + Go stay at `1.4.1` (no pending client surface for this cycle)._

@@ -47,6 +47,8 @@ import type {
   VoiceBargeInPayload,
   VoiceCancelledPayload,
   ChannelPresencePayload,
+  DispatchFanOutPayload,
+  DispatchJoinPayload,
 } from './types.js';
 
 // ─── Type guards ────────────────────────────────────────────────────────
@@ -256,6 +258,32 @@ export function isChannelPresence(
     ev.type === 'channel.presence' &&
     hasStringField(ev.payload, 'conversationId') &&
     Array.isArray((ev.payload as Record<string, unknown>).present)
+  );
+}
+
+/** `core.dispatch.fanOut` (RFC 0118). Emitted only on the `fanOutPolicy:
+ *  'parallel'` path when the wave begins. Narrows when `type` matches AND
+ *  payload carries `fanOutPolicy: 'parallel'` + a numeric `childCount`. */
+export function isDispatchFanOut(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<DispatchFanOutPayload> {
+  return (
+    ev.type === 'core.dispatch.fanOut' &&
+    (ev.payload as Record<string, unknown>)?.fanOutPolicy === 'parallel' &&
+    hasNumberField(ev.payload, 'childCount')
+  );
+}
+
+/** `core.dispatch.join` (RFC 0118). Emitted when a parallel join is satisfied
+ *  or fails. Narrows when `type` matches AND payload carries a `joinOutcome`
+ *  string + the `mergeOrder` array (the replay-deterministic merge tiebreak). */
+export function isDispatchJoin(
+  ev: RunEventDoc,
+): ev is TypedRunEvent<DispatchJoinPayload> {
+  return (
+    ev.type === 'core.dispatch.join' &&
+    hasStringField(ev.payload, 'joinOutcome') &&
+    Array.isArray((ev.payload as Record<string, unknown>).mergeOrder)
   );
 }
 

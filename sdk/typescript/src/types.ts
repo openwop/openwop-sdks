@@ -137,6 +137,24 @@ export interface Capabilities {
       audience?: boolean;
     };
   };
+  /** RFC 0007 + RFC 0118. Top-level `core.dispatch` capability descriptors
+   *  (`capabilities.md` §`dispatch`). This is the discovery surface for
+   *  parallel sub-workflow fan-out/join. NOTE: distinct from the legacy
+   *  boolean {@link AgentsCapability.dispatch} — `dispatch.supported` here
+   *  carries the SAME "host implements the `core.dispatch` Core typeId"
+   *  meaning, exposed top-level per `capabilities.md` (the corpus advertises
+   *  it both nested under `agents` and at the doc root; absent ⇒ the host
+   *  advertises no top-level dispatch descriptors). Read-only. */
+  dispatch?: DispatchCapability;
+  /** RFC 0117 (amended by RFC 0119). Host loads SIGNED, SANDBOXED front-end
+   *  plugin packs (`kind:"frontend-plugin"`) in an origin/execution-isolated
+   *  sandbox and talks to them over the closed `ui-plugin/1` host-RPC boundary
+   *  (`capabilities.md` §`uiPlugins`). This is the DISCOVERY surface only — the
+   *  `ui-plugin/1` RPC envelope + the `frontend-plugin` manifest are a
+   *  renderer/registry concern the SDK does not model (as with the RFC 0102
+   *  A2UI `surface` and RFC 0071 pack manifests). Absent ⇒ the host loads no
+   *  plugin packs (graceful degradation to RFC 0071 host rendering). Read-only. */
+  uiPlugins?: UiPluginsCapability;
   extensions?: Record<string, unknown>;
   // Network-handshake superset (all `(future)` fields per capabilities.md)
   implementation?: { name?: string; version?: string; vendor?: string };
@@ -767,6 +785,9 @@ export interface AgentsCapability {
   orchestratorPattern?: string;
   memoryBackends?: readonly string[];
   orchestrator?: boolean;
+  /** Phase 6. Host implements the `core.dispatch` Core typeId. The RFC 0118
+   *  fan-out/join descriptors live on the top-level {@link Capabilities.dispatch}
+   *  object (`capabilities.md` §`dispatch`), NOT here. */
   dispatch?: boolean;
   reasoning?: {
     verbosity: ReasoningVerbosity;
@@ -778,6 +799,85 @@ export interface AgentsCapability {
      *  is authoritative). */
     streaming?: boolean;
   };
+}
+
+/**
+ * RFC 0007 + RFC 0118 — the top-level `core.dispatch` capability descriptors
+ * (`capabilities.md` §`dispatch`), exposed as {@link Capabilities.dispatch}.
+ * The discovery surface for parallel sub-workflow fan-out and join: an author
+ * reads `joinModes` / `onChildFailureModes` / `fanOutPolicies` to detect partial
+ * support before pinning a `core.dispatch` node's `fanOutPolicy` / `joinPolicy`.
+ * All fields OPTIONAL + read-only; absent descriptors carry the documented
+ * conservative defaults (a host that omits `joinModes` implements no parallel
+ * join; one that omits `onChildFailureModes` accepts only `'collect'`). The SDK
+ * does NOT model the authoring-side `DispatchConfig` (`fanOutPolicy` /
+ * `joinPolicy` / `maxConcurrency`) — that is a workflow-node-definition shape,
+ * out of this client SDK's read-only scope.
+ */
+export interface DispatchCapability {
+  /** Host implements the `core.dispatch` Core typeId (the top-level mirror of
+   *  the legacy {@link AgentsCapability.dispatch} boolean). */
+  supported?: boolean;
+  /** RFC 0007 + RFC 0118. Host honors `nextWorkerIds.length > 1`; since RFC 0118
+   *  ALSO the gate for accepting `fanOutPolicy: 'parallel'` at registration. A
+   *  host advertising `false` rejects a node pinning `'parallel'`. */
+  fanOutSupported?: boolean;
+  /** RFC 0118. The `fanOutPolicy` values the host accepts. Absent ⇒ treat as
+   *  `['sequential', 'reject']` (parallel unsupported). */
+  fanOutPolicies?: readonly ('sequential' | 'reject' | 'parallel')[];
+  /** RFC 0118. The `joinPolicy.mode` values the host implements for
+   *  `fanOutPolicy: 'parallel'`. Absent ⇒ the host implements no parallel join. */
+  joinModes?: readonly ('wait-all' | 'quorum' | 'first' | 'race')[];
+  /** RFC 0118. The `joinPolicy.onChildFailure` error-aggregation values the host
+   *  accepts (orthogonal to {@link joinModes}). Absent ⇒ `['collect']` only — a
+   *  host that omits this MUST reject a node pinning `'fail-fast'` / `'absorb'`. */
+  onChildFailureModes?: readonly ('collect' | 'fail-fast' | 'absorb')[];
+  /** RFC 0118. The host's hard concurrency/breadth ceiling for a parallel
+   *  fan-out. Effective concurrency is `min(config.maxConcurrency ?? ∞,
+   *  maxFanOut ?? ∞)`. Absent ⇒ unbounded (treat as "unknown, may be capped"). */
+  maxFanOut?: number;
+}
+
+/**
+ * RFC 0117 (`Active`; amended by RFC 0119) — the `uiPlugins` capability
+ * advertisement (`capabilities.md` §`uiPlugins`), exposed as
+ * {@link Capabilities.uiPlugins}. The host loads `kind:"frontend-plugin"` packs
+ * in an origin/execution-isolated sandbox (mechanism per {@link isolation}) and
+ * serves the closed `ui-plugin/1` host-RPC boundary. All fields but `supported`
+ * are OPTIONAL + read-only; a client reads them to decide whether (and which
+ * surfaces / RPC methods) a plugin can target before install. The SDK models
+ * only this discovery block — NOT the `ui-plugin/1` RPC envelope or the
+ * `frontend-plugin` manifest (a renderer/registry concern, out of client scope).
+ */
+export interface UiPluginsCapability {
+  /** Host loads `kind:"frontend-plugin"` packs in an isolated sandbox and
+   *  serves the `ui-plugin/1` host-RPC boundary. `false`/absent ⇒ the host
+   *  rejects such packs at registration and renders no plugin surface. */
+  supported: boolean;
+  /** RFC 0117 (amended by RFC 0119). The categorical isolation MECHANISM the
+   *  host enforces for plugin bytes. The five named values plus a vendor
+   *  `x-host-<host>-<key>` form (per `host-extensions.md`) — the open string
+   *  admits the vendor form without discarding autocomplete for the known set.
+   *  ALL values denote the SAME mandatory isolation property (no host execution
+   *  context / DOM / origin-storage / credential access, deny-egress, RPC-only);
+   *  the field names the mechanism, never relaxes the property. Absent ⇒
+   *  `'cross-origin-iframe'` (the default). */
+  isolation?:
+    | 'cross-origin-iframe'
+    | 'wasm'
+    | 'process'
+    | 'container'
+    | 'vm'
+    | (string & {});
+  /** RFC 0117. Plugin surfaces this host renders. A pack surface not in this
+   *  set is installable-but-inert (graceful degradation). */
+  surfaces?: readonly ('artifact-viewer' | 'route' | 'settings-panel')[];
+  /** RFC 0117. The `ui-plugin/1` host-RPC methods this host honors. A plugin
+   *  call to a method not in this set is rejected with `method_not_allowed`
+   *  (SECURITY invariant `frontend-plugin-rpc-allowlist`). */
+  hostApi?: readonly ('artifact.read' | 'artifact.write' | 'host.toast' | 'host.navigate')[];
+  /** RFC 0117. Per-plugin entry-bundle byte ceiling the host will load. */
+  maxEntryBytes?: number;
 }
 
 // ─── agent.* event payloads (RFC 0002 §B + RFC 0024) ────────────────────
@@ -991,6 +1091,51 @@ export interface ChannelPresencePayload {
   present: readonly string[];
   /** Subset of `present` currently typing (boolean-by-presence; no free text). */
   typing?: readonly string[];
+  [key: string]: unknown;
+}
+
+/** `core.dispatch.fanOut` (RFC 0118). Emitted by `core.dispatch` when a
+ *  `fanOutPolicy: 'parallel'` wave BEGINS, so the parent stays observable while
+ *  children run concurrently. Emitted ONLY on the parallel path; the envelope's
+ *  `nodeId` carries the dispatching node id and `causationId` is the consumed
+ *  `runOrchestrator.decided` event. Per `run-event-payloads.schema.json`
+ *  `$defs.dispatchFanOut`. */
+export interface DispatchFanOutPayload {
+  /** Always `'parallel'` — this event fires only on the parallel fan-out path. */
+  fanOutPolicy: 'parallel';
+  /** Number of children dispatched in this fan-out (`> 1` by construction). */
+  childCount: number;
+  /** Effective concurrency ceiling for the wave, when bounded
+   *  (`min(config.maxConcurrency ?? ∞, capabilities.dispatch.maxFanOut ?? ∞)`). */
+  maxConcurrency?: number;
+  /** The `joinPolicy.mode` governing this fan-out. */
+  joinMode?: 'wait-all' | 'quorum' | 'first' | 'race';
+  [key: string]: unknown;
+}
+
+/** `core.dispatch.join` (RFC 0118). Emitted by `core.dispatch` when a
+ *  `fanOutPolicy: 'parallel'` join is satisfied (or fails). `mergeOrder` is the
+ *  canonical replay-deterministic record of the output-merge tiebreak — a
+ *  replay/`:fork` MUST re-apply `outputMapping` in `mergeOrder` (the parent
+ *  host's observed wall-clock terminal order), never in `nextWorkerIds` order.
+ *  Per `run-event-payloads.schema.json` `$defs.dispatchJoin`. */
+export interface DispatchJoinPayload {
+  /** `'satisfied'` — `mode` met, `onChildFailure` did not fail the node.
+   *  `'failed'` — `fail-fast` tripped or `mode` unsatisfiable (node fails).
+   *  `'partial'` — `mode` met but ≥1 child non-`completed` under
+   *  `collect`/`absorb` (node SUCCEEDS). */
+  joinOutcome: 'satisfied' | 'failed' | 'partial';
+  /** Number of children that reached `completed`. */
+  completedCount: number;
+  /** Number of children that reached `failed`. */
+  failedCount: number;
+  /** Number of children cancelled (e.g. in-flight when a `quorum`/`first`/
+   *  `race`/`fail-fast` join short-circuited). */
+  cancelledCount?: number;
+  /** `childRunId`s in the parent host's observed wall-clock terminal order —
+   *  the replay-deterministic tiebreak for colliding `outputMapping` keys.
+   *  Recorded at terminal-fold time; never recomputed from child timestamps. */
+  mergeOrder: readonly string[];
   [key: string]: unknown;
 }
 
