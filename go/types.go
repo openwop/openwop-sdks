@@ -121,6 +121,26 @@ type CapabilitiesAIProviders struct {
 	SpeechSynthesis string `json:"speechSynthesis,omitempty"`
 	// RealtimeVoice (RFC 0106) is the real-time voice profile; nil ⇒ no live voice.
 	RealtimeVoice *CapabilitiesRealtimeVoice `json:"realtimeVoice,omitempty"`
+	// PromptPrefixCache (RFC 0116) advertises that the host honors the
+	// AI-envelope generate request's optional cachePrefixId routing hint; nil ⇒
+	// the host ignores cachePrefixId (no error).
+	PromptPrefixCache *CapabilitiesPromptPrefixCache `json:"promptPrefixCache,omitempty"`
+}
+
+// CapabilitiesPromptPrefixCache is the RFC 0116 provider-scoped advertisement
+// that the host honors the AI-envelope generate request's optional
+// cachePrefixId (a tenant-namespaced, secret-free label) as a routing hint into
+// the routed provider's server-side context cache. The cache MUST be keyed by
+// (resolved tenant, cachePrefixId) (SECURITY invariant
+// prompt-prefix-cache-cross-tenant-isolation) and a hit/miss MUST NOT change the
+// recorded envelope or provider.usage token counts (replay-invariant).
+type CapabilitiesPromptPrefixCache struct {
+	// Supported toggles — true when the host honors cachePrefixId.
+	Supported bool `json:"supported"`
+	// Providers is the subset of the routed providers for which cachePrefixId is
+	// honored; a request whose routed provider is not listed has cachePrefixId
+	// ignored. nil ⇒ not provider-scoped.
+	Providers []string `json:"providers,omitempty"`
 }
 
 // CapabilitiesA2A is the RFC 0100 A2A (Agent2Agent) advertisement. Supported
@@ -185,6 +205,124 @@ type CapabilitiesInterrupt struct {
 	ApproverRouting *CapabilitiesApproverRouting `json:"approverRouting,omitempty"`
 }
 
+// CapabilitiesMemoryInjectionBudget is the RFC 0113 injection-budget descriptor:
+// the host honors MemoryListOptions.tokenBudget (a token-bounded prefix of the
+// ranked, SR-1-redacted, single-tenant entry list).
+type CapabilitiesMemoryInjectionBudget struct {
+	// Supported toggles — true when the host honors a supplied tokenBudget;
+	// absent/false ⇒ tokenBudget is ignored (today's limit/tag behavior).
+	Supported bool `json:"supported"`
+	// TokenCounter is the unit tokenBudget is denominated in:
+	// "o200k_base" | "cl100k_base" | "chars" | "host-defined". "chars" counts
+	// UTF-8/Unicode characters of the entry content (tokenizer-free). nil ⇒
+	// host-defined default. Kept an open string for forward-compat.
+	TokenCounter *string `json:"tokenCounter,omitempty"`
+}
+
+// CapabilitiesMemory is the RFC 0113 agent-memory capability block. The wire
+// memory block MAY carry other descriptors (e.g. search) not modeled here;
+// nil ⇒ a supplied tokenBudget is ignored.
+type CapabilitiesMemory struct {
+	// InjectionBudget advertises that the host honors
+	// MemoryListOptions.tokenBudget; nil ⇒ not advertised.
+	InjectionBudget *CapabilitiesMemoryInjectionBudget `json:"injectionBudget,omitempty"`
+}
+
+// CapabilitiesRestTransport is the RFC 0115 advertisement of conditional-GET +
+// Content-Encoding negotiation on run reads (GET /v1/runs/{runId}). Absent ⇒ the
+// host returns today's 200 + identity body. Distinct from the file-egress
+// fileHandling.transport sub-capability — this advertises HTTP-layer poll economy
+// on the run-read REST surface.
+type CapabilitiesRestTransport struct {
+	// ConditionalRunGet — the host emits a strong, event-log-sequence-derived
+	// ETag on GET /v1/runs/{runId} and honors If-None-Match with a 304 Not
+	// Modified (empty body) when the validator matches the current state.
+	ConditionalRunGet *bool `json:"conditionalRunGet,omitempty"`
+	// ContentEncodings the host will negotiate on run reads: "gzip" is the
+	// baseline; "br"/"zstd" are optional. For each advertised value the decoded
+	// body is byte-identical to the identity body.
+	ContentEncodings []string `json:"contentEncodings,omitempty"`
+}
+
+// CapabilitiesToolCatalog is the RFC 0112 advertisement of the compact,
+// model-facing tool-catalog projection served by GET /v1/tools?view=compact;
+// nil ⇒ the host serves no compact view.
+type CapabilitiesToolCatalog struct {
+	// CompactView — the host serves the compact CompactToolDescriptor projection
+	// on GET /v1/tools?view=compact (+ the by-id variant); nil/false ⇒ unsupported.
+	CompactView *bool `json:"compactView,omitempty"`
+}
+
+// CapabilitiesA2UISurface is the RFC 0114 advertisement that the host emits
+// RFC 6902 (JSON-Patch) delta frames (A2UISurfaceDeltaFrame) over a recorded
+// ui.a2ui-surface envelope to subscribers that negotiate ?a2uiDelta=1; nil ⇒ the
+// host always delivers the materialized full surface.
+type CapabilitiesA2UISurface struct {
+	// DeltaTransport — the host emits A2UISurfaceDeltaFrame over the run event
+	// stream to negotiating subscribers; nil/false ⇒ full-surface only.
+	DeltaTransport *bool `json:"deltaTransport,omitempty"`
+}
+
+// CapabilitiesUIPlugins is the RFC 0117 (amended by RFC 0119) discovery block
+// (capabilities.md §uiPlugins): the host loads signed kind:"frontend-plugin"
+// packs in an origin/execution-isolated sandbox and serves the closed
+// ui-plugin/1 host-RPC boundary. Absent ⇒ the host loads no plugin packs
+// (graceful degradation to RFC 0071 host rendering). The SDK models only this
+// discovery block — NOT the ui-plugin/1 RPC envelope or the frontend-plugin
+// manifest (a renderer/registry concern).
+type CapabilitiesUIPlugins struct {
+	// Supported — the host loads frontend-plugin packs in an isolated sandbox
+	// and serves the ui-plugin/1 boundary; false ⇒ it rejects such packs at
+	// registration and renders no plugin surface.
+	Supported bool `json:"supported"`
+	// Isolation is the categorical isolation MECHANISM the host enforces:
+	// "cross-origin-iframe" (default) | "wasm" | "process" | "container" | "vm",
+	// plus a vendor "x-host-<host>-<key>" form. ALL values denote the SAME
+	// mandatory isolation property; the field names the mechanism, never relaxes
+	// the property. Open string for the vendor form; nil ⇒ "cross-origin-iframe".
+	Isolation *string `json:"isolation,omitempty"`
+	// Surfaces are the plugin surfaces this host renders:
+	// "artifact-viewer" | "route" | "settings-panel". A pack surface not in this
+	// set is installable-but-inert (graceful degradation).
+	Surfaces []string `json:"surfaces,omitempty"`
+	// HostAPI is the ui-plugin/1 host-RPC methods this host honors:
+	// "artifact.read" | "artifact.write" | "host.toast" | "host.navigate". A call
+	// to a method not in this set is rejected with method_not_allowed (SECURITY
+	// invariant frontend-plugin-rpc-allowlist).
+	HostAPI []string `json:"hostApi,omitempty"`
+	// MaxEntryBytes is the per-plugin entry-bundle byte ceiling the host loads;
+	// nil ⇒ host-defined / unbounded.
+	MaxEntryBytes *int `json:"maxEntryBytes,omitempty"`
+}
+
+// CapabilitiesDispatch is the RFC 0007 + RFC 0118 top-level core.dispatch
+// capability descriptors (capabilities.md §dispatch) — the discovery surface for
+// parallel sub-workflow fan-out and join. All fields OPTIONAL + read-only; absent
+// descriptors carry conservative defaults (a host that omits JoinModes implements
+// no parallel join; one that omits OnChildFailureModes accepts only "collect").
+// The SDK does NOT model the authoring-side DispatchConfig.
+type CapabilitiesDispatch struct {
+	// Supported — the host implements the core.dispatch Core typeId.
+	Supported *bool `json:"supported,omitempty"`
+	// FanOutSupported — the host honors nextWorkerIds.length > 1; since RFC 0118
+	// ALSO the gate for accepting fanOutPolicy:"parallel" at registration.
+	FanOutSupported *bool `json:"fanOutSupported,omitempty"`
+	// FanOutPolicies are the fanOutPolicy values the host accepts:
+	// "sequential" | "reject" | "parallel". Absent ⇒ ["sequential","reject"].
+	FanOutPolicies []string `json:"fanOutPolicies,omitempty"`
+	// JoinModes are the joinPolicy.mode values the host implements for
+	// fanOutPolicy:"parallel": "wait-all" | "quorum" | "first" | "race".
+	// Absent ⇒ no parallel join.
+	JoinModes []string `json:"joinModes,omitempty"`
+	// OnChildFailureModes are the joinPolicy.onChildFailure error-aggregation
+	// values the host accepts: "collect" | "fail-fast" | "absorb". Absent ⇒
+	// ["collect"] only.
+	OnChildFailureModes []string `json:"onChildFailureModes,omitempty"`
+	// MaxFanOut is the host's hard concurrency/breadth ceiling for a parallel
+	// fan-out; nil ⇒ unbounded (treat as "unknown, may be capped").
+	MaxFanOut *int `json:"maxFanOut,omitempty"`
+}
+
 // CapBreachedKind is the `kind` discriminator on a cap.breached event payload
 // (run-event-payloads.schema.json#capBreached): the four engine kinds, the
 // RFC 0008 §K wasm-* runtime caps, and the RFC 0058 run-scoped bounds.
@@ -235,6 +373,24 @@ type Capabilities struct {
 	// Interrupt is the RFC 0104 interrupt capability block (approver routing);
 	// nil ⇒ no interrupt-level options advertised.
 	Interrupt *CapabilitiesInterrupt `json:"interrupt,omitempty"`
+	// Memory is the RFC 0113 agent-memory capability block (injection budget);
+	// nil ⇒ a supplied tokenBudget is ignored.
+	Memory *CapabilitiesMemory `json:"memory,omitempty"`
+	// RestTransport is the RFC 0115 conditional-GET + Content-Encoding
+	// advertisement on run reads; nil ⇒ 200 + identity body only.
+	RestTransport *CapabilitiesRestTransport `json:"restTransport,omitempty"`
+	// ToolCatalog is the RFC 0112 compact tool-catalog advertisement; nil ⇒ no
+	// compact view.
+	ToolCatalog *CapabilitiesToolCatalog `json:"toolCatalog,omitempty"`
+	// A2UISurface is the RFC 0114 A2UI delta-transport advertisement; nil ⇒
+	// full-surface delivery only.
+	A2UISurface *CapabilitiesA2UISurface `json:"a2uiSurface,omitempty"`
+	// UIPlugins is the RFC 0117 (amended by RFC 0119) front-end plugin discovery
+	// block; nil ⇒ the host loads no plugin packs.
+	UIPlugins *CapabilitiesUIPlugins `json:"uiPlugins,omitempty"`
+	// Dispatch is the RFC 0007 + RFC 0118 top-level core.dispatch fan-out/join
+	// descriptors; nil ⇒ no top-level dispatch descriptors.
+	Dispatch *CapabilitiesDispatch `json:"dispatch,omitempty"`
 }
 
 // RunSnapshotError mirrors `RunSnapshot.error`.
@@ -873,6 +1029,23 @@ type ToolDescriptor struct {
 	LatencyHint  string         `json:"latencyHint,omitempty"`
 }
 
+// CompactToolDescriptor is the RFC 0112 compact, model-facing projection of
+// ToolDescriptor, returned by GET /v1/tools?view=compact (envelope
+// {tools: CompactToolDescriptor[]}) + GET /v1/tools/{toolId}?view=compact when
+// the host advertises capabilities.toolCatalog.compactView. The heavy descriptor
+// fields (outputSchema / auth / egress / approval / replayPolicy / costHint /
+// latencyHint) are dropped, and any InputSchema is bounded to the compact
+// structural subset (top-level type:"object" with properties; no
+// $ref/oneOf/allOf/anyOf/not/patternProperties/dependentSchemas).
+type CompactToolDescriptor struct {
+	ToolID      string         `json:"toolId"`
+	Source      string         `json:"source"`
+	SafetyTier  string         `json:"safetyTier"`
+	Title       string         `json:"title,omitempty"`
+	Description string         `json:"description,omitempty"`
+	InputSchema map[string]any `json:"inputSchema,omitempty"`
+}
+
 // ── RFC 0082 — Agent deployment lifecycle ──────────────────────────────────
 
 // AgentDeployment is a per-(agentId, version) deployment record, returned by
@@ -1341,4 +1514,44 @@ type A2UISurfacePayload struct {
 	CatalogVersion string         `json:"catalogVersion"`
 	Surface        map[string]any `json:"surface"`
 	Reasoning      string         `json:"reasoning,omitempty"`
+}
+
+// A2UISurfacePatchOp is a single RFC 6902 (JSON-Patch) operation inside an
+// A2UISurfaceDeltaFrame (RFC 0114). The "test" op is deliberately EXCLUDED (a
+// fire-and-forget transport frame cannot act on a failed conditional);
+// "move"/"copy" are permitted but OPTIONAL for a host to emit.
+type A2UISurfacePatchOp struct {
+	// Op is the RFC 6902 operation: "add" | "remove" | "replace" | "move" |
+	// "copy" ("test" is excluded by RFC 0114).
+	Op string `json:"op"`
+	// Path is an RFC 6901 JSON-Pointer into the target surface.
+	Path string `json:"path"`
+	// From is the RFC 6901 JSON-Pointer source for "move"/"copy".
+	From string `json:"from,omitempty"`
+	// Value is the value for "add"/"replace"; walked by the SR-1 redaction
+	// harness exactly like a full-surface value.
+	Value any `json:"value,omitempty"`
+}
+
+// A2UISurfaceDeltaFrame is a HOST-SIDE TRANSPORT frame carrying an RFC 6902
+// delta over a recorded ui.a2ui-surface envelope (A2UISurfacePayload) (RFC 0114).
+// Delivered ONLY over the run event stream (GET /v1/runs/{runId}/events) to a
+// subscriber that negotiated ?a2uiDelta=1; every other consumer (event-log read,
+// replay, :fork, any non-negotiating subscriber) receives the materialized FULL
+// surface. This is NOT a recorded-envelope shape — the recorded ui.a2ui-surface
+// payload is unchanged and always full. The consumer applies Patch to the
+// surface last delivered under SurfaceRef, re-validates against the closed
+// CatalogVersion catalog, and falls back fail-closed (host re-materializes the
+// full surface) on any apply/validation failure. Per
+// schemas/a2ui-surface-delta-frame.schema.json; gated by the RFC 0114
+// a2uiSurface.deltaTransport capability flag.
+type A2UISurfaceDeltaFrame struct {
+	// SurfaceRef is the recorded ui.a2ui-surface envelope id this delta patches.
+	SurfaceRef string `json:"surfaceRef"`
+	// CatalogVersion MUST equal the referenced full surface's catalogVersion; a
+	// catalog-version change MUST start from a fresh full surface.
+	CatalogVersion string `json:"catalogVersion"`
+	// Patch is a non-empty RFC 6902 document applied over the surface last
+	// delivered under SurfaceRef.
+	Patch []A2UISurfacePatchOp `json:"patch"`
 }

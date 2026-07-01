@@ -208,6 +208,59 @@ class ChannelPresencePayload(TypedDict, total=False):
     typing: list[str]
 
 
+# ── RFC 0118 core.dispatch.* + RFC 0111 context.summarized payloads ─────
+# Mirror run-event-payloads.schema.json. core.dispatch.fanOut/join are emitted
+# by the core.dispatch node on the parallel fan-out/join path; context.summarized
+# is emitted when the host summarizes evicted orchestrator-loop transcript turns.
+
+
+class DispatchFanOutPayload(TypedDict, total=False):
+    """`core.dispatch.fanOut` payload (RFC 0118). Emitted ONLY on the
+    `fanOutPolicy:'parallel'` path when the wave begins, so the parent stays
+    observable while children run concurrently. Required: `fanOutPolicy` (always
+    "parallel"), `childCount` (> 1 by construction). Optional: `maxConcurrency`
+    (effective concurrency ceiling when bounded), `joinMode` (the joinPolicy.mode
+    governing this fan-out)."""
+
+    fanOutPolicy: str
+    childCount: int
+    maxConcurrency: int
+    joinMode: str
+
+
+class DispatchJoinPayload(TypedDict, total=False):
+    """`core.dispatch.join` payload (RFC 0118). Emitted when a parallel join is
+    satisfied or fails. `mergeOrder` is the canonical replay-deterministic record
+    of the output-merge tiebreak — a replay/:fork MUST re-apply outputMapping in
+    `mergeOrder` (the parent host's observed wall-clock terminal order), never in
+    nextWorkerIds order. Required: `joinOutcome` ("satisfied"/"failed"/"partial"),
+    `completedCount`, `failedCount`, `mergeOrder`. Optional: `cancelledCount`."""
+
+    joinOutcome: str
+    completedCount: int
+    failedCount: int
+    cancelledCount: int
+    mergeOrder: list[str]
+
+
+class ContextSummarizedPayload(TypedDict, total=False):
+    """`context.summarized` payload (RFC 0111). Emitted when the host replaces
+    older in-window orchestrator-loop transcript turns with a host-produced
+    summary to honor a `contextBudget.transcriptTokenBudget`. CONTENT-FREE: the
+    summary text never rides the wire — `summaryRef` is an artifactId resolved via
+    `GET /v1/runs/{runId}/artifacts/{artifactId}`. On :fork mode:replay the host
+    MUST reuse this recorded `summaryRef` and MUST NOT re-summarize. Required:
+    `iteration`, `replacedTurns`, `summaryRef`, `tokenCounter`, `tokensBefore`,
+    `tokensAfter`."""
+
+    iteration: int
+    replacedTurns: list[str]
+    summaryRef: str
+    tokenCounter: str
+    tokensBefore: int
+    tokensAfter: int
+
+
 # ── Predicates ──────────────────────────────────────────────────────────
 
 
@@ -468,6 +521,57 @@ def channel_presence_payload(ev: RunEventDoc) -> ChannelPresencePayload | None:
     return ev.payload if is_channel_presence(ev) else None
 
 
+def is_dispatch_fan_out(ev: RunEventDoc) -> bool:
+    """`core.dispatch.fanOut` discriminator + required-field check (RFC 0118).
+    Emitted only on the `fanOutPolicy:'parallel'` path; narrows when the payload
+    carries `fanOutPolicy == "parallel"` + a numeric `childCount`."""
+    return (
+        ev.type == "core.dispatch.fanOut"
+        and isinstance(ev.payload, dict)
+        and ev.payload.get("fanOutPolicy") == "parallel"
+        and _payload_has_number(ev.payload, "childCount")
+    )
+
+
+def is_dispatch_join(ev: RunEventDoc) -> bool:
+    """`core.dispatch.join` discriminator + required-field check (RFC 0118).
+    Narrows when the payload carries a `joinOutcome` string + the `mergeOrder`
+    array (the replay-deterministic merge tiebreak)."""
+    return (
+        ev.type == "core.dispatch.join"
+        and _payload_has_str(ev.payload, "joinOutcome")
+        and isinstance(ev.payload, dict)
+        and isinstance(ev.payload.get("mergeOrder"), list)
+    )
+
+
+def is_context_summarized(ev: RunEventDoc) -> bool:
+    """`context.summarized` discriminator + required-field check (RFC 0111).
+    Narrows when the payload carries the `summaryRef` string + a numeric
+    `iteration`. The summary text is never inlined (`summaryRef` is an
+    artifactId)."""
+    return (
+        ev.type == "context.summarized"
+        and _payload_has_str(ev.payload, "summaryRef")
+        and _payload_has_number(ev.payload, "iteration")
+    )
+
+
+def dispatch_fan_out_payload(ev: RunEventDoc) -> DispatchFanOutPayload | None:
+    """Return the payload as `DispatchFanOutPayload` if matched, else `None`."""
+    return ev.payload if is_dispatch_fan_out(ev) else None
+
+
+def dispatch_join_payload(ev: RunEventDoc) -> DispatchJoinPayload | None:
+    """Return the payload as `DispatchJoinPayload` if matched, else `None`."""
+    return ev.payload if is_dispatch_join(ev) else None
+
+
+def context_summarized_payload(ev: RunEventDoc) -> ContextSummarizedPayload | None:
+    """Return the payload as `ContextSummarizedPayload` if matched, else `None`."""
+    return ev.payload if is_context_summarized(ev) else None
+
+
 __all__ = [
     "ReasoningVerbosity",
     "AgentReasonedPayload",
@@ -486,6 +590,9 @@ __all__ = [
     "VoiceBargeInPayload",
     "VoiceCancelledPayload",
     "ChannelPresencePayload",
+    "DispatchFanOutPayload",
+    "DispatchJoinPayload",
+    "ContextSummarizedPayload",
     "is_agent_reasoned",
     "is_agent_reasoning_delta",
     "is_agent_tool_called",
@@ -502,6 +609,9 @@ __all__ = [
     "is_voice_barge_in",
     "is_voice_cancelled",
     "is_channel_presence",
+    "is_dispatch_fan_out",
+    "is_dispatch_join",
+    "is_context_summarized",
     "memory_written_payload",
     "output_chunk_payload",
     "voice_speech_start_payload",
@@ -512,6 +622,9 @@ __all__ = [
     "voice_barge_in_payload",
     "voice_cancelled_payload",
     "channel_presence_payload",
+    "dispatch_fan_out_payload",
+    "dispatch_join_payload",
+    "context_summarized_payload",
     "agent_reasoned_payload",
     "agent_reasoning_delta_payload",
     "agent_tool_called_payload",

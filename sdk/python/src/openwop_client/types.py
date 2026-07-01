@@ -11,7 +11,7 @@ may grow over time.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Literal
+from typing import Any, Literal, TypedDict
 
 # ── Type aliases ────────────────────────────────────────────────────────
 
@@ -105,6 +105,28 @@ class CapabilitiesRealtimeVoice:
 
 
 @dataclass(frozen=True)
+class CapabilitiesPromptPrefixCache:
+    """RFC 0116 provider-scoped prompt-prefix-cache advertisement (nested under
+    :class:`CapabilitiesAIProviders`). ``supported`` ⇒ the host honors the
+    AI-envelope ``generate`` request's optional ``cachePrefixId`` (a
+    tenant-namespaced, secret-free label) as a routing hint into the routed
+    provider's server-side context cache. Absent ⇒ the host ignores
+    ``cachePrefixId`` (no error). The cache MUST be keyed by
+    ``(resolved tenant, cachePrefixId)`` (SECURITY invariant
+    ``prompt-prefix-cache-cross-tenant-isolation``) and a hit/miss MUST NOT
+    change the recorded envelope or ``provider.usage`` token counts
+    (replay-invariant). NOT a universal claim — ``providers`` scopes it per
+    routed provider.
+    """
+
+    supported: bool
+    # Subset of `supported` for which cachePrefixId is honored (prefix caching
+    # is provider-specific). A request whose routed provider is not listed has
+    # cachePrefixId ignored.
+    providers: list[str] | None = None
+
+
+@dataclass(frozen=True)
 class CapabilitiesAIProviders:
     """Host AI-proxy capability advertisement (``aiProviders`` in
     capabilities.md). Every field is optional per ``capabilities.schema.json``
@@ -129,6 +151,8 @@ class CapabilitiesAIProviders:
     speechSynthesis: Literal["supported"] | None = None
     # RFC 0106. Real-time voice profile.
     realtimeVoice: CapabilitiesRealtimeVoice | None = None
+    # RFC 0116. Provider-scoped prompt-prefix-cache advertisement.
+    promptPrefixCache: CapabilitiesPromptPrefixCache | None = None
 
 
 @dataclass(frozen=True)
@@ -199,6 +223,135 @@ class CapabilitiesInterrupt:
     approverRouting: CapabilitiesApproverRouting | None = None
 
 
+@dataclass(frozen=True)
+class CapabilitiesMemoryInjectionBudget:
+    """RFC 0113 injection-budget advertisement (nested under
+    :class:`CapabilitiesMemory`). ``supported`` ⇒ the host honors
+    ``MemoryListOptions.tokenBudget`` (a token-bounded prefix of the ranked,
+    SR-1-redacted, single-tenant entry list). Absent ⇒ a supplied
+    ``tokenBudget`` is ignored (today's ``limit``/``tag`` behavior).
+    """
+
+    supported: bool
+    # Unit tokenBudget is denominated in. "chars" counts UTF-8/Unicode
+    # characters of the entry content (tokenizer-free).
+    tokenCounter: (
+        Literal["o200k_base", "cl100k_base", "chars", "host-defined"] | None
+    ) = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesMemory:
+    """RFC 0113 agent-memory capability descriptors. Absent from
+    :class:`Capabilities` ⇒ a supplied ``tokenBudget`` is ignored. The wire
+    ``memory`` block MAY carry other descriptors not modeled here (e.g.
+    ``search``).
+    """
+
+    injectionBudget: CapabilitiesMemoryInjectionBudget | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesRestTransport:
+    """RFC 0115 conditional-GET + Content-Encoding negotiation on run reads
+    (``GET /v1/runs/{runId}``). Absent from :class:`Capabilities` ⇒ the host
+    returns today's ``200`` + identity body. Distinct from the file-egress
+    ``fileHandling.transport`` sub-capability — this advertises HTTP-layer poll
+    economy on the run-read REST surface.
+    """
+
+    # Host emits a strong, event-log-sequence-derived ETag on GET /v1/runs/{runId}
+    # and honors If-None-Match with a 304 (empty body) when the validator matches.
+    conditionalRunGet: bool | None = None
+    # Content-Encoding values the host will negotiate on run reads. "gzip" is the
+    # baseline; "br"/"zstd" are optional. Each advertised value's decoded body is
+    # byte-identical to the identity body.
+    contentEncodings: list[Literal["gzip", "br", "zstd"]] | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesToolCatalog:
+    """RFC 0112 tool-catalog advertisement. ``compactView`` ⇒ the host serves the
+    model-facing compact projection at ``GET /v1/tools?view=compact`` (and
+    ``GET /v1/tools/{toolId}?view=compact``). Absent from :class:`Capabilities`
+    ⇒ no compact view.
+    """
+
+    compactView: bool | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesA2uiSurface:
+    """RFC 0114 A2UI-surface advertisement. ``deltaTransport`` ⇒ the host emits
+    RFC 6902 delta frames over the run event stream to a subscriber that
+    negotiated ``?a2uiDelta=1`` (every other consumer receives the materialized
+    full surface). Absent from :class:`Capabilities` ⇒ full surfaces only.
+    """
+
+    deltaTransport: bool | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesUiPlugins:
+    """RFC 0117 (amended by RFC 0119). Host loads SIGNED, SANDBOXED front-end
+    plugin packs (``kind:'frontend-plugin'``) in an origin/execution-isolated
+    sandbox and talks to them over the closed ``ui-plugin/1`` host-RPC boundary.
+    Discovery surface only — the RPC envelope + the ``frontend-plugin`` manifest
+    are a renderer/registry concern the SDK does not model. Absent from
+    :class:`Capabilities` ⇒ the host loads no plugin packs.
+    """
+
+    supported: bool
+    # Categorical isolation MECHANISM (5 named values —
+    # cross-origin-iframe/wasm/process/container/vm — plus a vendor
+    # x-host-<host>-<key> form, hence an open str). ALL values denote the SAME
+    # mandatory isolation property; None ⇒ "cross-origin-iframe" (the default).
+    isolation: str | None = None
+    # Plugin surfaces this host renders; a pack surface not in this set is
+    # installable-but-inert (graceful degradation).
+    surfaces: list[Literal["artifact-viewer", "route", "settings-panel"]] | None = None
+    # The ui-plugin/1 host-RPC methods this host honors; a call to a method not
+    # in this set is rejected with method_not_allowed.
+    hostApi: (
+        list[
+            Literal["artifact.read", "artifact.write", "host.toast", "host.navigate"]
+        ]
+        | None
+    ) = None
+    # Per-plugin entry-bundle byte ceiling the host will load.
+    maxEntryBytes: int | None = None
+
+
+@dataclass(frozen=True)
+class CapabilitiesDispatch:
+    """RFC 0007 + RFC 0118 top-level ``core.dispatch`` capability descriptors
+    (``capabilities.md`` §``dispatch``) — the discovery surface for parallel
+    sub-workflow fan-out/join. All fields OPTIONAL + read-only; absent
+    descriptors carry the documented conservative defaults (a host that omits
+    ``joinModes`` implements no parallel join; one that omits
+    ``onChildFailureModes`` accepts only ``'collect'``). Distinct from the
+    legacy boolean ``agents.dispatch``.
+    """
+
+    # Host implements the core.dispatch Core typeId (top-level mirror of the
+    # legacy agents.dispatch boolean).
+    supported: bool | None = None
+    # Host honors nextWorkerIds.length > 1; since RFC 0118 also the gate for
+    # accepting fanOutPolicy:'parallel' at registration.
+    fanOutSupported: bool | None = None
+    # fanOutPolicy values the host accepts. Absent ⇒ ["sequential","reject"].
+    fanOutPolicies: list[Literal["sequential", "reject", "parallel"]] | None = None
+    # joinPolicy.mode values the host implements for parallel fan-out. Absent ⇒
+    # no parallel join.
+    joinModes: list[Literal["wait-all", "quorum", "first", "race"]] | None = None
+    # joinPolicy.onChildFailure error-aggregation values (orthogonal to
+    # joinModes). Absent ⇒ ["collect"] only.
+    onChildFailureModes: list[Literal["collect", "fail-fast", "absorb"]] | None = None
+    # Host's hard concurrency/breadth ceiling for a parallel fan-out. Absent ⇒
+    # unbounded (treat as "unknown, may be capped").
+    maxFanOut: int | None = None
+
+
 # The `kind` discriminator on a `cap.breached` payload
 # (run-event-payloads.schema.json#capBreached): four engine kinds + RFC 0008 §K
 # wasm-* runtime caps + RFC 0058 run-scoped bounds.
@@ -246,6 +399,18 @@ class Capabilities:
     channelPresence: CapabilitiesChannelPresence | None = None
     # RFC 0104 interrupt capability block (approver routing).
     interrupt: CapabilitiesInterrupt | None = None
+    # RFC 0113 agent-memory advertisement (injection budget).
+    memory: CapabilitiesMemory | None = None
+    # RFC 0115 conditional-GET + Content-Encoding on run reads.
+    restTransport: CapabilitiesRestTransport | None = None
+    # RFC 0112 compact tool-catalog view advertisement.
+    toolCatalog: CapabilitiesToolCatalog | None = None
+    # RFC 0114 A2UI surface delta-transport advertisement.
+    a2uiSurface: CapabilitiesA2uiSurface | None = None
+    # RFC 0117 (amended by RFC 0119) front-end plugin advertisement.
+    uiPlugins: CapabilitiesUiPlugins | None = None
+    # RFC 0007 + RFC 0118 top-level core.dispatch fan-out/join descriptors.
+    dispatch: CapabilitiesDispatch | None = None
 
 
 # ── RunSnapshot ─────────────────────────────────────────────────────────
@@ -885,6 +1050,27 @@ class ToolDescriptor:
     latencyHint: str | None = None
 
 
+# ── RFC 0112 compact tool catalog (tool-descriptor.schema.json) ─────────
+
+
+class CompactToolDescriptor(TypedDict, total=False):
+    """RFC 0112 — a compact, model-facing projection of :class:`ToolDescriptor`,
+    returned by ``GET /v1/tools?view=compact`` (envelope ``{tools: [...]}``) +
+    ``GET /v1/tools/{toolId}?view=compact`` when the host advertises
+    ``capabilities.toolCatalog.compactView``. The heavy descriptor fields
+    (``outputSchema``/``auth``/``egress``/``approval``/``replayPolicy``/
+    ``costHint``/``latencyHint``) are dropped, and any ``inputSchema`` is bounded
+    to the compact structural subset. Required: ``toolId``, ``source``,
+    ``safetyTier``. Optional: ``title``, ``description``, ``inputSchema``."""
+
+    toolId: str
+    source: str
+    safetyTier: str
+    title: str
+    description: str
+    inputSchema: dict[str, Any]
+
+
 # ── RFC 0082 agent deployment lifecycle ─────────────────────────────────
 
 DeploymentState = Literal[
@@ -1392,3 +1578,49 @@ class A2UISurfacePayload:
     catalogVersion: str
     surface: dict[str, Any]
     reasoning: str | None = None
+
+
+# ── RFC 0114 A2UI surface delta transport (a2ui-surface-delta-frame.schema.json) ─
+# Host-side TRANSPORT frames — NOT a recorded run-event or envelope shape. A
+# delta rides the run event stream ONLY to a subscriber that negotiated
+# ?a2uiDelta=1; every other consumer receives the materialized full surface.
+# No guard: these are stream frames, not RunEventDoc payloads.
+
+
+# RFC 6902 uses the reserved word ``from`` as a key (source pointer for
+# move/copy), so :class:`A2uiSurfacePatchOp` is declared via the functional
+# TypedDict form. ``test`` is deliberately EXCLUDED from ``op`` by RFC 0114 (a
+# fire-and-forget transport frame cannot act on a failed conditional);
+# ``move``/``copy`` are permitted but OPTIONAL for a host to emit. Required:
+# ``op``, ``path``. Optional: ``from``, ``value`` (for ``add``/``replace``).
+A2uiSurfacePatchOp = TypedDict(
+    "A2uiSurfacePatchOp",
+    {
+        "op": Literal["add", "remove", "replace", "move", "copy"],
+        "path": str,
+        "from": str,
+        "value": Any,
+    },
+    total=False,
+)
+"""RFC 0114 — a single RFC 6902 (JSON-Patch) operation inside an
+:class:`A2uiSurfaceDeltaFrame`."""
+
+
+class A2uiSurfaceDeltaFrame(TypedDict, total=False):
+    """RFC 0114 — a HOST-SIDE TRANSPORT frame carrying an RFC 6902 delta over a
+    recorded ``ui.a2ui-surface`` envelope (:class:`A2UISurfacePayload`).
+    Delivered ONLY over the run event stream to a subscriber that negotiated
+    ``?a2uiDelta=1``; every other consumer (the event-log read, replay,
+    ``:fork``, any non-negotiating subscriber) receives the materialized FULL
+    surface. NOT a recorded-envelope shape — the recorded ``ui.a2ui-surface``
+    payload is unchanged and always full. The consumer applies ``patch`` to the
+    surface last delivered under ``surfaceRef``, re-validates against the closed
+    ``catalogVersion`` catalog, and falls back fail-closed (host re-materializes
+    the full surface) on any apply/validation failure. A host advertises support
+    via ``capabilities.a2uiSurface.deltaTransport``. Required: ``surfaceRef``,
+    ``catalogVersion``, ``patch``."""
+
+    surfaceRef: str
+    catalogVersion: str
+    patch: list[A2uiSurfacePatchOp]

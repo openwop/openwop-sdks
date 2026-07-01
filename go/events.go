@@ -656,3 +656,160 @@ func UnmarshalChannelPresence(ev RunEventDoc) (ChannelPresencePayload, error) {
 	}
 	return p, nil
 }
+
+// payloadStringEquals reports whether the payload is a map with `field` set to a
+// JSON string equal to want. Used for discriminated event payloads that pin a
+// literal enum value (e.g. dispatchFanOut.fanOutPolicy == "parallel").
+func payloadStringEquals(payload any, field, want string) bool {
+	m, ok := payloadAsMap(payload)
+	if !ok {
+		return false
+	}
+	s, ok := m[field].(string)
+	return ok && s == want
+}
+
+// ── RFC 0111 — context.summarized ────────────────────────────────────────
+
+// ContextSummarizedPayload mirrors `context.summarized` (RFC 0111). Emitted when
+// the host replaces older in-window orchestrator-loop transcript turns with a
+// host-produced summary to honor
+// multiAgent.executionModel.contextBudget.transcriptTokenBudget. CONTENT-FREE:
+// the summary text never rides the wire — SummaryRef is an artifactId resolved
+// via GET /v1/runs/{runId}/artifacts/{artifactId}. On :fork mode:replay the host
+// MUST reuse this recorded SummaryRef and MUST NOT re-summarize. ReplacedTurns
+// lists the event ids the summary stands in for, so a replay engine
+// reconstructs the exact transcript.
+type ContextSummarizedPayload struct {
+	// Iteration is the orchestrator-loop iteration whose transcript assembly
+	// triggered this.
+	Iteration int `json:"iteration"`
+	// ReplacedTurns are the event ids the summary stands in for (a contiguous
+	// most-recent-replaced range).
+	ReplacedTurns []string `json:"replacedTurns"`
+	// SummaryRef is the artifactId of the persisted summary (the summary text is
+	// NOT inlined).
+	SummaryRef string `json:"summaryRef"`
+	// TokenCounter is the unit TokensBefore/TokensAfter are denominated in;
+	// equals the advertised contextBudget.tokenCounter
+	// ("o200k_base" | "cl100k_base" | "chars" | "host-defined").
+	TokenCounter string `json:"tokenCounter,omitempty"`
+	// TokensBefore is the token count of the replaced range before summarization.
+	TokensBefore int `json:"tokensBefore,omitempty"`
+	// TokensAfter is the token count of the summary that replaced the range
+	// (expected ≤ TokensBefore).
+	TokensAfter int `json:"tokensAfter,omitempty"`
+}
+
+// IsContextSummarized reports whether the event is a well-formed
+// `context.summarized` (RFC 0111): type discriminator + a string SummaryRef and
+// a numeric Iteration.
+func IsContextSummarized(ev RunEventDoc) bool {
+	return ev.Type == "context.summarized" &&
+		payloadHasString(ev.Payload, "summaryRef") &&
+		payloadHasNumber(ev.Payload, "iteration")
+}
+
+// UnmarshalContextSummarized extracts the typed payload from a
+// `context.summarized` event.
+func UnmarshalContextSummarized(ev RunEventDoc) (ContextSummarizedPayload, error) {
+	var p ContextSummarizedPayload
+	if !IsContextSummarized(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// ── RFC 0118 — core.dispatch.fanOut / core.dispatch.join ─────────────────
+
+// DispatchFanOutPayload mirrors `core.dispatch.fanOut` (RFC 0118). Emitted by
+// core.dispatch when a fanOutPolicy:"parallel" wave BEGINS, so the parent stays
+// observable while children run concurrently. Emitted ONLY on the parallel path;
+// the envelope's nodeId carries the dispatching node id and causationId is the
+// consumed runOrchestrator.decided event.
+type DispatchFanOutPayload struct {
+	// FanOutPolicy is always "parallel" — this event fires only on the parallel
+	// fan-out path.
+	FanOutPolicy string `json:"fanOutPolicy"`
+	// ChildCount is the number of children dispatched in this fan-out (> 1 by
+	// construction).
+	ChildCount int `json:"childCount"`
+	// MaxConcurrency is the effective concurrency ceiling for the wave, when
+	// bounded (min(config.maxConcurrency, capabilities.dispatch.maxFanOut)).
+	MaxConcurrency *int `json:"maxConcurrency,omitempty"`
+	// JoinMode is the joinPolicy.mode governing this fan-out:
+	// "wait-all" | "quorum" | "first" | "race".
+	JoinMode string `json:"joinMode,omitempty"`
+}
+
+// DispatchJoinPayload mirrors `core.dispatch.join` (RFC 0118). Emitted by
+// core.dispatch when a fanOutPolicy:"parallel" join is satisfied (or fails).
+// MergeOrder is the canonical replay-deterministic record of the output-merge
+// tiebreak — a replay/:fork MUST re-apply outputMapping in MergeOrder (the
+// parent host's observed wall-clock terminal order), never in nextWorkerIds
+// order.
+type DispatchJoinPayload struct {
+	// JoinOutcome is "satisfied" (mode met, node did not fail), "failed"
+	// (fail-fast tripped or mode unsatisfiable — node fails), or "partial" (mode
+	// met but ≥1 child non-completed under collect/absorb — node SUCCEEDS).
+	JoinOutcome string `json:"joinOutcome"`
+	// CompletedCount is the number of children that reached completed.
+	CompletedCount int `json:"completedCount,omitempty"`
+	// FailedCount is the number of children that reached failed.
+	FailedCount int `json:"failedCount,omitempty"`
+	// CancelledCount is the number of children cancelled (e.g. in-flight when a
+	// quorum/first/race/fail-fast join short-circuited).
+	CancelledCount *int `json:"cancelledCount,omitempty"`
+	// MergeOrder is the childRunIds in the parent host's observed wall-clock
+	// terminal order — the replay-deterministic tiebreak for colliding
+	// outputMapping keys. Recorded at terminal-fold time; never recomputed from
+	// child timestamps.
+	MergeOrder []string `json:"mergeOrder"`
+}
+
+// IsDispatchFanOut reports whether the event is a well-formed
+// `core.dispatch.fanOut` (RFC 0118): type discriminator + fanOutPolicy pinned to
+// "parallel" (the event fires only on the parallel path) + a numeric ChildCount.
+func IsDispatchFanOut(ev RunEventDoc) bool {
+	return ev.Type == "core.dispatch.fanOut" &&
+		payloadStringEquals(ev.Payload, "fanOutPolicy", "parallel") &&
+		payloadHasNumber(ev.Payload, "childCount")
+}
+
+// IsDispatchJoin reports whether the event is a well-formed
+// `core.dispatch.join` (RFC 0118): type discriminator + a string JoinOutcome and
+// a MergeOrder array.
+func IsDispatchJoin(ev RunEventDoc) bool {
+	return ev.Type == "core.dispatch.join" &&
+		payloadHasString(ev.Payload, "joinOutcome") &&
+		payloadHasArray(ev.Payload, "mergeOrder")
+}
+
+// UnmarshalDispatchFanOut extracts the typed payload from a
+// `core.dispatch.fanOut` event.
+func UnmarshalDispatchFanOut(ev RunEventDoc) (DispatchFanOutPayload, error) {
+	var p DispatchFanOutPayload
+	if !IsDispatchFanOut(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}
+
+// UnmarshalDispatchJoin extracts the typed payload from a
+// `core.dispatch.join` event.
+func UnmarshalDispatchJoin(ev RunEventDoc) (DispatchJoinPayload, error) {
+	var p DispatchJoinPayload
+	if !IsDispatchJoin(ev) {
+		return p, ErrNotMatchingEvent
+	}
+	if err := reencode(ev.Payload, &p); err != nil {
+		return p, err
+	}
+	return p, nil
+}

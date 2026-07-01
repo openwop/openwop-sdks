@@ -1,5 +1,15 @@
 # `openwop-client` Changelog
 
+## [1.5.0] — 2026-06-30 — RFC 0111–0120 client-surface parity with TypeScript
+
+_Brings the Python SDK to parity with the TS client surface for the corpus RFC 0111–0120 cycle (spec `v1.2.0`). Additive + read-only; stdlib-only; `ruff check` clean._
+
+- **Capability discovery** — `Capabilities` gains `memory` (RFC 0113 `injectionBudget`), `restTransport` (0115), `toolCatalog` (0112 `compactView`), `a2uiSurface` (0114 `deltaTransport`), `uiPlugins` (0117/0119; open-string `isolation` admits the vendor `x-host-*` form), and `dispatch` (0118 fan-out/join descriptors); `CapabilitiesAIProviders` gains `promptPrefixCache` (0116). Each parsed with the existing `_capabilities_from_dict` idiom.
+- **Events** — `ContextSummarizedPayload` (0111 `context.summarized`), `DispatchFanOutPayload` / `DispatchJoinPayload` (0118 `core.dispatch.fanOut` / `.join`), each with an `is_*` guard + payload extractor.
+- **Compact tools** — `CompactToolDescriptor` + `OpenwopClient.tools_list_compact()` (`GET /v1/tools?view=compact`, `None` on 404/501); the `A2uiSurfaceDeltaFrame` / `A2uiSurfacePatchOp` stream-frame types (0114).
+
+RFC 0120 (`apiHosts`) has no client surface (registry-manifest-only). Ships in lockstep with Go `1.5.0` and the TS `1.6.1` clobber-restore fix.
+
 ## [1.4.1] — 2026-06-24 — AI-envelope surface parity (Python + Go)
 
 - **AI-envelope surface parity.** Adds the full `ai-envelope.md` client surface that was previously TypeScript-only: `AIEnvelope`, `EnvelopeMeta`, `PartialInfo`, `EnvelopeContract`, `EnvelopeContractRefusal`, `ValidationDetail`, `EnvelopeOutcome` (status-tagged), `EnvelopeContractsCapability`, `EnvelopeStrictness`, and the per-kind payloads (`ClarificationRequestPayload`/`Question`, `SchemaRequestPayload`, `SchemaResponsePayload`, `AIEnvelopeErrorPayload`, `A2UISurfacePayload` — RFC 0102). Frozen dataclasses, re-exported from the package root; `AIEnvelope.payload` is `Any` (narrow per `type`). Closes the `PARITY.md` §"Known cross-SDK asymmetry". Additive.
