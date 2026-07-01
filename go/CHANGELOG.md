@@ -1,5 +1,15 @@
 # `openwopclient` Changelog
 
+## [1.5.0] — 2026-06-30 — RFC 0111–0120 client-surface parity with TypeScript
+
+_Brings the Go SDK to parity with the TS client surface for the corpus RFC 0111–0120 cycle (spec `v1.2.0`). Additive + read-only; `go vet` + `gofmt` clean._
+
+- **Capability discovery** — `Capabilities` gains `Memory` (RFC 0113 `InjectionBudget`), `RestTransport` (0115), `ToolCatalog` (0112 `CompactView`), `A2UISurface` (0114 `DeltaTransport`), `UIPlugins` (0117/0119; open-string `Isolation` for the vendor `x-host-*` form), and `Dispatch` (0118 fan-out/join descriptors); `CapabilitiesAIProviders` gains `PromptPrefixCache` (0116). Parsed via `encoding/json` struct tags (nil ⇒ absent).
+- **Events** — `ContextSummarizedPayload` (0111), `DispatchFanOutPayload` / `DispatchJoinPayload` (0118), each with an `Is*` guard + `Unmarshal*` helper.
+- **Compact tools** — `CompactToolDescriptor` + `(*OpenwopClient).ListCompactTools` (`GET /v1/tools?view=compact`, `(nil, nil)` on 404/501); the `A2UISurfaceDeltaFrame` / `A2UISurfacePatchOp` stream-frame types (0114).
+
+RFC 0120 (`apiHosts`) has no client surface (registry-manifest-only). Tag `go/v1.5.0`. Ships in lockstep with Python `1.5.0` and the TS `1.6.1` clobber-restore fix.
+
 ## [1.4.1] — 2026-06-24 — AI-envelope surface parity (Python + Go)
 
 - **AI-envelope surface parity.** Adds the full `ai-envelope.md` client surface that was previously TypeScript-only: `AIEnvelope`, `EnvelopeMeta`, `PartialInfo`, `EnvelopeContract`, `EnvelopeContractRefusal`, `ValidationDetail`, `EnvelopeOutcome` (status-tagged; Go has no sum types), `EnvelopeContractsCapability`, and the per-kind payload structs (`ClarificationRequestPayload`/`Question`, `SchemaRequestPayload`, `SchemaResponsePayload`, `AIEnvelopeErrorPayload`, `A2UISurfacePayload` — RFC 0102). `AIEnvelope.Payload` is `any` (unmarshal per `Type`). Closes the `PARITY.md` §"Known cross-SDK asymmetry". Additive.

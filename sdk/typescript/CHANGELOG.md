@@ -1,5 +1,15 @@
 # `@openwop/openwop` Changelog
 
+## [1.6.1] — 2026-06-30 — restore RFC 0111/0113/0115 surfaces dropped by the v1.5.0 clobber
+
+_Correctness fix. The v1.5.0 merge cascade dropped surfaces that nothing else referenced, so the build stayed green while `1.5.0`/`1.6.0` shipped a CHANGELOG claiming RFC 0111/0113/0115 client surface that wasn't in the package. Restored (additive + read-only) so the package matches its own notes._
+
+- **RFC 0111** — `ContextSummarizedPayload` (`context.summarized`) + the `isContextSummarized` type guard.
+- **RFC 0113** — `MemoryListOptions.tokenBudget`/`rank`/`query` + the `capabilities.memory.injectionBudget` block.
+- **RFC 0115** — the `capabilities.restTransport` block (`conditionalRunGet` + `contentEncodings`).
+
+Sourced from the corpus schemas cross-checked against the authoring commits. `provider.usage` cache-token fields stay out of scope (the SDK models no provider-usage payload). This release also coincides with the Python `1.5.0` + Go `1.5.0` RFC 0111–0120 parity cut.
+
 ## [1.6.0] — 2026-06-30 — RFC 0117–0120 client surface (front-end plugins, parallel dispatch)
 
 _TypeScript-only. Completes the corpus RFC 0109–0120 (spec `v1.2.0`) client-surface catch-up. Additive + read-only. Python + Go stay at `1.4.1` (no pending client surface for this cycle)._
