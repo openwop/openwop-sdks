@@ -59,3 +59,15 @@ disallow_untyped_decorators = true
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
+
+# Ruff is pinned here so lint + format behavior is deterministic across ruff
+# versions (the enforced gate is `ruff check`, run in dev + PR review; `ruff
+# format` is NOT run in CI — hand-wrapped call style is intentional). `select`
+# restates ruff's historical default set explicitly so a future ruff default
+# change can't silently alter what the lint gate checks.
+[tool.ruff]
+target-version = "py310"
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
