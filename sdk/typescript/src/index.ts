@@ -23,6 +23,8 @@ export type {
   Capabilities,
   // RFC 0007 + RFC 0118 — top-level dispatch fan-out/join capability
   DispatchCapability,
+  // RFC 0117 + RFC 0119 — front-end plugin packs capability
+  UiPluginsCapability,
   CancelRunRequest,
   CancelRunResponse,
   CreateRunRequest,

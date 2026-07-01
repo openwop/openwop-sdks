@@ -146,6 +146,15 @@ export interface Capabilities {
    *  it both nested under `agents` and at the doc root; absent ⇒ the host
    *  advertises no top-level dispatch descriptors). Read-only. */
   dispatch?: DispatchCapability;
+  /** RFC 0117 (amended by RFC 0119). Host loads SIGNED, SANDBOXED front-end
+   *  plugin packs (`kind:"frontend-plugin"`) in an origin/execution-isolated
+   *  sandbox and talks to them over the closed `ui-plugin/1` host-RPC boundary
+   *  (`capabilities.md` §`uiPlugins`). This is the DISCOVERY surface only — the
+   *  `ui-plugin/1` RPC envelope + the `frontend-plugin` manifest are a
+   *  renderer/registry concern the SDK does not model (as with the RFC 0102
+   *  A2UI `surface` and RFC 0071 pack manifests). Absent ⇒ the host loads no
+   *  plugin packs (graceful degradation to RFC 0071 host rendering). Read-only. */
+  uiPlugins?: UiPluginsCapability;
   extensions?: Record<string, unknown>;
   // Network-handshake superset (all `(future)` fields per capabilities.md)
   implementation?: { name?: string; version?: string; vendor?: string };
@@ -827,6 +836,48 @@ export interface DispatchCapability {
    *  fan-out. Effective concurrency is `min(config.maxConcurrency ?? ∞,
    *  maxFanOut ?? ∞)`. Absent ⇒ unbounded (treat as "unknown, may be capped"). */
   maxFanOut?: number;
+}
+
+/**
+ * RFC 0117 (`Active`; amended by RFC 0119) — the `uiPlugins` capability
+ * advertisement (`capabilities.md` §`uiPlugins`), exposed as
+ * {@link Capabilities.uiPlugins}. The host loads `kind:"frontend-plugin"` packs
+ * in an origin/execution-isolated sandbox (mechanism per {@link isolation}) and
+ * serves the closed `ui-plugin/1` host-RPC boundary. All fields but `supported`
+ * are OPTIONAL + read-only; a client reads them to decide whether (and which
+ * surfaces / RPC methods) a plugin can target before install. The SDK models
+ * only this discovery block — NOT the `ui-plugin/1` RPC envelope or the
+ * `frontend-plugin` manifest (a renderer/registry concern, out of client scope).
+ */
+export interface UiPluginsCapability {
+  /** Host loads `kind:"frontend-plugin"` packs in an isolated sandbox and
+   *  serves the `ui-plugin/1` host-RPC boundary. `false`/absent ⇒ the host
+   *  rejects such packs at registration and renders no plugin surface. */
+  supported: boolean;
+  /** RFC 0117 (amended by RFC 0119). The categorical isolation MECHANISM the
+   *  host enforces for plugin bytes. The five named values plus a vendor
+   *  `x-host-<host>-<key>` form (per `host-extensions.md`) — the open string
+   *  admits the vendor form without discarding autocomplete for the known set.
+   *  ALL values denote the SAME mandatory isolation property (no host execution
+   *  context / DOM / origin-storage / credential access, deny-egress, RPC-only);
+   *  the field names the mechanism, never relaxes the property. Absent ⇒
+   *  `'cross-origin-iframe'` (the default). */
+  isolation?:
+    | 'cross-origin-iframe'
+    | 'wasm'
+    | 'process'
+    | 'container'
+    | 'vm'
+    | (string & {});
+  /** RFC 0117. Plugin surfaces this host renders. A pack surface not in this
+   *  set is installable-but-inert (graceful degradation). */
+  surfaces?: readonly ('artifact-viewer' | 'route' | 'settings-panel')[];
+  /** RFC 0117. The `ui-plugin/1` host-RPC methods this host honors. A plugin
+   *  call to a method not in this set is rejected with `method_not_allowed`
+   *  (SECURITY invariant `frontend-plugin-rpc-allowlist`). */
+  hostApi?: readonly ('artifact.read' | 'artifact.write' | 'host.toast' | 'host.navigate')[];
+  /** RFC 0117. Per-plugin entry-bundle byte ceiling the host will load. */
+  maxEntryBytes?: number;
 }
 
 // ─── agent.* event payloads (RFC 0002 §B + RFC 0024) ────────────────────
