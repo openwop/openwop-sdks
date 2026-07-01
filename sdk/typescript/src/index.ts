@@ -21,6 +21,8 @@ export type {
   BulkCancelRunsRequest,
   BulkCancelRunsResponse,
   Capabilities,
+  // RFC 0007 + RFC 0118 — top-level dispatch fan-out/join capability
+  DispatchCapability,
   CancelRunRequest,
   CancelRunResponse,
   CreateRunRequest,
@@ -71,6 +73,9 @@ export type {
   VoiceCancelledPayload,
   // RFC 0110 — channel.presence run-event payload
   ChannelPresencePayload,
+  // RFC 0118 — core.dispatch.fanOut / core.dispatch.join run-event payloads
+  DispatchFanOutPayload,
+  DispatchJoinPayload,
   // RFC 0027 + RFC 0028 — Prompt library (spec/v1/prompts.md)
   GetPromptRequest,
   ListPromptsRequest,
@@ -134,6 +139,8 @@ export {
   isVoiceBargeIn,
   isVoiceCancelled,
   isChannelPresence,
+  isDispatchFanOut,
+  isDispatchJoin,
   subscribeToAgentReasoning,
 } from './event-helpers.js';
 export type {
