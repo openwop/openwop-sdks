@@ -277,3 +277,77 @@ func TestVoiceAndPresenceGuards(t *testing.T) {
 		t.Error("channel.presence without present must not match")
 	}
 }
+
+// ── RFC 0111 context.summarized + RFC 0118 core.dispatch.* guards ─────────
+
+func TestContextSummarizedGuard(t *testing.T) {
+	good := makeEvent("context.summarized", map[string]any{
+		"iteration":     float64(3),
+		"summaryRef":    "artifact-9",
+		"replacedTurns": []string{"evt-1", "evt-2"},
+		"tokenCounter":  "chars",
+		"tokensBefore":  float64(900),
+		"tokensAfter":   float64(120),
+	})
+	if !IsContextSummarized(good) {
+		t.Fatal("well-formed context.summarized should match")
+	}
+	p, err := UnmarshalContextSummarized(good)
+	if err != nil || p.SummaryRef != "artifact-9" || p.Iteration != 3 || len(p.ReplacedTurns) != 2 {
+		t.Errorf("UnmarshalContextSummarized: %+v err=%v", p, err)
+	}
+	// Missing numeric iteration must not match.
+	if IsContextSummarized(makeEvent("context.summarized", map[string]any{"summaryRef": "a"})) {
+		t.Error("context.summarized without iteration must not match")
+	}
+	// Missing summaryRef string must not match.
+	if IsContextSummarized(makeEvent("context.summarized", map[string]any{"iteration": float64(1)})) {
+		t.Error("context.summarized without summaryRef must not match")
+	}
+	// Wrong type discriminator → Unmarshal returns ErrNotMatchingEvent.
+	if _, err := UnmarshalContextSummarized(makeEvent("node.message", map[string]any{})); !errors.Is(err, ErrNotMatchingEvent) {
+		t.Errorf("expected ErrNotMatchingEvent, got %v", err)
+	}
+}
+
+func TestDispatchGuards(t *testing.T) {
+	// core.dispatch.fanOut: fanOutPolicy pinned to "parallel" + numeric childCount.
+	fanOut := makeEvent("core.dispatch.fanOut", map[string]any{
+		"fanOutPolicy": "parallel", "childCount": float64(4), "joinMode": "wait-all",
+	})
+	if !IsDispatchFanOut(fanOut) {
+		t.Fatal("well-formed core.dispatch.fanOut should match")
+	}
+	fp, err := UnmarshalDispatchFanOut(fanOut)
+	if err != nil || fp.FanOutPolicy != "parallel" || fp.ChildCount != 4 {
+		t.Errorf("UnmarshalDispatchFanOut: %+v err=%v", fp, err)
+	}
+	// A non-parallel fanOutPolicy must not match (the event fires only on parallel).
+	if IsDispatchFanOut(makeEvent("core.dispatch.fanOut", map[string]any{"fanOutPolicy": "sequential", "childCount": float64(4)})) {
+		t.Error("core.dispatch.fanOut with fanOutPolicy!=parallel must not match")
+	}
+	// Missing numeric childCount must not match.
+	if IsDispatchFanOut(makeEvent("core.dispatch.fanOut", map[string]any{"fanOutPolicy": "parallel"})) {
+		t.Error("core.dispatch.fanOut without childCount must not match")
+	}
+
+	// core.dispatch.join: string joinOutcome + mergeOrder array.
+	join := makeEvent("core.dispatch.join", map[string]any{
+		"joinOutcome": "satisfied", "completedCount": float64(3), "mergeOrder": []string{"r-1", "r-2", "r-3"},
+	})
+	if !IsDispatchJoin(join) {
+		t.Fatal("well-formed core.dispatch.join should match")
+	}
+	jp, err := UnmarshalDispatchJoin(join)
+	if err != nil || jp.JoinOutcome != "satisfied" || len(jp.MergeOrder) != 3 {
+		t.Errorf("UnmarshalDispatchJoin: %+v err=%v", jp, err)
+	}
+	// Missing mergeOrder array must not match.
+	if IsDispatchJoin(makeEvent("core.dispatch.join", map[string]any{"joinOutcome": "failed"})) {
+		t.Error("core.dispatch.join without mergeOrder must not match")
+	}
+	// []any wire form for mergeOrder also matches.
+	if !IsDispatchJoin(makeEvent("core.dispatch.join", map[string]any{"joinOutcome": "partial", "mergeOrder": []any{"r-1"}})) {
+		t.Error("core.dispatch.join with []any mergeOrder should match")
+	}
+}

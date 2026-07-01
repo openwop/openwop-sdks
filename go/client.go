@@ -856,6 +856,27 @@ func (c *OpenwopClient) GetTool(ctx context.Context, toolID string) (*ToolDescri
 	return &out, nil
 }
 
+// ListCompactTools calls GET /v1/tools?view=compact per RFC 0112 — lists the
+// compact, model-facing CompactToolDescriptor projection (the heavy descriptor
+// fields dropped). Reads the {tools:[...]} envelope. Returns (nil, nil) when the
+// host doesn't advertise capabilities.toolCatalog.compactView (the endpoint
+// 404s) or doesn't implement the compact view (501), so callers can branch on
+// capability discovery without unwrapping the error envelope.
+func (c *OpenwopClient) ListCompactTools(ctx context.Context) ([]CompactToolDescriptor, error) {
+	var out struct {
+		Tools []CompactToolDescriptor `json:"tools"`
+	}
+	err := c.requestJSON(ctx, http.MethodGet, "/v1/tools?view=compact", nil, nil, true, &out)
+	if err != nil {
+		var werr *WopError
+		if errors.As(err, &werr) && (werr.Status == 404 || werr.Status == 501) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return out.Tools, nil
+}
+
 // GetArtifact calls GET /v1/runs/{runID}/artifacts/{artifactID} — reads a
 // run-produced artifact by id. The artifact body is implementation-defined per
 // the host, so it's returned as a generic map. Returns (nil, nil) on 404 (no

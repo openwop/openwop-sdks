@@ -32,15 +32,23 @@ from .types import (
     BulkCancelRunsResponse,
     Capabilities,
     CapabilitiesA2A,
+    CapabilitiesA2uiSurface,
     CapabilitiesAIProviders,
     CapabilitiesApproverRouting,
     CapabilitiesChannelPresence,
     CapabilitiesConversationTurnModelProvenance,
+    CapabilitiesDispatch,
     CapabilitiesInterrupt,
     CapabilitiesGrpc,
     CapabilitiesLimits,
+    CapabilitiesMemory,
+    CapabilitiesMemoryInjectionBudget,
     CapabilitiesMultiPartyConversation,
+    CapabilitiesPromptPrefixCache,
     CapabilitiesRealtimeVoice,
+    CapabilitiesRestTransport,
+    CapabilitiesToolCatalog,
+    CapabilitiesUiPlugins,
     CancelRunRequest,
     CancelRunResponse,
     CreateRunRequest,
@@ -92,6 +100,7 @@ from .types import (
     RunSnapshotError,
     RunStatus,
     StreamMode,
+    CompactToolDescriptor,
     ToolDescriptor,
 )
 
@@ -215,6 +224,17 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
             if isinstance(raw_rv, dict)
             else None
         )
+        raw_ppc = raw_aip.get("promptPrefixCache")
+        prompt_prefix_cache = (
+            CapabilitiesPromptPrefixCache(
+                supported=bool(raw_ppc.get("supported", False)),
+                providers=(
+                    list(raw_ppc["providers"]) if "providers" in raw_ppc else None
+                ),
+            )
+            if isinstance(raw_ppc, dict)
+            else None
+        )
         ai_providers = CapabilitiesAIProviders(
             supported=(
                 list(raw_aip["supported"]) if "supported" in raw_aip else None
@@ -226,6 +246,7 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
             ),
             speechSynthesis=raw_aip.get("speechSynthesis"),
             realtimeVoice=realtime_voice,
+            promptPrefixCache=prompt_prefix_cache,
         )
     else:
         ai_providers = None
@@ -272,6 +293,82 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         interrupt = CapabilitiesInterrupt(approverRouting=approver_routing)
     else:
         interrupt = None
+    raw_mem = d.get("memory")
+    if isinstance(raw_mem, dict):
+        raw_ib = raw_mem.get("injectionBudget")
+        injection_budget = (
+            CapabilitiesMemoryInjectionBudget(
+                supported=bool(raw_ib.get("supported", False)),
+                tokenCounter=raw_ib.get("tokenCounter"),
+            )
+            if isinstance(raw_ib, dict)
+            else None
+        )
+        memory = CapabilitiesMemory(injectionBudget=injection_budget)
+    else:
+        memory = None
+    raw_rt = d.get("restTransport")
+    rest_transport = (
+        CapabilitiesRestTransport(
+            conditionalRunGet=raw_rt.get("conditionalRunGet"),
+            contentEncodings=(
+                list(raw_rt["contentEncodings"])
+                if "contentEncodings" in raw_rt
+                else None
+            ),
+        )
+        if isinstance(raw_rt, dict)
+        else None
+    )
+    raw_tc = d.get("toolCatalog")
+    tool_catalog = (
+        CapabilitiesToolCatalog(compactView=raw_tc.get("compactView"))
+        if isinstance(raw_tc, dict)
+        else None
+    )
+    raw_a2ui = d.get("a2uiSurface")
+    a2ui_surface = (
+        CapabilitiesA2uiSurface(deltaTransport=raw_a2ui.get("deltaTransport"))
+        if isinstance(raw_a2ui, dict)
+        else None
+    )
+    raw_uip = d.get("uiPlugins")
+    ui_plugins = (
+        CapabilitiesUiPlugins(
+            supported=bool(raw_uip.get("supported", False)),
+            isolation=raw_uip.get("isolation"),
+            surfaces=(
+                list(raw_uip["surfaces"]) if "surfaces" in raw_uip else None
+            ),
+            hostApi=list(raw_uip["hostApi"]) if "hostApi" in raw_uip else None,
+            maxEntryBytes=raw_uip.get("maxEntryBytes"),
+        )
+        if isinstance(raw_uip, dict)
+        else None
+    )
+    raw_disp = d.get("dispatch")
+    dispatch = (
+        CapabilitiesDispatch(
+            supported=raw_disp.get("supported"),
+            fanOutSupported=raw_disp.get("fanOutSupported"),
+            fanOutPolicies=(
+                list(raw_disp["fanOutPolicies"])
+                if "fanOutPolicies" in raw_disp
+                else None
+            ),
+            joinModes=(
+                list(raw_disp["joinModes"]) if "joinModes" in raw_disp else None
+            ),
+            onChildFailureModes=(
+                list(raw_disp["onChildFailureModes"])
+                if "onChildFailureModes" in raw_disp
+                else None
+            ),
+            maxFanOut=raw_disp.get("maxFanOut"),
+        )
+        if isinstance(raw_disp, dict)
+        else None
+    )
     return Capabilities(
         protocolVersion=str(d["protocolVersion"]),
         supportedEnvelopes=list(d.get("supportedEnvelopes", [])),
@@ -292,6 +389,12 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
         conversationTurnModelProvenance=conversation_turn_model_provenance,
         channelPresence=channel_presence,
         interrupt=interrupt,
+        memory=memory,
+        restTransport=rest_transport,
+        toolCatalog=tool_catalog,
+        a2uiSurface=a2ui_surface,
+        uiPlugins=ui_plugins,
+        dispatch=dispatch,
     )
 
 
@@ -373,6 +476,25 @@ def _tool_descriptor_from_dict(d: dict[str, Any]) -> ToolDescriptor:
         costHint=d.get("costHint"),
         latencyHint=d.get("latencyHint"),
     )
+
+
+def _compact_tool_descriptor_from_dict(d: dict[str, Any]) -> CompactToolDescriptor:
+    """Map a compact ``GET /v1/tools?view=compact`` entry into a
+    :class:`CompactToolDescriptor` (RFC 0112). TypedDict is static-only, so this
+    returns a plain dict carrying the compact fields verbatim; the heavy
+    descriptor fields are dropped host-side."""
+    out: CompactToolDescriptor = {
+        "toolId": str(d["toolId"]),
+        "source": str(d["source"]),
+        "safetyTier": str(d["safetyTier"]),
+    }
+    if "title" in d:
+        out["title"] = d["title"]
+    if "description" in d:
+        out["description"] = d["description"]
+    if "inputSchema" in d:
+        out["inputSchema"] = d["inputSchema"]
+    return out
 
 
 def _agent_deployment_from_dict(d: dict[str, Any]) -> AgentDeployment:
@@ -1073,6 +1195,20 @@ class OpenwopClient:
                 return None
             raise
         return _tool_descriptor_from_dict(d)
+
+    def tools_list_compact(self) -> list[CompactToolDescriptor] | None:
+        """RFC 0112 — list the model-facing compact tool projections
+        (``GET /v1/tools?view=compact``). Reads the ``{tools: [...]}`` envelope.
+        Returns ``None`` when the host doesn't advertise
+        ``capabilities.toolCatalog.compactView`` (the endpoint 404s / 501s)."""
+        try:
+            d = self._request_json_any("GET", "/v1/tools?view=compact")
+        except WopError as err:
+            if err.status in (404, 501):
+                return None
+            raise
+        items = d if isinstance(d, list) else d.get("tools", d.get("items", []))
+        return [_compact_tool_descriptor_from_dict(t) for t in items]
 
     # ── Prompt library (RFC 0027 / RFC 0028) ─────────────────────────
     def prompts_list(
