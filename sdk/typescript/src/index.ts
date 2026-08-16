@@ -51,6 +51,7 @@ export type {
   RunEventDoc,
   RunSnapshot,
   RunStatus,
+  CompensationStatus,
   StreamMode,
   TypedRunEvent,
   // RFC 0059 — agent workspace (spec/v1/agent-workspace.md)

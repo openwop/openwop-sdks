@@ -213,10 +213,32 @@ export type CapBreachedKind =
   | 'run-duration'
   | 'loop-iterations';
 
+/**
+ * RFC 0151 §D — the run's compensation (unwind) rollup on `RunSnapshot`,
+ * kept separate from `RunStatus` on purpose: `status` is the FORWARD
+ * execution state and RFC 0151 forbids reinterpreting it (there is
+ * deliberately no `compensating` run status). Capability-gated: a host that
+ * does not advertise `capabilities.compensation` omits the field; an
+ * advertising host carries it on every snapshot, `none` when idle. The
+ * value is the deterministic fold of the `compensation.*` events defined in
+ * `spec/v1/compensation.md §"Run rollup: compensationStatus"`.
+ */
+export type CompensationStatus =
+  | 'none'
+  | 'pending'
+  | 'running'
+  | 'completed'
+  | 'partial'
+  | 'failed'
+  | 'manual';
+
 export interface RunSnapshot {
   runId: string;
   workflowId: string;
   status: RunStatus;
+  /** RFC 0151 §D. Present iff the host advertises `capabilities.compensation`.
+   *  See {@link CompensationStatus}. */
+  compensationStatus?: CompensationStatus;
   currentNodeId?: string;
   startedAt?: string;
   completedAt?: string;

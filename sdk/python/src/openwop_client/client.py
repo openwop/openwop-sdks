@@ -99,6 +99,7 @@ from .types import (
     RunSnapshot,
     RunSnapshotError,
     RunStatus,
+    CompensationStatus,
     StreamMode,
     CompactToolDescriptor,
     ToolDescriptor,
@@ -430,6 +431,11 @@ def _run_snapshot_from_dict(d: dict[str, Any]) -> RunSnapshot:
         runId=str(d["runId"]),
         workflowId=str(d["workflowId"]),
         status=cast(RunStatus, d["status"]),
+        compensationStatus=(
+            cast(CompensationStatus, d["compensationStatus"])
+            if isinstance(d.get("compensationStatus"), str)
+            else None
+        ),
         currentNodeId=d.get("currentNodeId"),
         startedAt=d.get("startedAt"),
         completedAt=d.get("completedAt"),
