@@ -1,5 +1,12 @@
 # `openwop-client` Changelog
 
+## [1.6.0] — 2026-08-16 — `RunSnapshot.compensation_status` (RFC 0151 §D) + version-stable ruff pin
+
+_Lockstep with TypeScript `1.7.0`; Go unchanged at `1.5.0`. Additive + read-only; stdlib-only._
+
+- **RFC 0151 §D / UQ3** — `CompensationStatus` literal (`none | pending | running | completed | partial | failed | manual`) and the OPTIONAL `RunSnapshot.compensation_status`, present iff the host advertises `capabilities.compensation`; kept separate from `RunStatus` (no `compensating` run status). Sourced from `schemas/run-snapshot.schema.json` (corpus #1007). Exported from the package root.
+- **Tooling** — ruff pinned to a version-stable configuration so lint/format results do not drift with the developer's ruff release (#27).
+
 ## [1.5.0] — 2026-06-30 — RFC 0111–0120 client-surface parity with TypeScript
 
 _Brings the Python SDK to parity with the TS client surface for the corpus RFC 0111–0120 cycle (spec `v1.2.0`). Additive + read-only; stdlib-only; `ruff check` clean._
