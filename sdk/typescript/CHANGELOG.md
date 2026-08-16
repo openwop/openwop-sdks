@@ -1,5 +1,11 @@
 # `@openwop/openwop` Changelog
 
+## [1.7.0] — 2026-08-16 — `RunSnapshot.compensationStatus` (RFC 0151 §D)
+
+_TypeScript + Python in lockstep (`openwop-client` 1.6.0); Go unchanged at `1.5.0` (no client surface moved). Additive + read-only._
+
+- **RFC 0151 §D / UQ3** — `CompensationStatus` (`none | pending | running | completed | partial | failed | manual`) and the OPTIONAL `RunSnapshot.compensationStatus`, present iff the host advertises `capabilities.compensation` (`spec/v1/compensation.md` §"Run rollup"); kept separate from `RunStatus` on purpose — forward execution state is not reinterpreted, there is no `compensating` run status. Sourced from `schemas/run-snapshot.schema.json` (corpus #1007). Exported from the package root.
+
 ## [1.6.1] — 2026-06-30 — restore RFC 0111/0113/0115 surfaces dropped by the v1.5.0 clobber
 
 _Correctness fix. The v1.5.0 merge cascade dropped surfaces that nothing else referenced, so the build stayed green while `1.5.0`/`1.6.0` shipped a CHANGELOG claiming RFC 0111/0113/0115 client surface that wasn't in the package. Restored (additive + read-only) so the package matches its own notes._
