@@ -422,11 +422,31 @@ class RunSnapshotError:
     details: dict[str, Any] | None = None
 
 
+CompensationStatus = Literal[
+    "none",
+    "pending",
+    "running",
+    "completed",
+    "partial",
+    "failed",
+    "manual",
+]
+"""RFC 0151 §D — the run's compensation (unwind) rollup on `RunSnapshot`.
+
+Kept separate from ``RunStatus`` on purpose: ``status`` is the FORWARD
+execution state and RFC 0151 forbids reinterpreting it. Capability-gated —
+present iff the host advertises ``capabilities.compensation`` (``none`` when
+idle). The value is the deterministic fold of the ``compensation.*`` events
+defined in ``spec/v1/compensation.md`` §"Run rollup: compensationStatus".
+"""
+
+
 @dataclass(frozen=True)
 class RunSnapshot:
     runId: str
     workflowId: str
     status: RunStatus
+    compensationStatus: CompensationStatus | None = None
     currentNodeId: str | None = None
     startedAt: str | None = None
     completedAt: str | None = None
