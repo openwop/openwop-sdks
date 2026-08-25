@@ -1,5 +1,16 @@
 # `@openwop/openwop` Changelog
 
+## [1.8.0] — 2026-08-25 — the barrel is browser-safe again (openwop-sdks#30)
+
+_TypeScript only; Python + Go unchanged (the defect is a JS module-resolution issue with no analogue there). Additive — nothing is removed._
+
+- **Importing anything at all from `@openwop/openwop` failed a browser build.** The barrel re-exported `webhook-helpers`, which imports `node:crypto`, and the `exports` map offered only `"."` — so a consumer importing `OpenwopClient` still dragged in `createHmac`. Vite/Rollup then failed with `"createHmac" is not exported by "__vite-browser-external"`, a message naming a bundler-internal shim rather than the real cause. **Reported 2026-05-26 and still reproducible against published `1.7.0` fifteen months later**, which is roughly how long an error that points nowhere useful survives.
+- **`@openwop/openwop/webhooks`** is a new subpath export — the server-side home for `verifyWebhookSignature`, `signWebhookDelivery`, and `DEFAULT_WEBHOOK_FRESHNESS_WINDOW_SECONDS`.
+- **The barrel re-exports stay, marked `@deprecated`**, and will be removed in the next major. Removing them now would be a breaking change for everyone importing from the barrel today, and a consumer needs somewhere to move *to* before the move is required.
+- **A `browser` field substitutes a stub for the Node module**, so a browser build now succeeds and only a browser *call* fails. **The stub throws rather than returning `{ valid: false }`** — a caller treating "not valid" as "reject the delivery" cannot otherwise distinguish a forged signature from a platform that could not check one, and only one of those is a fact about the payload. Webhook verification is a server concern regardless: the subscription secret must never reach a browser.
+- **Pinned by `browser-safety.test.ts`**, whose load-bearing case is not the fix but the *next* one — it asserts that `webhook-helpers` is the **only** barrel module importing a Node builtin, so the module that would silently re-break this is caught by name. Verified by sabotage: adding `node:crypto` to `run-helpers` reddens it with `expected [ 'run-helpers', 'webhook-helpers' ]`.
+- **End-to-end, red-before-green.** A real Vite build against published `1.7.0` reproduces the reported error verbatim; the same build against this version succeeds with **zero `node:crypto` occurrences** in the output bundle, and the server subpath verifies a real signature (`{"valid":true}`) and rejects a wrong secret (`{"valid":false,"reason":"signature_mismatch"}`).
+
 ## [1.7.0] — 2026-08-16 — `RunSnapshot.compensationStatus` (RFC 0151 §D)
 
 _TypeScript + Python in lockstep (`openwop-client` 1.6.0); Go unchanged at `1.5.0` (no client surface moved). Additive + read-only._
