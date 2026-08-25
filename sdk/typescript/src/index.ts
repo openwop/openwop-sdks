@@ -188,6 +188,18 @@ export type { OpenwopCostAttributeName } from './cost-attribution.js';
 // HMAC-SHA256 + timestamp freshness window verification per
 // spec/v1/webhooks.md §"Signature recipe". Receivers MUST verify both
 // the HMAC AND the timestamp to defeat replay attacks.
+//
+// DEPRECATED ON THE BARREL (openwop-sdks#30). These re-exports are why a
+// browser consumer importing anything at all from `@openwop/openwop` dragged
+// in `node:crypto` and failed the build. Import them from
+// `@openwop/openwop/webhooks` instead; the barrel re-export is retained for
+// compatibility and will be removed in the next major.
+//
+// Until then the `browser` field in package.json substitutes a stub that
+// throws with an explanatory message, so a browser build succeeds and only a
+// browser CALL fails — which is the correct outcome either way, since the
+// subscription secret must never reach a browser.
+/** @deprecated Import from `@openwop/openwop/webhooks` — server-only; removed from the barrel in the next major. */
 export {
   DEFAULT_WEBHOOK_FRESHNESS_WINDOW_SECONDS,
   verifyWebhookSignature,
