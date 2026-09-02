@@ -1,6 +1,7 @@
 package openwopclient
 
 import (
+	"strings"
 	"testing"
 	"time"
 )
