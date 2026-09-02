@@ -208,7 +208,12 @@ export {
 export type {
   VerifyWebhookSignatureOptions,
   VerifyWebhookOutcome,
+  SignedWebhookDelivery,
 } from './webhook-helpers.js';
+// RFC 0165 §C.3 — browser-safe (no Node builtin): which header family a
+// delivery carries, and the `sha256=` / legacy `v1=` value parser.
+export { WEBHOOK_HEADER_FAMILIES, parseSignatureValue, readWebhookHeaders } from './webhook-header-families.js';
+export type { WebhookHeaderRead } from './webhook-header-families.js';
 
 // Public-registry read helpers (SDK-5 close-out 2026-05-15). Read-only
 // typed client for the public node-pack registry at packs.openwop.dev

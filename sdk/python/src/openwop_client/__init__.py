@@ -182,7 +182,7 @@ from .types import (
     is_http_error_code,
 )
 
-__version__ = "1.6.0"
+__version__ = "1.7.0"
 
 __all__ = [
     "OpenwopClient",
@@ -361,6 +361,8 @@ __all__ = [
     "context_summarized_payload",
     # Webhook helpers (SDK-3, 2026-05-15)
     "verify_webhook_signature",
+    "read_webhook_headers",
+    "parse_signature_value",
     "sign_webhook_delivery",
     "VerifyValid",
     "VerifyInvalid",
@@ -381,6 +383,8 @@ from .webhook_helpers import (
     VerifyValid,
     sign_webhook_delivery,
     verify_webhook_signature,
+    read_webhook_headers,
+    parse_signature_value,
 )
 
 from .registry_helpers import (

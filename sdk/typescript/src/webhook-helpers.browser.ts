@@ -46,4 +46,9 @@ export function signWebhookDelivery(): never {
   throw new Error(REASON);
 }
 
-export type { VerifyWebhookSignatureOptions, VerifyWebhookOutcome } from './webhook-helpers.js';
+// RFC 0165 §C.3 — the header-family readers need no Node builtin, so the
+// browser build carries the real implementations (a browser MAY inspect which
+// family a delivery carries; it still MUST NOT verify — no secret in a browser).
+export { WEBHOOK_HEADER_FAMILIES, parseSignatureValue, readWebhookHeaders } from './webhook-header-families.js';
+
+export type { VerifyWebhookSignatureOptions, VerifyWebhookOutcome, SignedWebhookDelivery, WebhookHeaderRead } from './webhook-helpers.js';
