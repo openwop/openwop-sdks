@@ -1,5 +1,14 @@
 # `openwop-client` Changelog
 
+## [1.7.0] — 2026-09-02 — webhook helpers read the spec's headers (RFC 0165 §C.3)
+
+_Python half of the three-SDK change (TypeScript 1.9.0, Python 1.7.0, Go v1.6.0). Additive — existing calls keep working; only the default emitted value changes shape._
+
+- **Verification accepted a header value that appears in no spec file.** The helper required `v1=<hex>` and rejected the spec's `sha256=<hex>` (`webhooks.md` §"Headers") as `malformed_signature_header`, so a conformant host's delivery failed verification outright. Both forms are accepted now.
+- **Signing emits the spec form** `sha256=<hex>`.
+- **Header families are read in spec order** — `OpenWOP-*` (RFC 0165 §C.1), then `X-openwop-*`, then the legacy `openwop-Webhook-*` names — case-insensitively.
+
+
 ## [1.6.0] — 2026-08-16 — `RunSnapshot.compensation_status` (RFC 0151 §D) + version-stable ruff pin
 
 _Lockstep with TypeScript `1.7.0`; Go unchanged at `1.5.0`. Additive + read-only; stdlib-only._

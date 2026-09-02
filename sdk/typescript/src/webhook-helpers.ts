@@ -4,15 +4,23 @@
  * timestamp freshness before accepting a delivery — verifying HMAC
  * alone leaves the receiver open to replay attacks.
  *
- * The canonical signing recipe:
+ * The canonical signing recipe (`webhooks.md` §"Headers"):
  *
  *     hmac = HMAC-SHA256(secret, `${timestamp}.${rawBody}`)
- *     header `openwop-Webhook-Signature: v1=<hmac-hex>`
- *     header `openwop-Webhook-Timestamp: <unix-seconds>`
+ *     header `X-openwop-Signature: sha256=<hmac-hex>`        (v1 canonical)
+ *     header `OpenWOP-Signature: sha256=<hmac-hex>`          (RFC 0165 §C.1, dual-emitted)
+ *     header `X-openwop-Timestamp` / `OpenWOP-Timestamp: <unix-seconds>`
+ *
+ * History (RFC 0165 §C.3): until 1.9.0 this helper read a header named
+ * `openwop-Webhook-Signature` carrying `v1=<hex>` — a name and value shape
+ * that appear in no spec file. A spec-conformant `sha256=` delivery failed
+ * verification outright. The helper now accepts BOTH value forms, and
+ * `readWebhookHeaders` picks the first present header family in spec order
+ * (`OpenWOP-*`, then `X-openwop-*`, then the legacy `openwop-Webhook-*`).
  *
  * Verification:
  *
- *   1. Parse the `v1=<hex>` value from the signature header.
+ *   1. Parse the `sha256=<hex>` (or legacy `v1=<hex>`) value from the signature header.
  *   2. Recompute `expected = HMAC-SHA256(secret, `${timestamp}.${rawBody}`)`.
  *   3. Compare using **constant-time** equality (timing-safe).
  *   4. Reject when `|now - timestamp|` exceeds the freshness window
@@ -26,6 +34,7 @@
  */
 
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import { parseSignatureValue } from './webhook-header-families.js';
 
 /** Default freshness window per `spec/v1/webhooks.md` §"Replay attack resistance". */
 export const DEFAULT_WEBHOOK_FRESHNESS_WINDOW_SECONDS = 300;
@@ -58,8 +67,8 @@ export type VerifyWebhookOutcome =
  * signs the exact bytes it delivered.
  *
  * @param secret The pre-shared secret returned from `webhooks.register`.
- * @param signatureHeader The value of the `openwop-Webhook-Signature` header (e.g., `"v1=abc123…"`).
- * @param timestampHeader The value of the `openwop-Webhook-Timestamp` header (unix seconds as string).
+ * @param signatureHeader The value of the signature header — `OpenWOP-Signature` / `X-openwop-Signature` (`"sha256=abc123…"`) or the legacy `openwop-Webhook-Signature` (`"v1=abc123…"`); see `readWebhookHeaders`.
+ * @param timestampHeader The value of the matching timestamp header (unix seconds as string).
  * @param rawBody The exact request body bytes the host POSTed.
  */
 export function verifyWebhookSignature(
@@ -69,11 +78,12 @@ export function verifyWebhookSignature(
   rawBody: string | Buffer,
   options: VerifyWebhookSignatureOptions = {},
 ): VerifyWebhookOutcome {
-  // 1. Parse the signature header.
-  if (!signatureHeader.startsWith('v1=')) {
+  // 1. Parse the signature header — spec form `sha256=<hex>` (webhooks.md
+  //    §"Headers") or the legacy SDK form `v1=<hex>` (RFC 0165 §C.3).
+  const providedHex = parseSignatureValue(signatureHeader);
+  if (providedHex === null) {
     return { valid: false, reason: 'malformed_signature_header' };
   }
-  const providedHex = signatureHeader.slice(3);
   if (!/^[0-9a-f]+$/i.test(providedHex)) {
     return { valid: false, reason: 'malformed_signature_header' };
   }
@@ -111,6 +121,16 @@ export function verifyWebhookSignature(
   return { valid: true };
 }
 
+export interface SignedWebhookDelivery {
+  /** Spec form: `sha256=<hex>` (webhooks.md §"Headers"). */
+  readonly signatureHeader: string;
+  /** Legacy form this SDK used to emit: `v1=<hex>` (RFC 0165 §C.3). */
+  readonly legacySignatureHeader: string;
+  readonly timestampHeader: string;
+  /** Every header a host should send during the RFC 0165 overlap, by exact name. */
+  readonly headers: Readonly<Record<string, string>>;
+}
+
 /**
  * Compute the canonical webhook signature for a payload — useful when
  * implementing a host (forward direction) OR when generating test
@@ -121,11 +141,25 @@ export function signWebhookDelivery(
   secret: string,
   timestamp: number,
   rawBody: string | Buffer,
-): { signatureHeader: string; timestampHeader: string } {
+): SignedWebhookDelivery {
   const bodyStr = typeof rawBody === 'string' ? rawBody : rawBody.toString('utf8');
   const hex = createHmac('sha256', secret).update(`${timestamp}.${bodyStr}`, 'utf8').digest('hex');
   return {
-    signatureHeader: `v1=${hex}`,
+    signatureHeader: `sha256=${hex}`,
+    legacySignatureHeader: `v1=${hex}`,
     timestampHeader: String(timestamp),
+    headers: {
+      'OpenWOP-Signature': `sha256=${hex}`,
+      'OpenWOP-Timestamp': String(timestamp),
+      'OpenWOP-Signature-Algorithm': 'v1',
+      'X-openwop-Signature': `sha256=${hex}`,
+      'X-openwop-Timestamp': String(timestamp),
+      'X-openwop-Signature-Algorithm': 'v1',
+      'openwop-Webhook-Signature': `v1=${hex}`,
+      'openwop-Webhook-Timestamp': String(timestamp),
+    },
   };
 }
+
+export { WEBHOOK_HEADER_FAMILIES, parseSignatureValue, readWebhookHeaders } from './webhook-header-families.js';
+export type { WebhookHeaderRead } from './webhook-header-families.js';

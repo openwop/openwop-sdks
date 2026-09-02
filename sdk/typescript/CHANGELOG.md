@@ -1,5 +1,14 @@
 # `@openwop/openwop` Changelog
 
+## [1.9.0] — 2026-09-02 — webhook helpers read the spec's headers (RFC 0165 §C.3)
+
+_All three SDKs (TypeScript 1.9.0, Python 1.7.0, Go v1.6.0). Additive — every existing call keeps working; only the default emitted value changes shape._
+
+- **`verifyWebhookSignature` accepted a header value that appears in no spec file.** It required `v1=<hex>` and rejected the spec's `sha256=<hex>` (`webhooks.md` §"Headers") as `malformed_signature_header`, so a conformant host's delivery failed SDK verification outright. It now accepts both forms (`parseSignatureValue`).
+- **`signWebhookDelivery` emits the spec form.** `signatureHeader` is `sha256=<hex>`; `legacySignatureHeader` keeps the old `v1=` value; a new `headers` map carries every family a host should send during the RFC 0165 overlap — `OpenWOP-*`, `X-openwop-*`, and the legacy `openwop-Webhook-*` names.
+- **`readWebhookHeaders(headers)`** picks the first complete family in spec order (`OpenWOP-*`, then `X-openwop-*`, then legacy), case-insensitively, from a plain object or a `Headers`-like. `WEBHOOK_HEADER_FAMILIES` is exported.
+- Pinned by `webhook-header-families.test.ts`; the load-bearing case is the first one (a spec-conformant delivery verifies).
+
 ## [1.8.0] — 2026-08-25 — the barrel is browser-safe again (openwop-sdks#30)
 
 _TypeScript only; Python + Go unchanged (the defect is a JS module-resolution issue with no analogue there). Additive — nothing is removed._

@@ -6,12 +6,19 @@
 // The canonical signing recipe:
 //
 //	hmac = HMAC-SHA256(secret, fmt.Sprintf("%d.%s", timestamp, rawBody))
-//	header openwop-Webhook-Signature: v1=<hmac-hex>
-//	header openwop-Webhook-Timestamp: <unix-seconds>
+//	header X-openwop-Signature: sha256=<hmac-hex>      (v1 canonical, webhooks.md §"Headers")
+//	header OpenWOP-Signature:   sha256=<hmac-hex>      (RFC 0165 §C.1, dual-emitted)
+//	header X-openwop-Timestamp / OpenWOP-Timestamp: <unix-seconds>
+//
+// History (RFC 0165 §C.3): this helper used to read a header named
+// openwop-Webhook-Signature carrying v1=<hex> — a name and value shape that
+// appear in no spec file, so a spec-conformant sha256= delivery failed
+// verification. Both value forms are accepted now, and ReadWebhookHeaders
+// picks the first present family in spec order.
 //
 // Verification:
 //
-//  1. Parse the v1=<hex> value from the signature header.
+//  1. Parse the sha256=<hex> (or legacy v1=<hex>) value from the signature header.
 //  2. Recompute expected = HMAC-SHA256(secret, fmt.Sprintf("%d.%s", ts, body)).
 //  3. Compare using constant-time hmac.Equal.
 //  4. Reject when |now - timestamp| exceeds the freshness window
@@ -75,10 +82,10 @@ func VerifyWebhookSignature(
 	rawBody []byte,
 	opts VerifyWebhookOptions,
 ) VerifyWebhookOutcome {
-	if !strings.HasPrefix(signatureHeader, "v1=") {
+	providedHex, ok := ParseSignatureValue(signatureHeader)
+	if !ok {
 		return VerifyWebhookOutcome{Valid: false, Reason: VerifyReasonMalformedSigHeader}
 	}
-	providedHex := signatureHeader[3:]
 	providedBytes, err := hex.DecodeString(providedHex)
 	if err != nil || len(providedBytes) == 0 {
 		return VerifyWebhookOutcome{Valid: false, Reason: VerifyReasonMalformedSigHeader}
@@ -125,5 +132,54 @@ func SignWebhookDelivery(secret string, timestamp int64, rawBody []byte) (string
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write([]byte(fmt.Sprintf("%d.", timestamp)))
 	mac.Write(rawBody)
-	return "v1=" + hex.EncodeToString(mac.Sum(nil)), strconv.FormatInt(timestamp, 10)
+	return "sha256=" + hex.EncodeToString(mac.Sum(nil)), strconv.FormatInt(timestamp, 10)
+}
+
+// ParseSignatureValue accepts the spec form "sha256=<hex>" (webhooks.md
+// §"Headers") and the legacy SDK form "v1=<hex>" (RFC 0165 §C.3), returning
+// the hex digest. Anything else is malformed.
+func ParseSignatureValue(value string) (string, bool) {
+	for _, p := range []string{"sha256=", "v1="} {
+		if strings.HasPrefix(value, p) {
+			h := value[len(p):]
+			if h == "" {
+				return "", false
+			}
+			if _, err := hex.DecodeString(h); err != nil {
+				return "", false
+			}
+			return h, true
+		}
+	}
+	return "", false
+}
+
+// WebhookHeaderFamily names the header pair a delivery carries.
+type WebhookHeaderFamily struct {
+	Signature string
+	Timestamp string
+	Family    string // "openwop", "x-openwop", or "legacy"
+}
+
+// WebhookHeaderFamilies is the receiver's preference order (RFC 0165 §C.1):
+// the v2-bound OpenWOP-* family, the v1 canonical X-openwop-* family, then the
+// legacy names this SDK used to document.
+var WebhookHeaderFamilies = []WebhookHeaderFamily{
+	{Signature: "OpenWOP-Signature", Timestamp: "OpenWOP-Timestamp", Family: "openwop"},
+	{Signature: "X-openwop-Signature", Timestamp: "X-openwop-Timestamp", Family: "x-openwop"},
+	{Signature: "openwop-Webhook-Signature", Timestamp: "openwop-Webhook-Timestamp", Family: "legacy"},
+}
+
+// ReadWebhookHeaders picks the signature + timestamp values from a delivery's
+// headers (first complete family wins; lookups are case-insensitive via the
+// getter, e.g. http.Header.Get). ok is false when no family is complete.
+func ReadWebhookHeaders(get func(name string) string) (signature, timestamp, family string, ok bool) {
+	for _, f := range WebhookHeaderFamilies {
+		sig := get(f.Signature)
+		ts := get(f.Timestamp)
+		if sig != "" && ts != "" {
+			return sig, ts, f.Family, true
+		}
+	}
+	return "", "", "", false
 }

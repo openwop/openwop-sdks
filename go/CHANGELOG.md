@@ -1,5 +1,14 @@
 # `openwopclient` Changelog
 
+## [v1.6.0] — 2026-09-02 — webhook helpers read the spec's headers (RFC 0165 §C.3)
+
+_Go half of the three-SDK change (TypeScript 1.9.0, Python 1.7.0, Go v1.6.0). Additive — existing calls keep working; only the default emitted value changes shape._
+
+- **Verification accepted a header value that appears in no spec file.** The helper required `v1=<hex>` and rejected the spec's `sha256=<hex>` (`webhooks.md` §"Headers") as `malformed_signature_header`, so a conformant host's delivery failed verification outright. Both forms are accepted now.
+- **Signing emits the spec form** `sha256=<hex>`.
+- **Header families are read in spec order** — `OpenWOP-*` (RFC 0165 §C.1), then `X-openwop-*`, then the legacy `openwop-Webhook-*` names — case-insensitively.
+
+
 ## [1.5.0] — 2026-06-30 — RFC 0111–0120 client-surface parity with TypeScript
 
 _Brings the Go SDK to parity with the TS client surface for the corpus RFC 0111–0120 cycle (spec `v1.2.0`). Additive + read-only; `go vet` + `gofmt` clean._
