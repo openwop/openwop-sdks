@@ -38,7 +38,10 @@ externalDocs:
   url: https://openwop.dev/spec/v1/
 
 servers:
-  - url: https://{host}/v1
+  # No `/v1` here: the version segment lives in the path keys below, so a
+  # server base carrying it too resolves every operation to `/v1/v1/*` and
+  # the unversioned discovery route to `/v1/.well-known/openwop` (RFC 0149 §A).
+  - url: https://{host}
     description: openwop-compliant server
     variables:
       host:
@@ -106,6 +109,14 @@ paths:
       summary: Capability declaration handshake.
       operationId: getCapabilities
       security: []
+      parameters:
+        - name: If-None-Match
+          in: header
+          required: false
+          schema: { type: string }
+          description: >-
+            RFC 0165 §C.2. Standard conditional request against the discovery document's `ETag`;
+            a matching value SHOULD yield `304 Not Modified`.
       responses:
         '200':
           description: Capabilities object — see `capabilities.md`.
@@ -113,13 +124,21 @@ paths:
             Cache-Control:
               schema: { type: string }
               example: 'public, max-age=300'
+            ETag:
+              schema: { type: string }
+              description: >-
+                RFC 0165 §C.2. Standard strong validator for the response bytes (SHOULD be sent).
+                Distinct from `Capabilities-Etag`, which validates negotiation safety
+                (`capabilities-change-detection.md` §"Cache validators").
             Capabilities-Etag:
               schema: { type: string }
-              description: Optional probe handle for mid-session capability change detection.
+              description: Optional probe handle for mid-session capability change detection. Deprecated toward v2 (RFC 0165 §C.2).
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Capabilities'
+        '304':
+          description: RFC 0165 §C.2 — `If-None-Match` matched the current `ETag`; the body is unchanged.
         '503':
           description: Server unable to compute capabilities (transient).
           content:
@@ -211,6 +230,15 @@ paths:
                     inputs:
                       type: object
                       description: Workflow inputs (consumed by triggers/nodes).
+                    residency:
+                      # RFC 0129 — OPTIONAL data-residency constraint. Closed shape
+                      # lives in the referenced schema (RFC 0094 §A forbids a closed
+                      # `additionalProperties:false` branch inside this allOf; the
+                      # $ref keeps the constraint out of the composition). A host
+                      # advertising `capabilities.dataResidency` MUST honor-or-reject
+                      # (accept iff region in advertised regions[], else
+                      # `residency_unavailable`, create no run). Absent ⇒ no constraint.
+                      $ref: '../schemas/residency.schema.json'
                     tenantId:
                       type: string
                       description: Tenant scoping. Server typically defaults from API key.
@@ -289,13 +317,37 @@ paths:
       operationId: getRun
       parameters:
         - $ref: '#/components/parameters/RunId'
+        - in: header
+          name: If-None-Match
+          required: false
+          schema: { type: string }
+          description: |
+            RFC 0115. Conditional revalidation. When this carries the
+            current `ETag`, the host responds `304 Not Modified` with no
+            body (capability-gated on `restTransport.conditionalRunGet`).
       responses:
         '200':
           description: Projected run state.
+          headers:
+            ETag:
+              schema: { type: string }
+              description: |
+                RFC 0115. Strong validator derived from the run's latest
+                persisted event-log sequence number; changes on every
+                observable state transition, stable while none occurs.
+            Content-Encoding:
+              required: false
+              schema: { type: string, enum: [gzip, br, zstd] }
+              description: |
+                RFC 0115. Present only when the host negotiated compression
+                from `Accept-Encoding`; pairs with `Vary: Accept-Encoding`.
+                The decoded body is byte-identical to the identity body.
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/RunSnapshot'
+        '304':
+          description: 'RFC 0115. Not Modified — `If-None-Match` matched the current `ETag`. Empty body.'
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -1379,14 +1431,33 @@ paths:
         NOT see another principal's tools (non-disclosure). Read-only; each
         descriptor is content-free of any credential material (SR-1).
       operationId: listTools
+      parameters:
+        - name: view
+          in: query
+          required: false
+          schema: { type: string, enum: [standard, compact], default: standard }
+          description: >
+            RFC 0112. `compact` returns the `{ tools: CompactToolDescriptor[] }`
+            projection — heavy descriptor fields omitted and `inputSchema`
+            bounded to the compact structural subset — when the host advertises
+            `capabilities.toolCatalog.compactView: true`. Defaults to `standard`;
+            a host that does not advertise `compactView` treats `view=compact`
+            as any unknown query param and returns the standard view.
       responses:
         '200':
-          description: The caller's authorized tool catalog.
+          description: 'The caller''s authorized tool catalog (standard array, or the compact `{ tools: [] }` projection when `view=compact`).'
           content:
             application/json:
               schema:
-                type: array
-                items: { $ref: '../schemas/tool-descriptor.schema.json' }
+                oneOf:
+                  - type: array
+                    items: { $ref: '../schemas/tool-descriptor.schema.json' }
+                  - type: object
+                    required: [tools]
+                    properties:
+                      tools:
+                        type: array
+                        items: { $ref: '../schemas/compact-tool-descriptor.schema.json' }
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -1410,12 +1481,26 @@ paths:
           required: true
           schema: { type: string }
           description: The stable tool id (`ToolDescriptor.toolId`).
+        - name: view
+          in: query
+          required: false
+          schema: { type: string, enum: [standard, compact], default: standard }
+          description: >
+            RFC 0112. `compact` returns one `CompactToolDescriptor` (heavy
+            fields omitted; `inputSchema` bounded to the compact structural
+            subset) when the host advertises
+            `capabilities.toolCatalog.compactView: true`. Defaults to
+            `standard`; a host that does not advertise `compactView` treats
+            `view=compact` as any unknown query param.
       responses:
         '200':
-          description: The tool descriptor.
+          description: The tool descriptor (standard, or one `CompactToolDescriptor` when `view=compact`).
           content:
             application/json:
-              schema: { $ref: '../schemas/tool-descriptor.schema.json' }
+              schema:
+                oneOf:
+                  - $ref: '../schemas/tool-descriptor.schema.json'
+                  - $ref: '../schemas/compact-tool-descriptor.schema.json'
         '401': { $ref: '#/components/responses/Unauthenticated' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':

@@ -33,6 +33,11 @@
       ],
       "description": "Current run state. `waiting-external` MUST be used when the suspended interrupt's `kind` is `external-event` per `interrupt-profiles.md §openwop-interrupt-external-event` — distinguishes external-event waits from HITL waits at the wire level. `cancelling` (RFC 0094 §B) is the transitional state between a cancel request being accepted and the terminal `cancelled` — `rest-endpoints.md` and the OpenAPI cancel responses already document the transition; a snapshot read during the cancel cascade carries it. Forward-compat: future statuses MAY be added; readers SHOULD treat unknown values as terminal-unknown rather than throw."
     },
+    "compensationStatus": {
+      "type": "string",
+      "enum": ["none", "pending", "running", "completed", "partial", "failed", "manual"],
+      "description": "RFC 0151 §D — the run's compensation (unwind) rollup, kept separate from `status` on purpose: `status` is the FORWARD execution state and a closed union exported by the SDK, so RFC 0151 forbids reinterpreting it (there is deliberately no `compensating` run status). OPTIONAL and capability-gated — a host that does not advertise `capabilities.compensation` MUST omit this field; a host that advertises it MUST include it on every snapshot, `none` when no compensation was ever requested for the run. Presence is therefore a wire witness of the advert, and a `none` cannot be read as \"unwind is monitored here\" from a host that would never unwind. Values are the deterministic fold of the six `compensation.*` events over the persisted plan, defined normatively in `spec/v1/compensation.md §\"Run rollup: compensationStatus\"`: `none` (no `compensation.requested`), `pending` (requested, no `started`), `running` (started, plan active — a §E approval pause does NOT change it; the run's own `status: waiting-approval` carries the wait), `completed` (every inverse action completed), `partial` (plan inactive; some completed and some did not — reported, never rounded), `failed` (plan inactive; none completed), `manual` (`manual_intervention_required` recorded and unresolved; takes precedence over `partial`/`failed` while unresolved). Content-free by construction. Resolves RFC 0151 UQ3: `RunSnapshot` (`GET /v1/runs/{runId}`) is the sole owner; debug bundles and the AsyncAPI `run.snapshot` reuse it by `$ref`."
+    },
     "owner": {
       "type": "object",
       "description": "RFC 0048. The identity triple that owns this run. Redaction-safe — `principal` is an opaque identifier, never PII or credential material. Optional: single-tenant hosts omit it. A principal scoped to one `workspace` MUST NOT read a run owned by another (`run_forbidden`).",
@@ -40,7 +45,16 @@
       "properties": {
         "tenant": { "type": "string", "minLength": 1, "description": "Top-level isolation boundary." },
         "workspace": { "type": "string", "minLength": 1, "description": "Optional sub-tenant within the tenant (RFC 0048 workspace)." },
-        "principal": { "type": "string", "minLength": 1, "description": "Acting identity (user or agent) — opaque id, never PII." }
+        "principal": { "type": "string", "minLength": 1, "description": "Acting identity (user or agent) — opaque id, never PII." },
+        "subject": {
+          "$ref": "subject.schema.json",
+          "description": "RFC 0165 \u00a7B. OPTIONAL issuer-scoped Subject record for the acting identity. When present: `subject.tenant` MUST equal `tenant`, `subject.subjectId` MUST equal `principal` when both are present, `subject.kind` MUST equal `principalKind` when both are present. A host that emits it on new runs synthesizes `issuer: \"urn:openwop:legacy\"` for runs that predate emission (\u00a7B.3) and copies it verbatim onto forks (\u00a7B.4)."
+        },
+        "principalKind": {
+          "type": "string",
+          "enum": ["user", "agent", "anonymous"],
+          "description": "RFC 0132. The kind of the acting principal. OPTIONAL and EXPLICIT — absent ⇒ unconstrained (today's RFC 0048 behavior; a host that does not distinguish kinds omits it). `anonymous` ⇒ the RFC 0132 §A anonymous-actor rules and the §C default-deny per-surface grant bind: the `principal` id MUST be opaque, origin-bound, ephemeral, non-cross-linkable, non-PII, and never inherit a role or a default-on tool baseline. A host that advertises `capabilities.anonymousActor` and dispatches through a public surface MUST set `anonymous` on the resulting run. Resolves RFC 0048 §Unresolved-Q1 for the anonymous case."
+        }
       },
       "additionalProperties": false
     },

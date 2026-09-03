@@ -1,4 +1,4 @@
-module github.com/openwop/openwop/sdk/smoke
+module github.com/openwop/openwop-sdks/sdk/smoke
 
 go 1.22
 
