@@ -1,18 +1,39 @@
 # openwop-sdks publishing workflow.
 #
-# The three client SDKs publish from here (carved out of openwop/openwop in
-# 2026-06). Per PUBLISHING.md §"Versioning alignment" the SDKs track the spec
-# major — a coordinated spec release (a `v*` tag here, mirroring the spec
-# corpus's `v*`) publishes all three; per-package tags publish one.
+# The client SDKs publish from here (carved out of openwop/openwop in 2026-06).
+# Per PUBLISHING.md §"Versioning alignment" the SDKs track the spec major — a
+# coordinated spec release (a `v*` tag here, mirroring the spec corpus's `v*`)
+# publishes the three packages OF THAT MAJOR; per-package tags publish one.
 #
-#   Tag pattern         Triggers              Use case
-#   -----------------   ----------------      -----------------------
-#   v*                  all 3 publish jobs    Coordinated spec-aligned release
-#   openwop/v*          publish-ts-client     SDK-only patch (TS)
-#   openwop-client/v*   publish-python        SDK-only patch (Python)
-#   go/v*               publish-go            SDK-only patch (Go) + the subdir
-#                                             module-discovery tag proxy.golang.org
-#                                             indexes (module: …/openwop-sdks/go)
+# Two generations of packages live side by side (v2 charter Phase 3, S5):
+#
+#   major 1  sdk/typescript   sdk/python    go/     — unchanged 1.x publishing
+#   major 2  sdk/typescript-v2 sdk/python-v2 go/v2  — the v2-ONLY 2.0.0 packages
+#
+# The `resolve` job reads the tag's major and points every publish job at the
+# right directory; a major-1 tag resolves to exactly the directories and steps
+# this workflow always used.
+#
+#   Tag pattern            Triggers                Use case
+#   --------------------   ---------------------   ---------------------------------
+#   v1.*                   the three 1.x jobs      Coordinated spec-aligned 1.x release
+#   v2.*                   the three 2.x jobs      Coordinated spec-aligned 2.x release
+#                                                  (corpus release tags are v2.<minor>.<patch>,
+#                                                  rc's v2.0.0-rc.<n>; RFC 0172 §D)
+#   openwop/v1.* / v2.*    publish-ts-client       SDK-only release (TS 1.x / 2.x)
+#   openwop-client/v1.* / v2.*  publish-python     SDK-only release (Python 1.x / 2.x)
+#   go/v1.* (go/v*)        publish-go              SDK-only release (Go v1; module …/go)
+#   go/v2/v2.*             publish-go              SDK-only release (Go v2; module …/go/v2 —
+#                                                  Go's major-subdirectory tag form)
+#
+# Pre-release tags (`-rc.N`, `-next.N`, …):
+#   npm   → `npm publish --tag next` (never `latest`), and package.json MUST
+#           carry a matching pre-release version (`2.0.0-rc.0`).
+#   PyPI  → the version MUST be a PEP 440 pre-release (`2.0.0rc0`), which pip
+#           does not install by default; a final version under an rc tag fails
+#           the job.
+#   Go    → tags are the release; proxy.golang.org treats `v2.0.0-rc.0` as a
+#           pre-release automatically.
 
 name: openwop-sdks — Publish
 
@@ -23,6 +44,7 @@ on:
       - 'openwop/v*'
       - 'openwop-client/v*'
       - 'go/v*'
+      - 'go/v2/v*'
 
 jobs:
   validate-tag:
@@ -35,16 +57,66 @@ jobs:
             v[0-9]*.[0-9]*.[0-9]*|v[0-9]*.[0-9]*.[0-9]*-*|\
             openwop/v[0-9]*.[0-9]*.[0-9]*|openwop/v[0-9]*.[0-9]*.[0-9]*-*|\
             openwop-client/v[0-9]*.[0-9]*.[0-9]*|openwop-client/v[0-9]*.[0-9]*.[0-9]*-*|\
+            go/v2/v2.[0-9]*.[0-9]*|go/v2/v2.[0-9]*.[0-9]*-*|\
             go/v[0-9]*.[0-9]*.[0-9]*|go/v[0-9]*.[0-9]*.[0-9]*-*)
               echo "tag '$tag' matches expected SemVer pattern" ;;
             *)
               echo "::error::tag '$tag' does not match an expected SemVer pattern"
-              echo "Expected: vX.Y.Z | openwop/vX.Y.Z | openwop-client/vX.Y.Z | go/vX.Y.Z"
+              echo "Expected: vX.Y.Z | openwop/vX.Y.Z | openwop-client/vX.Y.Z | go/vX.Y.Z | go/v2/v2.Y.Z"
+              exit 1 ;;
+          esac
+          # A Go v2 module MUST be tagged under its major subdirectory; a bare
+          # go/v2.* tag would be indexed against the …/go module and refused.
+          case "$tag" in
+            go/v2.*)
+              echo "::error::Go v2 releases tag as go/v2/v2.Y.Z (module github.com/openwop/openwop-sdks/go/v2), not go/v2.Y.Z"
               exit 1 ;;
           esac
 
-  preflight:
+  # Which generation does this tag publish? Emits the directory for each
+  # package, the version the tag names, the npm dist-tag, and whether the tag
+  # is a pre-release.
+  resolve:
     needs: validate-tag
+    runs-on: ubuntu-latest
+    outputs:
+      major: ${{ steps.r.outputs.major }}
+      version: ${{ steps.r.outputs.version }}
+      prerelease: ${{ steps.r.outputs.prerelease }}
+      npm_tag: ${{ steps.r.outputs.npm_tag }}
+      ts_dir: ${{ steps.r.outputs.ts_dir }}
+      py_dir: ${{ steps.r.outputs.py_dir }}
+      go_dir: ${{ steps.r.outputs.go_dir }}
+      go_module: ${{ steps.r.outputs.go_module }}
+    steps:
+      - id: r
+        run: |
+          tag="${GITHUB_REF#refs/tags/}"
+          version="${tag##*/}"                  # vX.Y.Z / pkg/vX.Y.Z / go/v2/vX.Y.Z → vX.Y.Z[-pre]
+          version="${version#v}"                # → X.Y.Z[-pre]
+          major="${version%%.*}"
+          prerelease=false
+          case "$version" in *-*) prerelease=true ;; esac
+          npm_tag=latest
+          [[ "$prerelease" == true ]] && npm_tag=next
+          case "$major" in
+            1)
+              ts_dir=sdk/typescript; py_dir=sdk/python; go_dir=go
+              go_module=github.com/openwop/openwop-sdks/go ;;
+            2)
+              ts_dir=sdk/typescript-v2; py_dir=sdk/python-v2; go_dir=go/v2
+              go_module=github.com/openwop/openwop-sdks/go/v2 ;;
+            *)
+              echo "::error::no package generation for major $major (tag $tag)"; exit 1 ;;
+          esac
+          {
+            echo "major=$major"; echo "version=$version"; echo "prerelease=$prerelease"; echo "npm_tag=$npm_tag"
+            echo "ts_dir=$ts_dir"; echo "py_dir=$py_dir"; echo "go_dir=$go_dir"; echo "go_module=$go_module"
+          } >> "$GITHUB_OUTPUT"
+          echo "tag=$tag major=$major version=$version prerelease=$prerelease npm_tag=$npm_tag ts=$ts_dir py=$py_dir go=$go_dir"
+
+  preflight:
+    needs: resolve
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -57,11 +129,12 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.22'
-      - name: SDK gate
+      - run: pip install ruff
+      - name: SDK gate (1.x + 2.x legs)
         run: npm run check
 
   publish-ts-client:
-    needs: preflight
+    needs: [resolve, preflight]
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
       startsWith(github.ref, 'refs/tags/openwop/v')
@@ -69,6 +142,12 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      TS_DIR: ${{ needs.resolve.outputs.ts_dir }}
+      TAG_VERSION: ${{ needs.resolve.outputs.version }}
+      NPM_TAG: ${{ needs.resolve.outputs.npm_tag }}
+      PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
+      MAJOR: ${{ needs.resolve.outputs.major }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -80,21 +159,34 @@ jobs:
       # (@emnapi/*) resolve differently on macOS dev vs the Linux runner, so a
       # macOS-authored lockfile fails strict `npm ci` here. `npm install` tolerates
       # it the way the `sdks:check` gate already does, keeping publish cross-platform.
-      - run: cd sdk/typescript && npm install --no-audit --no-fund
-      - run: cd sdk/typescript && npm run build
+      - run: cd "$TS_DIR" && npm install --no-audit --no-fund
+      - name: Version ↔ tag agreement + pre-release discipline (2.x)
+        if: env.MAJOR != '1'
+        run: |
+          cd "$TS_DIR"
+          VER=$(node -p "require('./package.json').version")
+          if [[ "$VER" != "$TAG_VERSION" ]]; then
+            echo "::error::$TS_DIR/package.json is $VER but the tag names $TAG_VERSION"; exit 1
+          fi
+          if [[ "$PRERELEASE" == true && "$VER" != *-* ]]; then
+            echo "::error::pre-release tag but package.json version $VER has no pre-release segment"; exit 1
+          fi
+          npm run generate:check
+      - run: cd "$TS_DIR" && npm run build
       - name: Publish to npm (skip if already published)
         run: |
-          cd sdk/typescript
+          cd "$TS_DIR"
           PKG=$(node -p "require('./package.json').name")
           VER=$(node -p "require('./package.json').version")
           if npm view "$PKG@$VER" version >/dev/null 2>&1; then
             echo "✓ $PKG@$VER already on npm — skipping (idempotent)."
           else
-            npm publish --access public --provenance
+            # A pre-release publishes under dist-tag `next`, never `latest`.
+            npm publish --access public --provenance --tag "$NPM_TAG"
           fi
 
   publish-python:
-    needs: preflight
+    needs: [resolve, preflight]
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
       startsWith(github.ref, 'refs/tags/openwop-client/v')
@@ -102,38 +194,77 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    env:
+      PY_DIR: ${{ needs.resolve.outputs.py_dir }}
+      TAG_VERSION: ${{ needs.resolve.outputs.version }}
+      PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
+      MAJOR: ${{ needs.resolve.outputs.major }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
-      - run: pip install --upgrade build
-      - run: cd sdk/python && python -m build
+      - run: pip install --upgrade build packaging
+      - name: Version ↔ tag agreement + pre-release discipline (2.x)
+        if: env.MAJOR != '1'
+        run: |
+          cd "$PY_DIR"
+          python3 scripts/generate.py --check
+          python3 - <<'PY'
+          import os, re, sys
+          from packaging.version import Version
+          text = open("pyproject.toml").read()
+          ver = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M).group(1)
+          tag = os.environ["TAG_VERSION"]
+          pre = os.environ["PRERELEASE"] == "true"
+          # PEP 440 renders `2.0.0-rc.0` as `2.0.0rc0`; compare normalized forms.
+          if Version(ver) != Version(tag.replace("-", "")):
+              sys.exit(f"::error::pyproject version {ver} does not match tag version {tag}")
+          if pre and not Version(ver).is_prerelease:
+              sys.exit(f"::error::pre-release tag but pyproject version {ver} is a final release (PyPI would serve it by default)")
+          print(f"ok: {ver} matches tag {tag} (prerelease={pre})")
+          PY
+      - run: cd "$PY_DIR" && python -m build
       - name: Publish to PyPI via OIDC trusted publisher
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: sdk/python/dist
+          packages-dir: ${{ needs.resolve.outputs.py_dir }}/dist
           skip-existing: true
 
   publish-go:
-    needs: preflight
+    needs: [resolve, preflight]
     if: |
       startsWith(github.ref, 'refs/tags/v') ||
       startsWith(github.ref, 'refs/tags/go/v')
     runs-on: ubuntu-latest
+    env:
+      GO_DIR: ${{ needs.resolve.outputs.go_dir }}
+      GO_MODULE: ${{ needs.resolve.outputs.go_module }}
+      TAG_VERSION: ${{ needs.resolve.outputs.version }}
+      MAJOR: ${{ needs.resolve.outputs.major }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
           go-version: '1.22'
-      # Go modules are tag-based; proxy.golang.org indexes from the `go/v*` tag.
-      # This job confirms vet+test pass against the tagged source.
-      - run: cd go && go vet ./...
-      - run: cd go && go test ./...
+      # Go modules are tag-based; proxy.golang.org indexes the …/go module from
+      # `go/v*` tags and the …/go/v2 module from `go/v2/v*` tags (major
+      # subdirectory). This job confirms the module path, vet, test and gofmt
+      # against the tagged source.
+      - name: Module path ↔ tag agreement
+        run: |
+          declared=$(grep -E '^module ' "$GO_DIR/go.mod" | awk '{print $2}')
+          if [[ "$declared" != "$GO_MODULE" ]]; then
+            echo "::error::$GO_DIR/go.mod declares $declared, tag expects $GO_MODULE"; exit 1
+          fi
+          if [[ "$MAJOR" != "1" ]]; then
+            python3 "$GO_DIR/scripts/generate.py" --check
+          fi
+      - run: cd "$GO_DIR" && go vet ./...
+      - run: cd "$GO_DIR" && go test ./...
+      - run: cd "$GO_DIR" && test -z "$(gofmt -l .)"
       - name: Verify Go module discoverability
-        env:
-          VERSION: ${{ github.ref_name }}
         run: |
           echo "Go module is tag-driven via ${GITHUB_REF}."
-          echo "Consumers: go get github.com/openwop/openwop-sdks/go@${VERSION}"
+          echo "Consumers: go get ${GO_MODULE}@v${TAG_VERSION}"
           echo "Cache warm-up may take ~5min for proxy.golang.org."
