@@ -6,7 +6,7 @@ Carved out of the `openwop/openwop` spec corpus (full history preserved) so the 
 stays a lean spec + conformance contract.
 
 Two generations of packages live side by side. The 1.x packages target v1 hosts (`/v1/…`); the
-2.0.0 packages are **v2-ONLY** siblings for the v2 major (`spec/v2/`: bare-origin unversioned
+2.x packages (currently the release-candidate line: npm `2.0.0-rc.1`, PyPI `2.0.0rc1`, Go tag `go/v2/v2.0.0-rc.1`) are **v2-ONLY** siblings for the v2 major (`spec/v2/`: bare-origin unversioned
 paths, `OpenWOP-Version` negotiation, the closed discovery root, the generated error registry —
 RFC 0172 / 0171 / 0173, RFC 0168 §D). Same npm / PyPI names, a new Go major-subdirectory module.
 

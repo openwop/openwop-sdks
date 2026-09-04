@@ -1,6 +1,6 @@
 {
   "name": "@openwop/openwop",
-  "version": "2.0.0",
+  "version": "2.0.0-rc.1",
   "description": "TypeScript reference SDK for OpenWOP v2 hosts — bare-origin unversioned paths, OpenWOP-Version negotiation, the closed discovery root, and the generated error-code registry.",
   "repository": {
     "type": "git",

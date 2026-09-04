@@ -1,8 +1,8 @@
 # `@openwop/openwop` 2.x Changelog
 
-The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major published from `sdk/typescript-v2/`.
+The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (release-candidate line, tags `openwop/v2.0.0-rc.N` tracking the corpus `v2.0.0-rc.N`) published from `sdk/typescript-v2/`.
 
-## [2.0.0] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.0`; RFC 0168 §D SDK 2 expectations)
+## [2.0.0-rc.1] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.0`; RFC 0168 §D SDK 2 expectations)
 
 **Breaking — the wire (RFC 0172 §A, RFC 0171 §C.1):**
 

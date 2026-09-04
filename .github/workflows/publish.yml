@@ -19,7 +19,9 @@
 #   v1.*                   the three 1.x jobs      Coordinated spec-aligned 1.x release
 #   v2.*                   the three 2.x jobs      Coordinated spec-aligned 2.x release
 #                                                  (corpus release tags are v2.<minor>.<patch>,
-#                                                  rc's v2.0.0-rc.<n>; RFC 0172 §D)
+#                                                  rc's v2.0.0-rc.<n>; RFC 0172 §D — the 2.x
+#                                                  packages currently sit on that rc line:
+#                                                  npm 2.0.0-rc.1 / PyPI 2.0.0rc1 / go/v2/v2.0.0-rc.1)
 #   openwop/v1.* / v2.*    publish-ts-client       SDK-only release (TS 1.x / 2.x)
 #   openwop-client/v1.* / v2.*  publish-python     SDK-only release (Python 1.x / 2.x)
 #   go/v1.* (go/v*)        publish-go              SDK-only release (Go v1; module …/go)
@@ -28,11 +30,11 @@
 #
 # Pre-release tags (`-rc.N`, `-next.N`, …):
 #   npm   → `npm publish --tag next` (never `latest`), and package.json MUST
-#           carry a matching pre-release version (`2.0.0-rc.0`).
-#   PyPI  → the version MUST be a PEP 440 pre-release (`2.0.0rc0`), which pip
+#           carry a matching pre-release version (`2.0.0-rc.1`).
+#   PyPI  → the version MUST be a PEP 440 pre-release (`2.0.0rc1`), which pip
 #           does not install by default; a final version under an rc tag fails
 #           the job.
-#   Go    → tags are the release; proxy.golang.org treats `v2.0.0-rc.0` as a
+#   Go    → tags are the release; proxy.golang.org treats `go/v2/v2.0.0-rc.1` as a
 #           pre-release automatically.
 
 name: openwop-sdks — Publish
@@ -217,8 +219,8 @@ jobs:
           ver = re.search(r'^version\s*=\s*"([^"]+)"', text, re.M).group(1)
           tag = os.environ["TAG_VERSION"]
           pre = os.environ["PRERELEASE"] == "true"
-          # PEP 440 renders `2.0.0-rc.0` as `2.0.0rc0`; compare normalized forms.
-          if Version(ver) != Version(tag.replace("-", "")):
+          # PEP 440 normalizes the SemVer tag `2.0.0-rc.1` to `2.0.0rc1`.
+          if Version(ver) != Version(tag):
               sys.exit(f"::error::pyproject version {ver} does not match tag version {tag}")
           if pre and not Version(ver).is_prerelease:
               sys.exit(f"::error::pre-release tag but pyproject version {ver} is a final release (PyPI would serve it by default)")

@@ -206,7 +206,7 @@ from .webhook_helpers import (
     webhook_delivery_headers,
 )
 
-__version__ = "2.0.0"
+__version__ = "2.0.0rc1"
 
 __all__ = [
     "OpenwopClient",

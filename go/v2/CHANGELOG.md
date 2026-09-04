@@ -2,7 +2,7 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2/vX.Y.Z`).
 
-## [v2.0.0] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.0`; RFC 0168 §D SDK 2 expectations)
+## [v2.0.0-rc.1] — 2026-09-03 (tag `go/v2/v2.0.0-rc.1`) — the v2 client (corpus `v2.0.0-rc.0`; RFC 0168 §D SDK 2 expectations)
 
 **Breaking — the wire (RFC 0172 §A, RFC 0171 §C.1):**
 

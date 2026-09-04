@@ -3,7 +3,7 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This package is the reference Python client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (51 operations), typed dataclasses, and pure-stdlib SSE iterators for the run and host event channels.
 
 ```bash
-pip install "openwop-client>=2,<3"
+pip install --pre "openwop-client>=2.0.0rc1,<3"   # 2.0.0rc1 — the corpus release-candidate line
 ```
 
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Corpus tag:** see [`CORPUS_TAG`](../../CORPUS_TAG) · **Mirrors:** [`api/v2/openapi.yaml`](../../api/v2/openapi.yaml), [`schemas/v2/`](../../schemas/v2/), [`spec/v2/errors.json`](../../spec/v2/errors.json) · **Sibling:** the TypeScript client at [`sdk/typescript-v2/`](../typescript-v2/)

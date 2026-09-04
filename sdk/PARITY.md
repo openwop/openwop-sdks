@@ -182,19 +182,19 @@ Two language adaptations: TypeScript's generic `AIEnvelope<TPayload>` is `payloa
 
 ---
 
-## v2 SDKs (2.0.0 — `sdk/typescript-v2`, `sdk/python-v2`, `go/v2`)
+## v2 SDKs (2.0.0-rc.1 — `sdk/typescript-v2`, `sdk/python-v2`, `go/v2`)
 
 > **Status:** Added 2026-09-03 (v2 charter Phase 3 SDK leg, corpus tag `v2.0.0-rc.0`). Machine-enforced by
 > `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`
 > (`scripts/sdks-check.sh` step 4). The 1.x rows above are unchanged; the 1.x packages stay byte-identical.
 
-The three 2.0.0 packages are v2-ONLY siblings of the 1.x ones — `@openwop/openwop@2`, `openwop-client>=2`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2/vX.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **51 operations**. Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. The gate also fails on any `/v1` path literal in a v2 source tree.
+The three 2.x packages are v2-ONLY siblings of the 1.x ones, publishing from the corpus release-candidate line — `@openwop/openwop@2.0.0-rc.1` (npm dist-tag `next`), `openwop-client==2.0.0rc1`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2/v2.0.0-rc.1`; tags `go/v2/vX.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **51 operations**. Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. The gate also fails on any `/v1` path literal in a v2 source tree.
 
 | SDK | typed | of manifest ops |
 |---|---:|---:|
-| TypeScript (`@openwop/openwop` 2.0.0) | 51 | 51 |
-| Python (`openwop-client` 2.0.0) | 51 | 51 |
-| Go (`github.com/openwop/openwop-sdks/go/v2` v2.0.0) | 51 | 51 |
+| TypeScript (`@openwop/openwop` 2.0.0-rc.1) | 51 | 51 |
+| Python (`openwop-client` 2.0.0rc1) | 51 | 51 |
+| Go (`github.com/openwop/openwop-sdks/go/v2` v2.0.0-rc.1) | 51 | 51 |
 
 **What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 51 of 56 OpenAPI operations; the v2 manifest has 51 operations, but not the same 51:
 

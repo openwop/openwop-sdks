@@ -1,8 +1,8 @@
 # `openwop-client` 2.x Changelog
 
-The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
+The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (release-candidate line, tags `openwop-client/v2.0.0-rc.N` tracking the corpus `v2.0.0-rc.N`) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
-## [2.0.0] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.0`; RFC 0168 §D SDK 2 expectations)
+## [2.0.0rc1] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.0`; RFC 0168 §D SDK 2 expectations)
 
 **Breaking — the wire (RFC 0172 §A, RFC 0171 §C.1):**
 

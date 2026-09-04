@@ -3,7 +3,7 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This package is the reference TypeScript client for the **v2 major** (`spec/v2/`, RFC 0168 §D): one typed method per operation in `spec/v2/path-manifest.json` (51 operations), an async-iterable SSE consumer for the run and host event channels, and zero runtime dependencies.
 
 ```bash
-npm install @openwop/openwop@2
+npm install @openwop/openwop@next   # 2.0.0-rc.1 — the corpus release-candidate line; `@2` once 2.0.0 is final
 ```
 
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Corpus tag:** see [`CORPUS_TAG`](../../CORPUS_TAG) · **Mirrors:** [`api/v2/openapi.yaml`](../../api/v2/openapi.yaml), [`api/v2/asyncapi.yaml`](../../api/v2/asyncapi.yaml), [`schemas/v2/`](../../schemas/v2/), [`spec/v2/errors.json`](../../spec/v2/errors.json)

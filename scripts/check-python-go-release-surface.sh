@@ -3,8 +3,12 @@
 # (+ the npm version field), for BOTH generations of packages:
 #
 #   1.x  sdk/python (openwop-client 1.7.0)   go/    (github.com/openwop/openwop-sdks/go)
-#   2.x  sdk/python-v2 (openwop-client 2.0.0) go/v2  (github.com/openwop/openwop-sdks/go/v2)
-#        sdk/typescript-v2 (@openwop/openwop 2.0.0)
+#   2.x  sdk/python-v2 (openwop-client 2.0.0rc1) go/v2 (github.com/openwop/openwop-sdks/go/v2, tag go/v2/v2.0.0-rc.1)
+#        sdk/typescript-v2 (@openwop/openwop 2.0.0-rc.1)
+#
+# The 2.x packages publish from the corpus release-candidate line: the npm
+# version is the SemVer pre-release form, PyPI the PEP 440 form of the SAME
+# tag (2.0.0-rc.1 ⇔ 2.0.0rc1); Go takes the version from the tag alone.
 #
 # The v2 packages are v2-ONLY siblings (v2 charter Phase 3 SDK leg, S5); the
 # 1.x assertions are unchanged.
@@ -14,7 +18,8 @@ set -euo pipefail
 SPEC_ROOT="."
 EXPECTED_GO_MODULE="github.com/openwop/openwop-sdks/go"
 EXPECTED_GO_V2_MODULE="github.com/openwop/openwop-sdks/go/v2"
-EXPECTED_V2_VERSION="2.0.0"
+EXPECTED_V2_NPM_VERSION="2.0.0-rc.1"
+EXPECTED_V2_PYPI_VERSION="2.0.0rc1"
 
 echo "=== check-python-go-release-surface — auditing Python and Go release surfaces ==="
 echo
@@ -92,7 +97,7 @@ fi
 echo "  ok: Go module path and language version are v1.0 release-ready."
 
 # ── v2 packages ──────────────────────────────────────────────────────────
-python3 - "$EXPECTED_V2_VERSION" <<'PY'
+python3 - "$EXPECTED_V2_NPM_VERSION" "$EXPECTED_V2_PYPI_VERSION" <<'PY'
 from __future__ import annotations
 
 import ast
@@ -102,7 +107,8 @@ import re
 import sys
 
 root = pathlib.Path(".")
-expected_version = sys.argv[1]
+expected_npm_version = sys.argv[1]
+expected_pypi_version = sys.argv[2]
 
 
 def fail(message: str) -> None:
@@ -128,10 +134,10 @@ for node in ast.parse(init_path.read_text()).body:
 
 if toml_string("name") != "openwop-client":
     fail(f"{pyproject_path} must keep the PyPI name openwop-client (a 2.x major of the same package)")
-if toml_string("version") != expected_version:
-    fail(f"{pyproject_path} version is {toml_string('version')!r}, expected {expected_version!r}")
-if init_version != expected_version:
-    fail(f"{init_path} __version__ is {init_version!r}, expected {expected_version!r}")
+if toml_string("version") != expected_pypi_version:
+    fail(f"{pyproject_path} version is {toml_string('version')!r}, expected {expected_pypi_version!r}")
+if init_version != expected_pypi_version:
+    fail(f"{init_path} __version__ is {init_version!r}, expected {expected_pypi_version!r}")
 if 'packages = ["src/openwop_client"]' not in pyproject_text:
     fail(f"{pyproject_path} wheel target must include only src/openwop_client")
 if not (root / "sdk/python-v2/src/openwop_client/_generated.py").exists():
@@ -140,8 +146,11 @@ if not (root / "sdk/python-v2/src/openwop_client/_generated.py").exists():
 pkg = json.loads((root / "sdk/typescript-v2/package.json").read_text())
 if pkg.get("name") != "@openwop/openwop":
     fail("sdk/typescript-v2/package.json must keep the npm name @openwop/openwop (a 2.x major of the same package)")
-if pkg.get("version") != expected_version:
-    fail(f"sdk/typescript-v2/package.json version is {pkg.get('version')!r}, expected {expected_version!r}")
+if pkg.get("version") != expected_npm_version:
+    fail(f"sdk/typescript-v2/package.json version is {pkg.get('version')!r}, expected {expected_npm_version!r}")
+# The two forms MUST name the same release (2.0.0-rc.1 ⇔ 2.0.0rc1).
+if re.sub(r"[-.]", "", expected_npm_version) != re.sub(r"[-.]", "", expected_pypi_version):
+    fail(f"npm {expected_npm_version} and PyPI {expected_pypi_version} name different releases")
 if pkg.get("repository", {}).get("directory") != "sdk/typescript-v2":
     fail("sdk/typescript-v2/package.json repository.directory must be sdk/typescript-v2")
 if "generate:check" not in pkg.get("scripts", {}):
@@ -155,7 +164,7 @@ for path in [root / "sdk/python-v2/README.md", root / "sdk/typescript-v2/README.
         if marker in text:
             fail(f"{path} contains a stale release marker: {marker}")
 
-print("  ok: v2 Python + TypeScript metadata (2.0.0, same package names, generated registries) are aligned.")
+print(f"  ok: v2 Python ({expected_pypi_version}) + TypeScript ({expected_npm_version}) metadata are aligned (same package names, generated registries).")
 PY
 
 GO_V2_MODULE_LINE=$(grep -E "^module " "$SPEC_ROOT/go/v2/go.mod" || true)

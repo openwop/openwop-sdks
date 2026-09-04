@@ -3,7 +3,7 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This module is the reference Go client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (51 operations), strongly-typed structs, and channel-based SSE consumers for the run and host event channels.
 
 ```bash
-go get github.com/openwop/openwop-sdks/go/v2@v2.0.0
+go get github.com/openwop/openwop-sdks/go/v2@v2.0.0-rc.1   # tag go/v2/v2.0.0-rc.1 — the corpus release-candidate line
 ```
 
 ```go
