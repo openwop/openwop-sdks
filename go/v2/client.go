@@ -693,7 +693,9 @@ func (c *OpenwopClient) requestJSON(
 		return newWopError(resp.StatusCode, string(rawBody), parseEnvelope(rawBody), traceparent)
 	}
 
-	if len(rawBody) == 0 {
+	// A 2xx with no body, or a call that expects none (DELETE → 204, or a
+	// host that answers `{}`), decodes nothing.
+	if len(rawBody) == 0 || out == nil {
 		return nil
 	}
 	if err := json.Unmarshal(rawBody, out); err != nil {
