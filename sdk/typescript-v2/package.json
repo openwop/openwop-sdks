@@ -1,0 +1,55 @@
+{
+  "name": "@openwop/openwop",
+  "version": "2.0.0",
+  "description": "TypeScript reference SDK for OpenWOP v2 hosts — bare-origin unversioned paths, OpenWOP-Version negotiation, the closed discovery root, and the generated error-code registry.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/openwop/openwop-sdks.git",
+    "directory": "sdk/typescript-v2"
+  },
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "browser": "./dist/index.js",
+      "import": "./dist/index.js"
+    },
+    "./webhooks": {
+      "types": "./dist/webhook-helpers.d.ts",
+      "import": "./dist/webhook-helpers.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "!src/__tests__",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "rm -rf dist && tsc -p tsconfig.build.json",
+    "typecheck": "tsc --noEmit",
+    "generate": "node scripts/generate.mjs",
+    "generate:check": "node scripts/generate.mjs --check",
+    "test": "vitest run",
+    "prepublishOnly": "npm run generate:check && npm run build"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.0",
+    "@types/node": "^22.0.0",
+    "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "esbuild": "^0.25.0"
+  },
+  "browser": {
+    "./dist/webhook-helpers.js": "./dist/webhook-helpers.browser.js"
+  }
+}
