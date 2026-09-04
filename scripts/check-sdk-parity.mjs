@@ -1,29 +1,40 @@
 #!/usr/bin/env node
 // check-sdk-parity.mjs — SDK parity gate (openwop:check step 4b).
 //
-// Enforces that every OpenAPI operation has a *declared* parity status for
-// each reference SDK (TypeScript / Python / Go), and that any operation
-// declared `typed` is actually wired in that SDK's source.
+// Enforces that every operation has a *declared* parity status for each
+// reference SDK (TypeScript / Python / Go), and that any operation declared
+// `typed` is actually wired in that SDK's source.
 //
-// Source of truth: `sdk/parity-expectations.json` — one entry per OpenAPI
-// operation with `{operationId, method, path, ts, py, go, note?}`, each
-// status either `"typed"` (a first-class helper exists) or `"excluded"`
+// Two operation sets, two expectations files:
+//
+//   default (v1)   operations come from api/openapi.yaml (a line regex, the
+//                  same extraction generate-protocol-status.mjs uses) and the
+//                  expectations are sdk/parity-expectations.json — the 1.x
+//                  SDKs (sdk/typescript, sdk/python, go).
+//
+//   --manifest <spec/v2/path-manifest.json> --expectations <sdk/parity-expectations-v2.json>
+//                  operations come from the generated v2 path manifest (RFC
+//                  0172 §C.2: the canonical unversioned operation set, no seam
+//                  or test-mode operation) and the expectations file names the
+//                  2.0.0 SDK source trees in its `sdks` block. In manifest mode
+//                  every entry MUST be `typed` in every SDK and MUST declare a
+//                  `symbols` map for all three — a v2 SDK has exactly one
+//                  method per operation (RFC 0168 §D), so "excluded" and
+//                  fragment-only anchoring are not accepted.
+//
+// Source of truth: the expectations file — one entry per operation with
+// `{operationId, method, path, ts, py, go, symbols?, note?}`, each status
+// either `"typed"` (a first-class helper exists) or `"excluded"`
 // (intentionally not in the SDK — requires a `note`).
 //
 // Three failure modes are caught:
-//   1. Coverage drift — a new OpenAPI operation with no expectations entry
-//      (someone added a route without declaring its SDK status).
-//   2. Orphan drift — an expectations entry whose operationId no longer
-//      exists in OpenAPI (a route was removed/renamed).
-//   3. Regression — an operation declared `typed` whose path is no longer
-//      referenced anywhere in that SDK's source (a whole surface was
-//      deleted). Verified against the operation's most-distinctive static
-//      path fragment, which params/interpolation can't perturb.
+//   1. Coverage drift — a new operation with no expectations entry.
+//   2. Orphan drift — an expectations entry whose operationId no longer exists.
+//   3. Regression — an operation declared `typed` whose symbol (or, for v1
+//      entries without one, whose most-distinctive static path fragment) is no
+//      longer present in that SDK's source.
 //
 // Dependency-free (runs under bare `node` in CI, no node_modules at root).
-// OpenAPI operationIds are extracted the same way as
-// generate-protocol-status.mjs (a line regex), so the two gates agree on
-// the operation set.
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -32,10 +43,26 @@ import { dirname, join } from 'node:path';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 const read = (p) => readFileSync(join(ROOT, p), 'utf8');
 
-const SDK_SOURCES = {
+// ── CLI ──
+const argv = process.argv.slice(2);
+const argValue = (flag) => {
+  const i = argv.indexOf(flag);
+  if (i === -1) return null;
+  const v = argv[i + 1];
+  if (!v) {
+    console.error(`  FAIL: ${flag} needs a value`);
+    process.exit(2);
+  }
+  return v;
+};
+const MANIFEST = argValue('--manifest');
+const EXPECTATIONS = argValue('--expectations') ?? 'sdk/parity-expectations.json';
+const MANIFEST_MODE = MANIFEST !== null;
+
+const DEFAULT_SDK_SOURCES = {
   ts: { label: 'TypeScript', dir: 'sdk/typescript/src', exts: ['.ts'], skip: /\.test\.|__tests__/ },
   py: { label: 'Python', dir: 'sdk/python/src/openwop_client', exts: ['.py'], skip: /(^|\/)test/ },
-  go: { label: 'Go', dir: 'go', exts: ['.go'], skip: /_test\.go$/ },
+  go: { label: 'Go', dir: 'go', exts: ['.go'], skip: /_test\.go$|(^|\/)go\/v2(\/|$)/ },
 };
 
 function fail(msg, items) {
@@ -44,8 +71,9 @@ function fail(msg, items) {
   process.exit(1);
 }
 
-// ── OpenAPI operation set (operationId → {method, path}) ──
-// Walk the `paths:` block so we can attach each operationId to its path.
+// ── Operation set (operationId → {method, path}) ──
+// Walk the `paths:` block of the OpenAPI document so each operationId is
+// attached to its path.
 function parseOpenApiOps() {
   const text = read('api/openapi.yaml');
   const lines = text.split('\n');
@@ -59,6 +87,21 @@ function parseOpenApiOps() {
     if (methodM) { curMethod = methodM[1].toUpperCase(); continue; }
     const opM = line.match(/^ {6}operationId:\s*([A-Za-z0-9_]+)/);
     if (opM && curPath && curMethod) ops.set(opM[1], { method: curMethod, path: curPath });
+  }
+  return ops;
+}
+
+// The generated v2 path manifest carries the operation set directly.
+function parseManifestOps(rel) {
+  const doc = JSON.parse(read(rel));
+  const ops = new Map();
+  for (const op of doc.operations ?? []) {
+    if (!op.operationId || !op.method || !op.path) fail(`${rel}: malformed operation entry`, [JSON.stringify(op)]);
+    if (ops.has(op.operationId)) fail(`${rel}: duplicate operationId`, [op.operationId]);
+    ops.set(op.operationId, { method: op.method.toUpperCase(), path: op.path });
+  }
+  if (doc.counts?.operations !== undefined && doc.counts.operations !== ops.size) {
+    fail(`${rel}: counts.operations=${doc.counts.operations} but ${ops.size} operations listed`, []);
   }
   return ops;
 }
@@ -93,70 +136,101 @@ function collectSource({ dir, exts, skip }) {
 }
 
 // ── Load expectations ──
-const expDoc = JSON.parse(read('sdk/parity-expectations.json'));
+const expDoc = JSON.parse(read(EXPECTATIONS));
 const expectations = expDoc.operations;
 const expById = new Map(expectations.map((e) => [e.operationId, e]));
 
-const openapiOps = parseOpenApiOps();
+// The expectations file may name its own SDK source trees (the v2 file does);
+// the regexes are given as strings there.
+const SDK_SOURCES = expDoc.sdks
+  ? Object.fromEntries(
+      Object.entries(expDoc.sdks).map(([k, v]) => [k, { label: v.label, dir: v.dir, exts: v.exts, skip: new RegExp(v.skip) }]),
+    )
+  : DEFAULT_SDK_SOURCES;
+for (const lang of ['ts', 'py', 'go']) {
+  if (!SDK_SOURCES[lang]) fail(`${EXPECTATIONS}: sdks block must name ts, py and go`, [lang]);
+}
 
-// 1. Coverage: every OpenAPI op is declared.
-const undeclared = [...openapiOps.keys()].filter((id) => !expById.has(id));
+const ops = MANIFEST_MODE ? parseManifestOps(MANIFEST) : parseOpenApiOps();
+const OPS_LABEL = MANIFEST_MODE ? MANIFEST : 'api/openapi.yaml';
+
+// 1. Coverage: every operation is declared.
+const undeclared = [...ops.keys()].filter((id) => !expById.has(id));
 if (undeclared.length) {
   fail(
-    'OpenAPI operations with no sdk/parity-expectations.json entry (declare ts/py/go status, or mark excluded with a note):',
-    undeclared.map((id) => `${id} (${openapiOps.get(id).method} ${openapiOps.get(id).path})`),
+    `${OPS_LABEL} operations with no ${EXPECTATIONS} entry (declare ts/py/go status${MANIFEST_MODE ? ' + symbols' : ', or mark excluded with a note'}):`,
+    undeclared.map((id) => `${id} (${ops.get(id).method} ${ops.get(id).path})`),
   );
 }
 
-// 2. Orphans: every declared op still exists in OpenAPI.
-const orphans = expectations.filter((e) => !openapiOps.has(e.operationId)).map((e) => e.operationId);
+// 2. Orphans: every declared op still exists.
+const orphans = expectations.filter((e) => !ops.has(e.operationId)).map((e) => e.operationId);
 if (orphans.length) {
-  fail('sdk/parity-expectations.json entries for operationIds not present in api/openapi.yaml (stale — remove or rename):', orphans);
+  fail(`${EXPECTATIONS} entries for operationIds not present in ${OPS_LABEL} (stale — remove or rename):`, orphans);
 }
 
-// 3. Status validity + path agreement.
+// 3. Status validity + path agreement (+ manifest-mode mandatory symbols).
 const STATUS = new Set(['typed', 'excluded']);
 const invalid = [];
 for (const e of expectations) {
   for (const lang of ['ts', 'py', 'go']) {
     if (!STATUS.has(e[lang])) invalid.push(`${e.operationId}.${lang}="${e[lang]}" (must be "typed" or "excluded")`);
+    if (MANIFEST_MODE && e[lang] !== 'typed') invalid.push(`${e.operationId}.${lang} is "${e[lang]}" — a v2 SDK has one method per manifest operation`);
+    if (MANIFEST_MODE && !e.symbols?.[lang]) invalid.push(`${e.operationId} must declare symbols.${lang} (mandatory in manifest mode)`);
   }
   if ((e.ts === 'excluded' || e.py === 'excluded' || e.go === 'excluded') && !e.note) {
     invalid.push(`${e.operationId} marks a SDK "excluded" but has no "note" explaining why`);
   }
-  const live = openapiOps.get(e.operationId);
+  const live = ops.get(e.operationId);
   if (live && e.path !== live.path) {
-    invalid.push(`${e.operationId} path drift: expectations="${e.path}" openapi="${live.path}"`);
+    invalid.push(`${e.operationId} path drift: expectations="${e.path}" ${OPS_LABEL}="${live.path}"`);
+  }
+  if (live && e.method && e.method.toUpperCase() !== live.method) {
+    invalid.push(`${e.operationId} method drift: expectations="${e.method}" ${OPS_LABEL}="${live.method}"`);
   }
 }
-if (invalid.length) fail('Invalid sdk/parity-expectations.json entries:', invalid);
+if (invalid.length) fail(`Invalid ${EXPECTATIONS} entries:`, invalid);
 
-// 4. Regression: every `typed` op's distinctive path fragment is present in
+// 4. Regression: every `typed` op's symbol (or path fragment) is present in
 //    that SDK's source.
 const sources = Object.fromEntries(Object.entries(SDK_SOURCES).map(([k, v]) => [k, collectSource(v)]));
-// A whole-identifier (word-boundary) match — so a `symbols.go` of `GetAgent`
-// does NOT spuriously match the sibling `GetAgentRosterEntry`, nor `agents_get`
-// match `agents_get_org_chart`.
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-const hasSymbol = (src, sym) => new RegExp(`\\b${escapeRe(sym)}\\b`).test(src);
+
+// Per-language definition-site matchers. A whole-identifier match — so a
+// `symbols.go` of `GetAgent` does NOT spuriously match `GetAgentRosterEntry`,
+// nor `agents_get` match `agents_get_org_chart` — and, where the language
+// makes it cheap, anchored on the definition rather than any use:
+//   go  `func (c *OpenwopClient) Name(`
+//   py  `def name(`
+//   ts  `namespace.method` — `readonly namespace = {` plus a `method:` key
+//       (the client's methods are namespaced object properties)
+function hasSymbol(lang, src, sym) {
+  if (lang === 'go') return new RegExp(`^func \\(c \\*OpenwopClient\\) ${escapeRe(sym)}\\(`, 'm').test(src);
+  if (lang === 'py') return new RegExp(`^\\s+def ${escapeRe(sym)}\\(`, 'm').test(src);
+  if (lang === 'ts') {
+    const [ns, method] = sym.split('.');
+    if (!ns || !method) return new RegExp(`\\b${escapeRe(sym)}\\b`).test(src);
+    return (
+      new RegExp(`^\\s+readonly ${escapeRe(ns)} = \\{`, 'm').test(src) &&
+      new RegExp(`^\\s+${escapeRe(method)}\\s*:`, 'm').test(src)
+    );
+  }
+  return new RegExp(`\\b${escapeRe(sym)}\\b`).test(src);
+}
 
 const missing = [];
 for (const e of expectations) {
   const frag = distinctiveFragment(e.path);
   for (const lang of ['ts', 'py', 'go']) {
     if (e[lang] !== 'typed') continue;
-    // Prefer an exact method-symbol check when the entry declares one — this
-    // catches a SINGLE method being deleted from a shared path family (e.g.
-    // dropping `prompts.update` while `prompts.list` keeps `/v1/prompts` wired),
-    // which the path-fragment anchor alone cannot see. TS methods are namespaced
-    // (not globally-unique identifiers), so symbols are py/go-only; TS falls back
-    // to the fragment anchor.
     const sym = e.symbols?.[lang];
     if (sym) {
-      if (!hasSymbol(sources[lang], sym)) {
+      if (!hasSymbol(lang, sources[lang], sym)) {
         missing.push(`${e.operationId} declared typed in ${SDK_SOURCES[lang].label} but its method "${sym}" is not defined in ${SDK_SOURCES[lang].dir}`);
       }
-      continue;
+      // In manifest mode the path anchor is checked too: the method exists
+      // AND the SDK still calls the operation's path (unversioned).
+      if (!MANIFEST_MODE) continue;
     }
     if (!frag || frag.replace(/[^A-Za-z0-9]/g, '').length < 4) continue; // fragment too generic to anchor on
     if (!sources[lang].includes(frag)) {
@@ -168,6 +242,16 @@ if (missing.length) {
   fail('SDK parity regressions (declared typed but the method/path is no longer wired):', missing);
 }
 
+// 5. Manifest mode: a v2 SDK must not carry a versioned path literal.
+if (MANIFEST_MODE) {
+  const versioned = [];
+  for (const [lang, src] of Object.entries(sources)) {
+    const hits = src.match(/["'`]\/v1\/[^"'`]*["'`]/g);
+    if (hits) versioned.push(`${SDK_SOURCES[lang].label}: ${[...new Set(hits)].slice(0, 5).join(', ')}`);
+  }
+  if (versioned.length) fail('v2 SDK sources still carry /v1 path literals (RFC 0172 §A: unversioned keys on a bare origin):', versioned);
+}
+
 const typed = expectations.filter((e) => e.ts === 'typed' && e.py === 'typed' && e.go === 'typed').length;
 const excluded = expectations.filter((e) => e.ts === 'excluded').length;
-console.log(`  ok: SDK parity — ${openapiOps.size} OpenAPI operations declared; ${typed} fully typed across TS/Python/Go, ${excluded} intentionally excluded`);
+console.log(`  ok: SDK parity — ${ops.size} ${OPS_LABEL} operations declared; ${typed} fully typed across TS/Python/Go, ${excluded} intentionally excluded`);

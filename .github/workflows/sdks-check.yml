@@ -20,5 +20,7 @@ jobs:
       - uses: actions/setup-go@v6
         with:
           go-version: '1.22'
+      # ruff is the Python 2.x lint gate (sdks-check.sh step 5).
+      - run: pip install ruff
       - name: Standalone SDK gate
         run: npm run check

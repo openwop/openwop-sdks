@@ -2,11 +2,12 @@
   "name": "openwop-sdks",
   "version": "1.1.7",
   "private": true,
-  "description": "OpenWOP client SDKs — TypeScript (@openwop/openwop), Python (openwop-client), and Go (github.com/openwop/openwop-sdks/go). Carved from the openwop spec corpus.",
+  "description": "OpenWOP client SDKs \u2014 TypeScript (@openwop/openwop), Python (openwop-client), and Go (github.com/openwop/openwop-sdks/go, \u2026/go/v2), in 1.x and v2-only 2.x generations. Carved from the openwop spec corpus.",
   "license": "Apache-2.0",
   "scripts": {
     "check": "bash scripts/sdks-check.sh",
     "check:parity": "node scripts/check-sdk-parity.mjs",
-    "check:vendored": "node scripts/check-vendored-sync.mjs"
+    "check:vendored": "node scripts/check-vendored-sync.mjs",
+    "check:parity:v2": "node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json"
   }
 }

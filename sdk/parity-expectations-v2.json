@@ -1,0 +1,694 @@
+{
+  "$comment": "SDK parity expectations for the 2.x SDKs (currently 2.0.0-rc.1 / 2.0.0rc1 / go/v2/v2.0.0-rc.1) (v2 charter Phase 3, S4). One entry per operation in spec/v2/path-manifest.json (RFC 0172 \u00a7C.2 \u2014 the canonical unversioned operation set, vendored at CORPUS_TAG). Every entry is typed in every SDK with a mandatory symbols map: a v2 SDK has exactly one method per manifest operation (RFC 0168 \u00a7D). Checked by `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`. TypeScript symbols are `namespace.method` on OpenwopClient; Python symbols are OpenwopClient methods; Go symbols are OpenwopClient methods. Note the two SSE channels are methods too (runs.events / host.events; runs_events / host_events; StreamEvents / StreamHostEvents).",
+  "sdks": {
+    "ts": {
+      "label": "TypeScript 2.x",
+      "dir": "sdk/typescript-v2/src",
+      "exts": [
+        ".ts"
+      ],
+      "skip": "\\.test\\.|__tests__|(^|/)generated\\.ts$"
+    },
+    "py": {
+      "label": "Python 2.x",
+      "dir": "sdk/python-v2/src/openwop_client",
+      "exts": [
+        ".py"
+      ],
+      "skip": "(^|/)test|_generated\\.py$"
+    },
+    "go": {
+      "label": "Go v2",
+      "dir": "go/v2",
+      "exts": [
+        ".go"
+      ],
+      "skip": "_test\\.go$|generated\\.go$"
+    }
+  },
+  "operations": [
+    {
+      "operationId": "getCapabilities",
+      "method": "GET",
+      "path": "/.well-known/openwop",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "discovery.capabilities",
+        "py": "discovery_capabilities",
+        "go": "GetCapabilities"
+      }
+    },
+    {
+      "operationId": "listAgents",
+      "method": "GET",
+      "path": "/agents",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "agents.list",
+        "py": "agents_list",
+        "go": "ListAgents"
+      }
+    },
+    {
+      "operationId": "getAgentOrgChart",
+      "method": "GET",
+      "path": "/agents/org-chart",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "agents.getOrgChart",
+        "py": "agents_get_org_chart",
+        "go": "GetAgentOrgChart"
+      }
+    },
+    {
+      "operationId": "getAgentOrgChartDepartment",
+      "method": "GET",
+      "path": "/agents/org-chart/{departmentId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "agents.getOrgChartDepartment",
+        "py": "agents_get_org_chart_department",
+        "go": "GetAgentOrgChartDepartment"
+      }
+    },
+    {
+      "operationId": "listAgentRoster",
+      "method": "GET",
+      "path": "/agents/roster",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "agents.listRoster",
+        "py": "agents_list_roster",
+        "go": "ListAgentRoster"
+      }
+    },
+    {
+      "operationId": "getAgentRosterEntry",
+      "method": "GET",
+      "path": "/agents/roster/{rosterId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "agents.getRosterEntry",
+        "py": "agents_get_roster_entry",
+        "go": "GetAgentRosterEntry"
+      }
+    },
+    {
+      "operationId": "getAgent",
+      "method": "GET",
+      "path": "/agents/{agentId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "agents.get",
+        "py": "agents_get",
+        "go": "GetAgent"
+      }
+    },
+    {
+      "operationId": "listAgentDeployments",
+      "method": "GET",
+      "path": "/agents/{agentId}/deployments",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "agents.listDeployments",
+        "py": "agents_list_deployments",
+        "go": "ListAgentDeployments"
+      }
+    },
+    {
+      "operationId": "transitionAgentDeployment",
+      "method": "POST",
+      "path": "/agents/{agentId}/deployments",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "agents.transitionDeployment",
+        "py": "agents_transition_deployment",
+        "go": "TransitionAgentDeployment"
+      }
+    },
+    {
+      "operationId": "verifyAuditLog",
+      "method": "GET",
+      "path": "/audit/verify",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "audit.verify",
+        "py": "audit_verify",
+        "go": "VerifyAuditLog"
+      }
+    },
+    {
+      "operationId": "listContentPages",
+      "method": "GET",
+      "path": "/content/pages",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "content.listPages",
+        "py": "content_list_pages",
+        "go": "ListContentPages"
+      }
+    },
+    {
+      "operationId": "createContentPage",
+      "method": "POST",
+      "path": "/content/pages",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "content.createPage",
+        "py": "content_create_page",
+        "go": "CreateContentPage"
+      }
+    },
+    {
+      "operationId": "putContentSection",
+      "method": "PUT",
+      "path": "/content/pages/{pageId}/sections/{sectionId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "content.putSection",
+        "py": "content_put_section",
+        "go": "PutContentSection"
+      }
+    },
+    {
+      "operationId": "getContentPage",
+      "method": "GET",
+      "path": "/content/pages/{slug}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "content.getPage",
+        "py": "content_get_page",
+        "go": "GetContentPage"
+      }
+    },
+    {
+      "operationId": "getContentSettings",
+      "method": "GET",
+      "path": "/content/settings",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "content.getSettings",
+        "py": "content_get_settings",
+        "go": "GetContentSettings"
+      }
+    },
+    {
+      "operationId": "putContentSettings",
+      "method": "PUT",
+      "path": "/content/settings",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "content.putSettings",
+        "py": "content_put_settings",
+        "go": "PutContentSettings"
+      }
+    },
+    {
+      "operationId": "getEffectSeamManifest",
+      "method": "GET",
+      "path": "/host/effect-seams",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "host.effectSeams",
+        "py": "host_effect_seams",
+        "go": "GetEffectSeamManifest"
+      }
+    },
+    {
+      "operationId": "streamHostEvents",
+      "method": "GET",
+      "path": "/host/events",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "host.events",
+        "py": "host_events",
+        "go": "StreamHostEvents"
+      }
+    },
+    {
+      "operationId": "inspectInterruptByToken",
+      "method": "GET",
+      "path": "/interrupts/{token}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "interrupts.inspectByToken",
+        "py": "interrupts_inspect_by_token",
+        "go": "InspectInterruptByToken"
+      }
+    },
+    {
+      "operationId": "resolveInterruptByToken",
+      "method": "POST",
+      "path": "/interrupts/{token}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "interrupts.resolveByToken",
+        "py": "interrupts_resolve_by_token",
+        "go": "ResolveInterruptByToken"
+      }
+    },
+    {
+      "operationId": "getOpenApiSpec",
+      "method": "GET",
+      "path": "/openapi.json",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "discovery.openapi",
+        "py": "discovery_openapi",
+        "go": "GetOpenAPI"
+      }
+    },
+    {
+      "operationId": "listPromptTemplates",
+      "method": "GET",
+      "path": "/prompts",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "prompts.list",
+        "py": "prompts_list",
+        "go": "ListPromptTemplates"
+      }
+    },
+    {
+      "operationId": "createPromptTemplate",
+      "method": "POST",
+      "path": "/prompts",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "prompts.create",
+        "py": "prompts_create",
+        "go": "CreatePromptTemplate"
+      }
+    },
+    {
+      "operationId": "deletePromptTemplate",
+      "method": "DELETE",
+      "path": "/prompts/{templateId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "prompts.delete",
+        "py": "prompts_delete",
+        "go": "DeletePromptTemplate"
+      }
+    },
+    {
+      "operationId": "getPromptTemplate",
+      "method": "GET",
+      "path": "/prompts/{templateId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "prompts.get",
+        "py": "prompts_get",
+        "go": "GetPromptTemplate"
+      }
+    },
+    {
+      "operationId": "updatePromptTemplate",
+      "method": "PUT",
+      "path": "/prompts/{templateId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "prompts.update",
+        "py": "prompts_update",
+        "go": "UpdatePromptTemplate"
+      }
+    },
+    {
+      "operationId": "renderPromptTemplate",
+      "method": "POST",
+      "path": "/prompts:render",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "prompts.render",
+        "py": "prompts_render",
+        "go": "RenderPromptTemplate"
+      }
+    },
+    {
+      "operationId": "createRun",
+      "method": "POST",
+      "path": "/runs",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.create",
+        "py": "runs_create",
+        "go": "CreateRun"
+      }
+    },
+    {
+      "operationId": "getRun",
+      "method": "GET",
+      "path": "/runs/{runId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.get",
+        "py": "runs_get",
+        "go": "GetRun"
+      }
+    },
+    {
+      "operationId": "getRunAncestry",
+      "method": "GET",
+      "path": "/runs/{runId}/ancestry",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.ancestry",
+        "py": "runs_ancestry",
+        "go": "RunAncestry"
+      }
+    },
+    {
+      "operationId": "listAnnotations",
+      "method": "GET",
+      "path": "/runs/{runId}/annotations",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.listAnnotations",
+        "py": "list_annotations",
+        "go": "ListAnnotations"
+      }
+    },
+    {
+      "operationId": "createAnnotation",
+      "method": "POST",
+      "path": "/runs/{runId}/annotations",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.createAnnotation",
+        "py": "create_annotation",
+        "go": "CreateAnnotation"
+      }
+    },
+    {
+      "operationId": "getArtifact",
+      "method": "GET",
+      "path": "/runs/{runId}/artifacts/{artifactId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.getArtifact",
+        "py": "runs_get_artifact",
+        "go": "GetArtifact"
+      }
+    },
+    {
+      "operationId": "cancelRun",
+      "method": "POST",
+      "path": "/runs/{runId}/cancel",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.cancel",
+        "py": "runs_cancel",
+        "go": "CancelRun"
+      }
+    },
+    {
+      "operationId": "getRunCompensation",
+      "method": "GET",
+      "path": "/runs/{runId}/compensation",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.compensation",
+        "py": "runs_compensation",
+        "go": "GetRunCompensation"
+      }
+    },
+    {
+      "operationId": "getRunEffects",
+      "method": "GET",
+      "path": "/runs/{runId}/effects",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.effects",
+        "py": "runs_effects",
+        "go": "GetRunEffects"
+      }
+    },
+    {
+      "operationId": "getEvalSummary",
+      "method": "GET",
+      "path": "/runs/{runId}/eval-summary",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.evalSummary",
+        "py": "runs_eval_summary",
+        "go": "GetEvalSummary"
+      }
+    },
+    {
+      "operationId": "streamRunEvents",
+      "method": "GET",
+      "path": "/runs/{runId}/events",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.events",
+        "py": "runs_events",
+        "go": "StreamEvents"
+      }
+    },
+    {
+      "operationId": "pollRunEvents",
+      "method": "GET",
+      "path": "/runs/{runId}/events/poll",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.pollEvents",
+        "py": "runs_poll_events",
+        "go": "PollRunEvents"
+      }
+    },
+    {
+      "operationId": "resolveInterruptByRun",
+      "method": "POST",
+      "path": "/runs/{runId}/interrupts/{nodeId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "interrupts.resolveByRun",
+        "py": "interrupts_resolve_by_run",
+        "go": "ResolveInterruptByRun"
+      }
+    },
+    {
+      "operationId": "diffRun",
+      "method": "GET",
+      "path": "/runs/{runId}:diff",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.diff",
+        "py": "runs_diff",
+        "go": "DiffRun"
+      }
+    },
+    {
+      "operationId": "forkRun",
+      "method": "POST",
+      "path": "/runs/{runId}:fork",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.fork",
+        "py": "runs_fork",
+        "go": "ForkRun"
+      }
+    },
+    {
+      "operationId": "pauseRun",
+      "method": "POST",
+      "path": "/runs/{runId}:pause",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.pause",
+        "py": "runs_pause",
+        "go": "PauseRun"
+      }
+    },
+    {
+      "operationId": "resumeRun",
+      "method": "POST",
+      "path": "/runs/{runId}:resume",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.resume",
+        "py": "runs_resume",
+        "go": "ResumeRun"
+      }
+    },
+    {
+      "operationId": "bulkCancelRuns",
+      "method": "POST",
+      "path": "/runs:bulk-cancel",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.bulkCancel",
+        "py": "runs_bulk_cancel",
+        "go": "BulkCancelRuns"
+      }
+    },
+    {
+      "operationId": "listTools",
+      "method": "GET",
+      "path": "/tools",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "tools.list",
+        "py": "tools_list",
+        "go": "ListTools"
+      }
+    },
+    {
+      "operationId": "getTool",
+      "method": "GET",
+      "path": "/tools/{toolId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "tools.get",
+        "py": "tools_get",
+        "go": "GetTool"
+      }
+    },
+    {
+      "operationId": "createTriggerSubscription",
+      "method": "POST",
+      "path": "/trigger-subscriptions",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "triggerSubscriptions.create",
+        "py": "create_trigger_subscription",
+        "go": "CreateTriggerSubscription"
+      }
+    },
+    {
+      "operationId": "registerWebhook",
+      "method": "POST",
+      "path": "/webhooks",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "webhooks.register",
+        "py": "webhooks_register",
+        "go": "RegisterWebhook"
+      }
+    },
+    {
+      "operationId": "unregisterWebhook",
+      "method": "DELETE",
+      "path": "/webhooks/{webhookId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "webhooks.unregister",
+        "py": "webhooks_unregister",
+        "go": "UnregisterWebhook"
+      }
+    },
+    {
+      "operationId": "getWorkflow",
+      "method": "GET",
+      "path": "/workflows/{workflowId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "workflows.get",
+        "py": "workflows_get",
+        "go": "GetWorkflow"
+      }
+    }
+  ]
+}

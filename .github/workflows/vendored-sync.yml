@@ -13,6 +13,8 @@ on:
     paths:
       - 'schemas/**'
       - 'api/**'
+      - 'spec/**'
+      - 'CORPUS_TAG'
       - 'scripts/check-vendored-sync.mjs'
 
 jobs:
