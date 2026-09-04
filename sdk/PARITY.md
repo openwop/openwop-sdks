@@ -184,7 +184,7 @@ Two language adaptations: TypeScript's generic `AIEnvelope<TPayload>` is `payloa
 
 ## v2 SDKs (2.0.0-rc.1 — `sdk/typescript-v2`, `sdk/python-v2`, `go/v2`)
 
-> **Status:** Added 2026-09-03 (v2 charter Phase 3 SDK leg, corpus tag `v2.0.0-rc.0`). Machine-enforced by
+> **Status:** Added 2026-09-03 (v2 charter Phase 3 SDK leg, corpus tag `v2.0.0-rc.1`). Machine-enforced by
 > `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`
 > (`scripts/sdks-check.sh` step 4). The 1.x rows above are unchanged; the 1.x packages stay byte-identical.
 
@@ -211,7 +211,7 @@ The three 2.x packages are v2-ONLY siblings of the 1.x ones, publishing from the
 | `GET /runs/{id}/effects` (RFC 0173 §C.2) | `runs.effects(id)` | `runs_effects(id)` | `GetRunEffects(ctx, id)` |
 | `GET /host/effect-seams` (RFC 0173 §C) | `host.effectSeams()` | `host_effect_seams()` | `GetEffectSeamManifest(ctx)` |
 | `GET /host/events` (SSE, `hostEvents` channel) | `host.events(opts)` / `streamHostEvents` | `host_events()` / `stream_host_events` | `StreamHostEvents(ctx, opts)` |
-| Error registry (`spec/v2/errors.json`, 92 codes) | generated `ERROR_CODES` / `ErrorCode` union, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`; `ErrorEnvelope.error: ErrorCode \| VendorErrorCode` | generated `ERROR_CODES` / `ErrorCode` Literal, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES` | generated `ErrorCodes`, `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsErrorCode` |
+| Error registry (`spec/v2/errors.json`, 94 codes) | generated `ERROR_CODES` / `ErrorCode` union, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`; `ErrorEnvelope.error: ErrorCode \| VendorErrorCode` | generated `ERROR_CODES` / `ErrorCode` Literal, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES` | generated `ErrorCodes`, `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsErrorCode` |
 | Capability keys (`schemas/v2/capabilities.schema.json`) | generated `CAPABILITY_FAMILY_KEYS` / `CAPABILITY_METADATA_KEYS` | generated `CAPABILITY_FAMILY_KEYS` / `CAPABILITY_METADATA_KEYS` | generated `CapabilityFamilyKeys` / `CapabilityMetadataKeys` |
 | Webhook verification (`OpenWOP-*`; `X-openwop-*` through the overlap; `sha256=` only; algorithm check) | `@openwop/openwop/webhooks` `verifyWebhookSignature` + `readWebhookHeaders` | `verify_webhook_signature` + `read_webhook_headers` → `WebhookHeaderRead` | `VerifyWebhookSignature` + `ReadWebhookHeaders` (returns the algorithm too) |
 

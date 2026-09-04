@@ -2,7 +2,7 @@
 
 The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (release-candidate line, tags `openwop/v2.0.0-rc.N` tracking the corpus `v2.0.0-rc.N`) published from `sdk/typescript-v2/`.
 
-## [2.0.0-rc.1] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.0`; RFC 0168 §D SDK 2 expectations)
+## [2.0.0-rc.1] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.1`; RFC 0168 §D SDK 2 expectations)
 
 **Breaking — the wire (RFC 0172 §A, RFC 0171 §C.1):**
 
@@ -14,7 +14,7 @@ The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CH
 **Breaking — types:**
 
 - `Capabilities` is the closed v2 root: `protocolVersions[]` + `preferredVersion` REQUIRED; every family key carries a `CapabilityRecord` `{ status, since, until?, witness, …facets }`. The 1.x `*Capability` shapes with `supported: boolean` are removed.
-- `ErrorEnvelope.error` is `ErrorCode | VendorErrorCode`; `ErrorCode` is the 92-member union generated from `spec/v2/errors.json`. `HTTP_ERROR_CODES` is now that registry; `isErrorCode`, `isRetriableErrorCode`, `isVendorErrorCode`, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES` are new.
+- `ErrorEnvelope.error` is `ErrorCode | VendorErrorCode`; `ErrorCode` is the 94-member union generated from `spec/v2/errors.json`. `HTTP_ERROR_CODES` is now that registry; `isErrorCode`, `isRetriableErrorCode`, `isVendorErrorCode`, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES` are new.
 - `RunSnapshot` gains the REQUIRED `owner { tenant, workspace?, subject }` and `eventLogSchemaVersion`; `RunEventDoc.schemaVersion` is REQUIRED and `engineVersion` is an integer. `RunConfigurable` is the closed, nested, versioned `{ version: 1, run?, ai?, distillation?, budget?, extensions? }`.
 
 **Removed (not v2 operations):** `workspace.listFiles/getFile/putFile/deleteFile`, `runs.debugBundle`, `userAgents.*` (host-sample seams), `RegistryClient` (the registry is resolved through `.well-known/openwop-registry.json` `endpoints`, packs.md). The barrel no longer re-exports the `node:crypto` webhook verifiers — import `@openwop/openwop/webhooks`.

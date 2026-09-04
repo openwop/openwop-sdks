@@ -57,7 +57,7 @@ func TestGeneratedRegistriesMatchCorpus(t *testing.T) {
 	if err := json.Unmarshal(raw, &registry); err != nil {
 		t.Fatalf("parse errors.json: %v", err)
 	}
-	if len(registry.Rows) != len(ErrorCodes) || len(ErrorCodes) != 92 {
+	if len(registry.Rows) != len(ErrorCodes) || len(ErrorCodes) != 94 {
 		t.Fatalf("ErrorCodes has %d entries, registry has %d", len(ErrorCodes), len(registry.Rows))
 	}
 	retriable := 0
@@ -121,7 +121,7 @@ func TestCapabilitiesClosedRootRoundTrip(t *testing.T) {
 		"protocolVersions":["1.12","2.0"],
 		"preferredVersion":"2.0",
 		"engineVersion":7,
-		"webhooks":{"status":"stable","since":"2.0","witness":"witnessable-gated","signatureAlgorithms":["v1"]},
+		"webhooks":{"status":"stable","since":"2.0","witness":"witnessable-gated","signatureAlgorithms":["v1"],"retryPolicy":{"maxAttempts":5,"backoff":"exponential"}},
 		"compensation":{"status":"experimental","since":"2.0","until":"2.3","witness":"seam-gated"},
 		"extensions":{"acme.thing":{"x":1}}
 	}`
@@ -138,6 +138,11 @@ func TestCapabilitiesClosedRootRoundTrip(t *testing.T) {
 	}
 	if algs, ok := wh.Facets["signatureAlgorithms"].([]any); !ok || len(algs) != 1 || algs[0] != "v1" {
 		t.Fatalf("facets not preserved: %+v", wh.Facets)
+	}
+	// A facet the SDK models no field for (retryPolicy, added at rc.1) rides
+	// through verbatim — facets are carried, never enumerated.
+	if rp, ok := wh.Facets["retryPolicy"].(map[string]any); !ok || rp["backoff"] != "exponential" {
+		t.Fatalf("unmodeled facet not preserved: %+v", wh.Facets)
 	}
 	comp, ok := caps.Family("compensation")
 	if !ok || comp.Status != CapabilityExperimental || comp.Until != "2.3" || len(comp.Facets) != 0 {

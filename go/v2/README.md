@@ -23,7 +23,7 @@ import openwop "github.com/openwop/openwop-sdks/go/v2"
 | `MutationOptions{Dedup: true}` → `X-Dedup` | → `OpenWOP-Dedup: enforce`. |
 | `PollRunEventsOptions{LastSequence}` | `PollRunEventsOptions{AfterSequence}`; `PollEventsResponse` is the closed `{RunID, Events, LastSequence, Status, IsTerminal}`. |
 | `Capabilities` with `supported` sub-structs | The closed v2 root: `ProtocolVersions` + `PreferredVersion` required, `Families map[string]CapabilityRecord` (`Status / Since / Until / Witness / Facets`) via `caps.Family(key)`. `CapabilityFamilyKeys` is generated from the schema. |
-| `HTTPErrorCodes` hand-kept | `ErrorCodes` (92) generated from `spec/v2/errors.json`, plus `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsRetriableErrorCode`, `IsVendorErrorCode`. |
+| `HTTPErrorCodes` hand-kept | `ErrorCodes` (94) generated from `spec/v2/errors.json`, plus `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsRetriableErrorCode`, `IsVendorErrorCode`. |
 | `*WorkspaceFile*` (4), `GetDebugBundle`, `RegistryClient` | Removed — not v2 operations (the registry is resolved through `.well-known/openwop-registry.json` `endpoints`). |
 | — | `GetRunCompensation`, `GetRunEffects`, `GetEffectSeamManifest` (RFC 0173), `StreamHostEvents` (the `hostEvents` SSE channel). |
 | Webhook `openwop-Webhook-*` names, `v1=<hex>` | `OpenWOP-*` only (`X-openwop-*` accepted through the overlap); `sha256=<hex>`; an unrecognized `OpenWOP-Signature-Algorithm` is rejected. |

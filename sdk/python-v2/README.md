@@ -19,7 +19,7 @@ pip install --pre "openwop-client>=2.0.0rc1,<3"   # 2.0.0rc1 — the corpus rele
 | `dedup=True` → `X-Dedup` | `dedup=True` → `OpenWOP-Dedup: enforce`. |
 | `runs_poll_events(last_sequence=)` | `runs_poll_events(after_sequence=)`; the response is the closed `{ runId, events, lastSequence, status, isTerminal }`. |
 | `Capabilities` with `supported` sub-dataclasses | The closed v2 root: `protocolVersions` + `preferredVersion` required, `families: dict[str, CapabilityRecord]` (`status / since / until / witness / facets`). `CAPABILITY_FAMILY_KEYS` is generated from the schema. |
-| `HTTP_ERROR_CODES` hand-kept | `ERROR_CODES` / `ErrorCode` (92) generated from `spec/v2/errors.json`, plus `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`, `is_vendor_error_code`. |
+| `HTTP_ERROR_CODES` hand-kept | `ERROR_CODES` / `ErrorCode` (94) generated from `spec/v2/errors.json`, plus `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`, `is_vendor_error_code`. |
 | `*_workspace_file` (4), `runs_debug_bundle`, `RegistryClient` | Removed — not v2 operations (the registry is resolved through `.well-known/openwop-registry.json` `endpoints`). |
 | — | `runs_compensation`, `runs_effects`, `host_effect_seams` (RFC 0173), `host_events` (the `hostEvents` SSE channel). |
 | Webhook `openwop-Webhook-*` names, `v1=<hex>` | `OpenWOP-*` only (`X-openwop-*` accepted through the overlap); `sha256=<hex>`; an unrecognized `OpenWOP-Signature-Algorithm` is rejected. |

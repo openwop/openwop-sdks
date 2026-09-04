@@ -187,7 +187,12 @@ describe('generated registries match the vendored corpus', () => {
     const registry = JSON.parse(readFileSync(resolve(REPO, 'spec/v2/errors.json'), 'utf8')) as { rows: { code: string; httpStatus: number; retriable: boolean }[] };
     const codes = registry.rows.map((r) => r.code).sort();
     expect([...ERROR_CODES]).toEqual(codes);
-    expect(ERROR_CODES).toHaveLength(92);
+    expect(ERROR_CODES).toHaveLength(94);
+    // rc.1 grew the registry by two rows; the union tracks it, not a hand-kept list.
+    expect(isErrorCode('fork_point_invalid')).toBe(true);
+    expect(isErrorCode('webhook_url_rejected')).toBe(true);
+    expect(ERROR_CODE_HTTP_STATUS['fork_point_invalid']).toBe(422);
+    expect(ERROR_CODE_HTTP_STATUS['webhook_url_rejected']).toBe(400);
     expect(HTTP_ERROR_CODES).toBe(ERROR_CODES);
     for (const r of registry.rows) expect(ERROR_CODE_HTTP_STATUS[r.code as (typeof ERROR_CODES)[number]]).toBe(r.httpStatus);
     expect([...RETRIABLE_ERROR_CODES].sort()).toEqual(registry.rows.filter((r) => r.retriable).map((r) => r.code).sort());

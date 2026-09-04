@@ -187,7 +187,15 @@ class ClosedRootTests(unittest.TestCase):
             "protocolVersions": ["1.12", "2.0"],
             "preferredVersion": "2.0",
             "engineVersion": 7,
-            "webhooks": {"status": "stable", "since": "2.0", "witness": "witnessable-gated", "signatureAlgorithms": ["v1"]},
+            "webhooks": {
+                "status": "stable",
+                "since": "2.0",
+                "witness": "witnessable-gated",
+                "signatureAlgorithms": ["v1"],
+                # A facet the SDK models no field for (added at rc.1) rides
+                # through verbatim — facets are carried, never enumerated.
+                "retryPolicy": {"maxAttempts": 5, "backoff": "exponential"},
+            },
             "extensions": {"acme.thing": {"x": 1}},
         }
         _, urlopen = _stub(lambda req: (200, doc))
@@ -199,7 +207,10 @@ class ClosedRootTests(unittest.TestCase):
         wh = caps.family("webhooks")
         assert wh is not None
         self.assertEqual(wh.status, "stable")
-        self.assertEqual(wh.facets, {"signatureAlgorithms": ["v1"]})
+        self.assertEqual(
+            wh.facets,
+            {"signatureAlgorithms": ["v1"], "retryPolicy": {"maxAttempts": 5, "backoff": "exponential"}},
+        )
         self.assertIsNone(caps.family("compensation"))
         self.assertEqual(caps.extensions, {"acme.thing": {"x": 1}})
 
@@ -217,7 +228,7 @@ class GeneratedRegistryTests(unittest.TestCase):
         registry = json.loads((REPO / "spec/v2/errors.json").read_text())
         codes = {r["code"] for r in registry["rows"]}
         self.assertEqual(ERROR_CODES, frozenset(codes))
-        self.assertEqual(len(ERROR_CODES), 92)
+        self.assertEqual(len(ERROR_CODES), 94)
         self.assertIs(HTTP_ERROR_CODES, ERROR_CODES)
         for r in registry["rows"]:
             self.assertEqual(ERROR_CODE_HTTP_STATUS[r["code"]], r["httpStatus"])

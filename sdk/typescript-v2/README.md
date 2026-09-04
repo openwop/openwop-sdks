@@ -19,7 +19,7 @@ npm install @openwop/openwop@next   # 2.0.0-rc.1 — the corpus release-candidat
 | `X-Dedup` | `OpenWOP-Dedup` (`MutationOptions.dedup`). Every non-standard header is `OpenWOP-<Name>` (headers.md). |
 | `pollEvents({ lastSequence })` | `pollEvents({ afterSequence })`; the response is the closed `{ runId, events, lastSequence, status, isTerminal }`. |
 | Open discovery root, `supported: boolean` | The closed v2 root: `protocolVersions[]` + `preferredVersion` REQUIRED, every family a `CapabilityRecord` `{ status, since, until?, witness, …facets }` (presence is the claim). Family and metadata keys are generated from `schemas/v2/capabilities.schema.json`. |
-| `ErrorEnvelope.error: string` | `ErrorCode \| VendorErrorCode` — the 92-member union is generated from `spec/v2/errors.json` (`ERROR_CODES`, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`). |
+| `ErrorEnvelope.error: string` | `ErrorCode \| VendorErrorCode` — the 94-member union is generated from `spec/v2/errors.json` (`ERROR_CODES`, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`). |
 | `workspace.*` (4), `runs.debugBundle`, `userAgents.*` (host-sample seams), `RegistryClient` | Removed — not v2 operations. The pack registry is a separate wire surface a client resolves through `.well-known/openwop-registry.json` `endpoints` (packs.md). |
 | — | `runs.compensation`, `runs.effects`, `host.effectSeams` (RFC 0173), `host.events` (the `hostEvents` SSE channel). |
 | Webhook `openwop-Webhook-*` legacy names, `v1=<hex>` | `OpenWOP-*` only (`X-openwop-*` accepted through the overlap); `sha256=<hex>`; an unrecognized `OpenWOP-Signature-Algorithm` is rejected. Import from `@openwop/openwop/webhooks` — the barrel no longer carries `node:crypto`. |
