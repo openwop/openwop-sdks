@@ -3,7 +3,7 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This module is the reference Go client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (51 operations), strongly-typed structs, and channel-based SSE consumers for the run and host event channels.
 
 ```bash
-go get github.com/openwop/openwop-sdks/go/v2@v2.0.0   # tag go/v2/v2.0.0 — v2-only; the 1.x module stays at github.com/openwop/openwop-sdks/go
+go get github.com/openwop/openwop-sdks/go/v2@v2.0.0   # tag go/v2.0.0 — v2-only; the 1.x module stays at github.com/openwop/openwop-sdks/go
 ```
 
 ```go
@@ -12,7 +12,7 @@ import openwop "github.com/openwop/openwop-sdks/go/v2"
 
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Corpus tag:** see [`CORPUS_TAG`](../../CORPUS_TAG) · **Mirrors:** [`api/v2/openapi.yaml`](../../api/v2/openapi.yaml), [`schemas/v2/`](../../schemas/v2/), [`spec/v2/errors.json`](../../spec/v2/errors.json) · **Siblings:** [`sdk/typescript-v2/`](../../sdk/typescript-v2/), [`sdk/python-v2/`](../../sdk/python-v2/)
 >
-> The v1 module (`github.com/openwop/openwop-sdks/go`, this directory's parent) is untouched and keeps publishing for v1 hosts. This is a v2-ONLY client: it never sends a `/v1/…` path. Tags are `go/v2/vX.Y.Z` (Go's major-subdirectory convention).
+> The v1 module (`github.com/openwop/openwop-sdks/go`, this directory's parent) is untouched and keeps publishing for v1 hosts. This is a v2-ONLY client: it never sends a `/v1/…` path. Tags are `go/v2.Y.Z` (Go's major-subdirectory convention).
 
 ## What is different from v1 (RFC 0172 / 0171 / 0173)
 

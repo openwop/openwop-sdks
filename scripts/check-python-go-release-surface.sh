@@ -3,7 +3,7 @@
 # (+ the npm version field), for BOTH generations of packages:
 #
 #   1.x  sdk/python (openwop-client 1.7.0)   go/    (github.com/openwop/openwop-sdks/go)
-#   2.x  sdk/python-v2 (openwop-client 2.0.0rc1) go/v2 (github.com/openwop/openwop-sdks/go/v2, tag go/v2/v2.0.0-rc.1)
+#   2.x  sdk/python-v2 (openwop-client 2.0.0rc1) go/v2 (github.com/openwop/openwop-sdks/go/v2, tag go/v2.0.0-rc.1)
 #        sdk/typescript-v2 (@openwop/openwop 2.0.0-rc.1)
 #
 # The 2.x packages publish from the corpus release-candidate line: the npm
@@ -169,7 +169,7 @@ PY
 
 GO_V2_MODULE_LINE=$(grep -E "^module " "$SPEC_ROOT/go/v2/go.mod" || true)
 if [[ "$GO_V2_MODULE_LINE" != "module $EXPECTED_GO_V2_MODULE" ]]; then
-  echo "  FAIL: go/v2/go.mod declares '$GO_V2_MODULE_LINE', expected 'module $EXPECTED_GO_V2_MODULE' (Go major-subdirectory convention; tags go/v2/vX.Y.Z)." >&2
+  echo "  FAIL: go/v2/go.mod declares '$GO_V2_MODULE_LINE', expected 'module $EXPECTED_GO_V2_MODULE' (Go major-subdirectory convention; tags go/v2.Y.Z)." >&2
   exit 1
 fi
 GO_V2_VERSION_LINE=$(grep -E "^go " "$SPEC_ROOT/go/v2/go.mod" || true)
