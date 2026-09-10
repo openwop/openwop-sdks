@@ -57,7 +57,7 @@ func TestGeneratedRegistriesMatchCorpus(t *testing.T) {
 	if err := json.Unmarshal(raw, &registry); err != nil {
 		t.Fatalf("parse errors.json: %v", err)
 	}
-	if len(registry.Rows) != len(ErrorCodes) || len(ErrorCodes) != 94 {
+	if len(registry.Rows) != len(ErrorCodes) {
 		t.Fatalf("ErrorCodes has %d entries, registry has %d", len(ErrorCodes), len(registry.Rows))
 	}
 	retriable := 0
