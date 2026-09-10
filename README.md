@@ -6,7 +6,7 @@ Carved out of the `openwop/openwop` spec corpus (full history preserved) so the 
 stays a lean spec + conformance contract.
 
 Two generations of packages live side by side. The 1.x packages target v1 hosts (`/v1/…`); the
-2.x packages (npm `2.0.0`, PyPI `2.0.0`, Go tag `go/v2/v2.0.0` — corpus `v2.0.8`) are **v2-ONLY** siblings for the v2 major (`spec/v2/`: bare-origin unversioned
+2.x packages (npm `2.0.0`, PyPI `2.0.0`, Go tag `go/v2.0.0` — corpus `v2.0.8`) are **v2-ONLY** siblings for the v2 major (`spec/v2/`: bare-origin unversioned
 paths, `OpenWOP-Version` negotiation, the closed discovery root, the generated error registry —
 RFC 0172 / 0171 / 0173, RFC 0168 §D). Same npm / PyPI names, a new Go major-subdirectory module.
 
@@ -14,7 +14,7 @@ RFC 0172 / 0171 / 0173, RFC 0168 §D). Same npm / PyPI names, a new Go major-sub
 |---|---|---|---|---|
 | TypeScript | [`@openwop/openwop`](https://www.npmjs.com/package/@openwop/openwop) | `sdk/typescript/` | `sdk/typescript-v2/` | `openwop/v2.Y.Z` |
 | Python | [`openwop-client`](https://pypi.org/project/openwop-client/) | `sdk/python/` | `sdk/python-v2/` | `openwop-client/v2.Y.Z` |
-| Go | `github.com/openwop/openwop-sdks/go` · `…/go/v2` | `go/` | `go/v2/` | `go/v2/v2.Y.Z` |
+| Go | `github.com/openwop/openwop-sdks/go` · `…/go/v2` | `go/` | `go/v2/` | `go/v2.Y.Z` |
 
 A coordinated corpus tag (`v1.Y.Z` / `v2.Y.Z`, rc's `v2.0.0-rc.N`) publishes the three packages of
 that major; a pre-release tag publishes to npm under dist-tag `next` and requires a PEP 440

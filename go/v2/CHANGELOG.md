@@ -1,20 +1,31 @@
 # `openwopclient` v2 Changelog
 
-The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2/vX.Y.Z`).
+The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2.Y.Z`).
 
-## [v2.0.0] — 2026-09-10 (tag `go/v2/v2.0.0`) — GA on the published corpus (`v2.0.8`)
+## [v2.0.0] — 2026-09-10 (tag `go/v2.0.0`) — GA on the published corpus (`v2.0.8`)
 
 No client-surface change from rc.1. The rc.1 vendored tree predated `v2.0.0`
 and eight 2.0.x corpus patches; re-vendored from the corpus at `v2.0.8` (27
 schemas added, 24 refreshed); `go vet` / `go test` clean; the v2 parity gate
 passes 51/51 against the current `spec/v2/path-manifest.json`.
 
-The tag is `go/v2/v2.0.0` — Go requires the `/v2` path segment in the tag for
-a v2 module, and the publish workflow rejects the `go/v2.0.0` form outright.
-The v1 module at `github.com/openwop/openwop-sdks/go` is not retired; a caller
-on `/v1/…` keeps it through the overlap.
+The tag is `go/v2.0.0`. Go derives a nested module's tag prefix from the
+module path *minus* its major suffix — `…/go/v2` → `go/` — and reads the
+source from the major subdirectory `go/v2/` because that is where `go.mod`
+lives. This entry first said the opposite (`go/v2/v2.0.0`, "the workflow
+rejects `go/v2.0.0` outright"): that tag was pushed on 2026-09-10 and
+proxy.golang.org answered `unknown revision go/v2.0.0` — it resolved to no
+module at all, while the publish job passed because its discoverability step
+only echoed a warm-up hint. Corrected the same day; the workflow now polls the
+proxy and rejects the `go/v2/*` form. The v1 module at
+`github.com/openwop/openwop-sdks/go` is not retired; a caller on `/v1/…` keeps
+it through the overlap.
 
-## [v2.0.0-rc.1] — 2026-09-03 (tag `go/v2/v2.0.0-rc.1`) — the v2 client (corpus `v2.0.0-rc.1`; RFC 0168 §D SDK 2 expectations)
+## [v2.0.0-rc.1] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.1`; RFC 0168 §D SDK 2 expectations)
+
+No Go tag was ever pushed for rc.1 (the remote carries none under `go/`); the
+proxy served the module as an untagged pseudo-version at the time. `v2.0.0`
+above is the first Go tag for this module.
 
 **Breaking — the wire (RFC 0172 §A, RFC 0171 §C.1):**
 

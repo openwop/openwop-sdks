@@ -21,12 +21,22 @@
 #                                                  (corpus release tags are v2.<minor>.<patch>,
 #                                                  rc's v2.0.0-rc.<n>; RFC 0172 §D — the 2.x
 #                                                  packages currently sit on that rc line:
-#                                                  npm 2.0.0-rc.1 / PyPI 2.0.0rc1 / go/v2/v2.0.0-rc.1)
+#                                                  npm 2.0.0 / PyPI 2.0.0 / go/v2.0.0)
 #   openwop/v1.* / v2.*    publish-ts-client       SDK-only release (TS 1.x / 2.x)
 #   openwop-client/v1.* / v2.*  publish-python     SDK-only release (Python 1.x / 2.x)
-#   go/v1.* (go/v*)        publish-go              SDK-only release (Go v1; module …/go)
-#   go/v2/v2.*             publish-go              SDK-only release (Go v2; module …/go/v2 —
-#                                                  Go's major-subdirectory tag form)
+#   go/v1.*                publish-go              SDK-only release (Go v1; module …/go)
+#   go/v2.*                publish-go              SDK-only release (Go v2; module …/go/v2)
+#
+# Go tag form — measured 2026-09-10, not inferred. Go derives the tag prefix
+# from the module path MINUS its major suffix: module …/go/v2 is tagged
+# `go/v2.Y.Z`, and the source is found in the major subdirectory `go/v2/`
+# because that is where go.mod lives ("major version subdirectories" in the
+# modules reference). The proxy lists the v1 module's `go/v1.5.0` as `v1.5.0`
+# for the same reason. A `go/v2/v2.0.0` tag — the form this file previously
+# required — resolves to NOTHING: proxy.golang.org answered
+# `unknown revision go/v2.0.0` for it, and the "discoverability" step below
+# used to echo a warm-up hint and pass without asking the proxy, so the
+# GA run was green while the module was unfetchable. The step now asks.
 #
 # Pre-release tags (`-rc.N`, `-next.N`, …):
 #   npm   → `npm publish --tag next` (never `latest`), and package.json MUST
@@ -34,7 +44,7 @@
 #   PyPI  → the version MUST be a PEP 440 pre-release (`2.0.0rc1`), which pip
 #           does not install by default; a final version under an rc tag fails
 #           the job.
-#   Go    → tags are the release; proxy.golang.org treats `go/v2/v2.0.0-rc.1` as a
+#   Go    → tags are the release; proxy.golang.org treats `go/v2.1.0-rc.1` as a
 #           pre-release automatically.
 
 name: openwop-sdks — Publish
@@ -46,7 +56,6 @@ on:
       - 'openwop/v*'
       - 'openwop-client/v*'
       - 'go/v*'
-      - 'go/v2/v*'
 
 jobs:
   validate-tag:
@@ -59,19 +68,14 @@ jobs:
             v[0-9]*.[0-9]*.[0-9]*|v[0-9]*.[0-9]*.[0-9]*-*|\
             openwop/v[0-9]*.[0-9]*.[0-9]*|openwop/v[0-9]*.[0-9]*.[0-9]*-*|\
             openwop-client/v[0-9]*.[0-9]*.[0-9]*|openwop-client/v[0-9]*.[0-9]*.[0-9]*-*|\
-            go/v2/v2.[0-9]*.[0-9]*|go/v2/v2.[0-9]*.[0-9]*-*|\
             go/v[0-9]*.[0-9]*.[0-9]*|go/v[0-9]*.[0-9]*.[0-9]*-*)
               echo "tag '$tag' matches expected SemVer pattern" ;;
+            go/v2/*)
+              echo "::error::'$tag' is not a Go tag form: module …/go/v2 is tagged go/v2.Y.Z (prefix = module path minus its major suffix; see the header comment)"
+              exit 1 ;;
             *)
               echo "::error::tag '$tag' does not match an expected SemVer pattern"
-              echo "Expected: vX.Y.Z | openwop/vX.Y.Z | openwop-client/vX.Y.Z | go/vX.Y.Z | go/v2/v2.Y.Z"
-              exit 1 ;;
-          esac
-          # A Go v2 module MUST be tagged under its major subdirectory; a bare
-          # go/v2.* tag would be indexed against the …/go module and refused.
-          case "$tag" in
-            go/v2.*)
-              echo "::error::Go v2 releases tag as go/v2/v2.Y.Z (module github.com/openwop/openwop-sdks/go/v2), not go/v2.Y.Z"
+              echo "Expected: vX.Y.Z | openwop/vX.Y.Z | openwop-client/vX.Y.Z | go/vX.Y.Z (major 1) | go/v2.Y.Z (major 2)"
               exit 1 ;;
           esac
 
@@ -94,7 +98,7 @@ jobs:
       - id: r
         run: |
           tag="${GITHUB_REF#refs/tags/}"
-          version="${tag##*/}"                  # vX.Y.Z / pkg/vX.Y.Z / go/v2/vX.Y.Z → vX.Y.Z[-pre]
+          version="${tag##*/}"                  # vX.Y.Z / pkg/vX.Y.Z / go/vX.Y.Z → vX.Y.Z[-pre]
           version="${version#v}"                # → X.Y.Z[-pre]
           major="${version%%.*}"
           prerelease=false
@@ -250,9 +254,10 @@ jobs:
         with:
           go-version: '1.22'
       # Go modules are tag-based; proxy.golang.org indexes the …/go module from
-      # `go/v*` tags and the …/go/v2 module from `go/v2/v*` tags (major
-      # subdirectory). This job confirms the module path, vet, test and gofmt
-      # against the tagged source.
+      # `go/v1.*` tags and the …/go/v2 module from `go/v2.*` tags, reading the
+      # v2 source from the major subdirectory `go/v2/` (header comment). This
+      # job confirms the module path, vet, test and gofmt against the tagged
+      # source, then asks the proxy whether the tag resolves.
       - name: Module path ↔ tag agreement
         run: |
           declared=$(grep -E '^module ' "$GO_DIR/go.mod" | awk '{print $2}')
@@ -266,7 +271,17 @@ jobs:
       - run: cd "$GO_DIR" && go test ./...
       - run: cd "$GO_DIR" && test -z "$(gofmt -l .)"
       - name: Verify Go module discoverability
+        # The proxy fetches on first request and may take a few minutes to
+        # index a new tag; poll it rather than echoing a hint and passing. A
+        # tag the proxy cannot resolve is not a release.
         run: |
-          echo "Go module is tag-driven via ${GITHUB_REF}."
           echo "Consumers: go get ${GO_MODULE}@v${TAG_VERSION}"
-          echo "Cache warm-up may take ~5min for proxy.golang.org."
+          url="https://proxy.golang.org/${GO_MODULE}/@v/v${TAG_VERSION}.info"
+          for attempt in $(seq 1 20); do
+            if body=$(curl -sf "$url"); then
+              echo "proxy.golang.org resolves v${TAG_VERSION}: $body"; exit 0
+            fi
+            echo "attempt $attempt: not indexed yet"; sleep 30
+          done
+          echo "::error::proxy.golang.org does not resolve ${GO_MODULE}@v${TAG_VERSION} after 10 minutes: $(curl -s "$url")"
+          exit 1
