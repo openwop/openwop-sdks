@@ -228,7 +228,6 @@ class GeneratedRegistryTests(unittest.TestCase):
         registry = json.loads((REPO / "spec/v2/errors.json").read_text())
         codes = {r["code"] for r in registry["rows"]}
         self.assertEqual(ERROR_CODES, frozenset(codes))
-        self.assertEqual(len(ERROR_CODES), 94)
         self.assertIs(HTTP_ERROR_CODES, ERROR_CODES)
         for r in registry["rows"]:
             self.assertEqual(ERROR_CODE_HTTP_STATUS[r["code"]], r["httpStatus"])

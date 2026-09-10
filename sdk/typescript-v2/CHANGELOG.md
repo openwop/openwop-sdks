@@ -1,6 +1,23 @@
 # `@openwop/openwop` 2.x Changelog
 
-The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (release-candidate line, tags `openwop/v2.0.0-rc.N` tracking the corpus `v2.0.0-rc.N`) published from `sdk/typescript-v2/`.
+The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop/v2.Y.Z` tracking a published corpus tag) published from `sdk/typescript-v2/`.
+
+## [2.0.0] — 2026-09-10 — GA on the published corpus (`v2.0.8`)
+
+No client-surface change from rc.1. What changed is what the client was
+checked against: the rc.1 vendored tree predated `v2.0.0` and eight 2.0.x
+corpus patches, and every parity claim in `sdk/PARITY.md` was a claim about
+that stale tree. Re-vendored from the corpus at `v2.0.8` — the tag that is
+on npm as `@openwop/spec-artifacts@2.0.8` — which brought in 27 schemas this
+repo had never seen and refreshed 24 more; `src/generated.ts` regenerated;
+the v2 parity gate (`check:parity:v2`, 51/51 operations) passes against the
+current `spec/v2/path-manifest.json`.
+
+`2.0.0` is `latest` on npm. The 1.x client is not retired: `@openwop/openwop@1`
+remains the correct pin for a caller on `/v1/…`, which every host keeps
+serving through the overlap (`versioning.md` §1.1 — `preferredVersion` stays
+`1.x`). A v2 caller should send `OpenWOP-Version: 2` on every request: it is
+MAY on the wire, but absent it a dual-stack host answers the v1 default.
 
 ## [2.0.0-rc.1] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.1`; RFC 0168 §D SDK 2 expectations)
 

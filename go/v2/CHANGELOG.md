@@ -2,6 +2,18 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2/vX.Y.Z`).
 
+## [v2.0.0] — 2026-09-10 (tag `go/v2/v2.0.0`) — GA on the published corpus (`v2.0.8`)
+
+No client-surface change from rc.1. The rc.1 vendored tree predated `v2.0.0`
+and eight 2.0.x corpus patches; re-vendored from the corpus at `v2.0.8` (27
+schemas added, 24 refreshed); `go vet` / `go test` clean; the v2 parity gate
+passes 51/51 against the current `spec/v2/path-manifest.json`.
+
+The tag is `go/v2/v2.0.0` — Go requires the `/v2` path segment in the tag for
+a v2 module, and the publish workflow rejects the `go/v2.0.0` form outright.
+The v1 module at `github.com/openwop/openwop-sdks/go` is not retired; a caller
+on `/v1/…` keeps it through the overlap.
+
 ## [v2.0.0-rc.1] — 2026-09-03 (tag `go/v2/v2.0.0-rc.1`) — the v2 client (corpus `v2.0.0-rc.1`; RFC 0168 §D SDK 2 expectations)
 
 **Breaking — the wire (RFC 0172 §A, RFC 0171 §C.1):**
