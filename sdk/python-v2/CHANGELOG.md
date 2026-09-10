@@ -1,6 +1,18 @@
 # `openwop-client` 2.x Changelog
 
-The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (release-candidate line, tags `openwop-client/v2.0.0-rc.N` tracking the corpus `v2.0.0-rc.N`) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
+The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
+
+## [2.0.0] — 2026-09-10 — GA on the published corpus (`v2.0.8`)
+
+No client-surface change from rc1. The rc1 vendored tree predated `v2.0.0`
+and eight 2.0.x corpus patches; re-vendored from the corpus at `v2.0.8` (27
+schemas added, 24 refreshed) and the v2 parity gate passes 51/51 against the
+current `spec/v2/path-manifest.json`. Stdlib-only, unchanged.
+
+`openwop-client<2` remains the correct pin for a caller on `/v1/…`, which
+every host keeps serving through the overlap. A v2 caller should send
+`OpenWOP-Version: 2` on every request — MAY on the wire, but absent it a
+dual-stack host answers the v1 default.
 
 ## [2.0.0rc1] — 2026-09-03 — the v2 client (corpus `v2.0.0-rc.1`; RFC 0168 §D SDK 2 expectations)
 

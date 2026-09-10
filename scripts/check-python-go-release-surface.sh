@@ -18,8 +18,8 @@ set -euo pipefail
 SPEC_ROOT="."
 EXPECTED_GO_MODULE="github.com/openwop/openwop-sdks/go"
 EXPECTED_GO_V2_MODULE="github.com/openwop/openwop-sdks/go/v2"
-EXPECTED_V2_NPM_VERSION="2.0.0-rc.1"
-EXPECTED_V2_PYPI_VERSION="2.0.0rc1"
+EXPECTED_V2_NPM_VERSION="2.0.0"
+EXPECTED_V2_PYPI_VERSION="2.0.0"
 
 echo "=== check-python-go-release-surface — auditing Python and Go release surfaces ==="
 echo
