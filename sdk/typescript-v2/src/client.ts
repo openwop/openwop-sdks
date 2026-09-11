@@ -28,6 +28,8 @@ import {
   type CancelRunResponse,
   type CompensationProjection,
   type CreateRunRequest,
+  type ListRunsOptions,
+  type RunListResponse,
   type CreateRunResponse,
   type EffectLedgerProjection,
   type EffectSeamManifest,
@@ -346,6 +348,28 @@ export class OpenwopClient {
           method: 'GET',
           path: `/runs/${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(artifactId)}`,
         });
+      } catch (err) {
+        if (err instanceof WopError && err.status === 404) return null;
+        throw err;
+      }
+    },
+
+    /**
+     * `GET /runs` (RFC 0182) — one page of the caller's runs, newest first,
+     * tenant-scoped by construction with every `runId` bound. Gated on the
+     * `runList` family; `null` on `404` (unadvertised). Walk `nextCursor`
+     * for the next page; a cursor the host did not mint is `400
+     * validation_error` and is thrown, not swallowed.
+     */
+    list: async (opts: ListRunsOptions = {}): Promise<RunListResponse | null> => {
+      const q = new URLSearchParams();
+      if (opts.limit !== undefined) q.set('limit', String(opts.limit));
+      if (opts.cursor !== undefined) q.set('cursor', opts.cursor);
+      if (opts.workflowId !== undefined) q.set('workflowId', opts.workflowId);
+      if (opts.status !== undefined) q.set('status', opts.status);
+      const qs = q.toString();
+      try {
+        return await this.#request<RunListResponse>({ method: 'GET', path: `/runs${qs ? `?${qs}` : ''}` });
       } catch (err) {
         if (err instanceof WopError && err.status === 404) return null;
         throw err;

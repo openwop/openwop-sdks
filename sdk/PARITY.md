@@ -196,7 +196,7 @@ The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against t
 | Python (`openwop-client` 2.0.0) | 51 | 51 |
 | Go (`github.com/openwop/openwop-sdks/go/v2` v2.0.0) | 51 | 51 |
 
-**What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 51 of 56 OpenAPI operations; the v2 manifest has 51 operations, but not the same 51:
+**What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 51 of 56 OpenAPI operations; the v2 manifest has 52 operations, but not the same 51:
 
 - Removed with the v1 surface: the 4 `workspace` file operations (`/v1/host/workspace/files*`) and the 5 seams the 1.x SDKs already excluded (`packs-test` ×4, `getA2ATaskState`). Also dropped from the SDKs though never OpenAPI operations: `runs.debugBundle`, the host-sample `userAgents.*` wrappers (TS), and `RegistryClient` (v2 resolves registry paths through `.well-known/openwop-registry.json` `endpoints`, packs.md).
 - Added (RFC 0173 + the AsyncAPI channel): `getRunCompensation`, `getRunEffects`, `getEffectSeamManifest`, `streamHostEvents`.
