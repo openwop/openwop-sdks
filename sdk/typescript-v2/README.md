@@ -90,7 +90,7 @@ const outcome = read
 
 ## Method ↔ operation map
 
-Every one of the 51 `spec/v2/path-manifest.json` operations has exactly one method; `scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json` enforces it. See [`sdk/PARITY.md`](../PARITY.md) §v2.
+Every one of the 52 `spec/v2/path-manifest.json` operations has exactly one method; `scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json` enforces it. See [`sdk/PARITY.md`](../PARITY.md) §v2.
 
 ## Development
 

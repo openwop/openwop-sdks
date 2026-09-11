@@ -2,6 +2,12 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2.Y.Z`).
 
+## [v2.1.0] — 2026-09-11 (tag `go/v2.1.0`) — `ListRuns` (RFC 0182) on corpus `v2.1.0`
+
+**Added:** `ListRuns(ctx, ListRunsOptions{Limit, Cursor, WorkflowID, Status}) (*RunListResponse, error)` — `GET /runs` (RFC 0182): one page of the caller's runs as full `RunSnapshot`s, newest first, tenant-scoped with every `runId` bound; walk `NextCursor`; `(nil, nil)` on 404 (the `runList` family is not advertised); a cursor the host did not mint is `400 validation_error` and is returned as an error. New types `RunListResponse`, `ListRunsOptions`.
+
+**Re-vendored** from corpus `v2.1.0`: `run-list-response.schema.json` added; manifest 52 operations (parity 52/52); `ErrorCodes` regenerated (94 → 97); capabilities schema gains `runList` and the 2.0.10 corrections. No breaking change.
+
 ## [v2.0.0] — 2026-09-10 (tag `go/v2.0.0`) — GA on the published corpus (`v2.0.8`)
 
 No client-surface change from rc.1. The rc.1 vendored tree predated `v2.0.0`

@@ -470,6 +470,19 @@
       }
     },
     {
+      "operationId": "listRuns",
+      "method": "GET",
+      "path": "/runs",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "runs.list",
+        "py": "runs_list",
+        "go": "ListRuns"
+      }
+    },
+    {
       "operationId": "getRunCompensation",
       "method": "GET",
       "path": "/runs/{runId}/compensation",

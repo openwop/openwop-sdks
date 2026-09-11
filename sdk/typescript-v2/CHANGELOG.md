@@ -2,6 +2,12 @@
 
 The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop/v2.Y.Z` tracking a published corpus tag) published from `sdk/typescript-v2/`.
 
+## [2.1.0] — 2026-09-11 — `runs.list` (RFC 0182) on corpus `v2.1.0`
+
+**Added:** `runs.list({ limit?, cursor?, workflowId?, status? })` → `RunListResponse | null` — `GET /runs` (RFC 0182): one page of the caller's runs as full `RunSnapshot`s, newest first, tenant-scoped with every `runId` bound; walk `nextCursor`; `null` on `404` (the `runList` family is not advertised); a cursor the host did not mint is `400 validation_error` and throws. New types `RunListResponse`, `ListRunsOptions`.
+
+**Re-vendored** from corpus `v2.1.0` (`CORPUS_TAG`): `run-list-response.schema.json` added; `path-manifest.json` now 52 operations (parity 52/52); `spec/v2/errors.json` grew from 94 to 97 registered codes between 2.0.8 and 2.1.0 (`ErrorCode` regenerated); the capabilities schema gained the `runList` family and the 2.0.10 corrections (`prompts.renderEndpoint` default `/prompts:render`, `/v1/` spellings rewritten to manifest keys in descriptions). No breaking change.
+
 ## [2.0.0] — 2026-09-10 — GA on the published corpus (`v2.0.8`)
 
 No client-surface change from rc.1. What changed is what the client was

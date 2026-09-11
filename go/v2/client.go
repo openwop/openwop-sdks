@@ -528,6 +528,44 @@ func (c *OpenwopClient) PollRunEvents(
 	return &out, nil
 }
 
+// ListRuns calls GET /runs (RFC 0182) — one page of the caller's runs, newest
+// first, tenant-scoped with every runId bound. Gated on the `runList` family;
+// returns (nil, nil) on 404 (unadvertised). Walk NextCursor for the next page;
+// a cursor the host did not mint is 400 validation_error and is returned as an
+// error, never swallowed.
+func (c *OpenwopClient) ListRuns(
+	ctx context.Context,
+	opts ListRunsOptions,
+) (*RunListResponse, error) {
+	q := url.Values{}
+	if opts.Limit > 0 {
+		q.Set("limit", strconv.Itoa(opts.Limit))
+	}
+	if opts.Cursor != "" {
+		q.Set("cursor", opts.Cursor)
+	}
+	if opts.WorkflowID != "" {
+		q.Set("workflowId", opts.WorkflowID)
+	}
+	if opts.Status != "" {
+		q.Set("status", opts.Status)
+	}
+	path := "/runs"
+	if enc := q.Encode(); enc != "" {
+		path += "?" + enc
+	}
+	var out RunListResponse
+	err := c.requestJSON(ctx, http.MethodGet, path, nil, nil, true, &out)
+	if err != nil {
+		var werr *WopError
+		if errors.As(err, &werr) && werr.Status == 404 {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &out, nil
+}
+
 // GetRunCompensation calls GET /runs/{runID}/compensation (RFC 0173 §C.1) —
 // the compensation plan and attempts. Gated on `compensation`; returns
 // (nil, nil) on 404 so callers can branch on capability discovery.

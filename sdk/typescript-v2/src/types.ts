@@ -545,6 +545,28 @@ export type Capabilities = {
 // ─── RFC 0173 — compensation, effect ledger, effect seams ─────────────────
 
 /** `GET /runs/{runId}/compensation` (`schemas/v2/compensation-projection.schema.json`). */
+/**
+ * RFC 0182 — `GET /runs` (`listRuns`). One page of the caller's runs as full
+ * `RunSnapshot`s, newest first; `nextCursor` is absent on the last page.
+ * Mirrors `schemas/v2/run-list-response.schema.json` (corpus 2.1.0).
+ */
+export interface RunListResponse {
+  runs: RunSnapshot[];
+  nextCursor?: string;
+}
+
+/** Query options for `runs.list` (RFC 0182 §A.1). */
+export interface ListRunsOptions {
+  /** Page size; the host clamps to its advertised `runList.maxPageSize`. */
+  limit?: number;
+  /** Opaque cursor from a previous page's `nextCursor`. */
+  cursor?: string;
+  /** Exact-match filter (honoured when `runList.filters` names it). */
+  workflowId?: string;
+  /** Exact-match filter (honoured when `runList.filters` names it). */
+  status?: RunSnapshot['status'];
+}
+
 export interface CompensationProjection {
   runId: string;
   status: 'none' | 'pending' | 'running' | 'completed' | 'partial' | 'failed' | 'manual-intervention';

@@ -566,6 +566,23 @@ type CompensationAttempt struct {
 // (schemas/v2/compensation-projection.schema.json, RFC 0173 §C.1). Status is
 // "none" | "pending" | "running" | "completed" | "partial" | "failed" |
 // "manual-intervention".
+// RunListResponse is one page of the caller's runs (RFC 0182, GET /runs):
+// full RunSnapshots newest first; NextCursor is nil on the last page. Mirrors
+// schemas/v2/run-list-response.schema.json (corpus 2.1.0).
+type RunListResponse struct {
+	Runs       []RunSnapshot `json:"runs"`
+	NextCursor *string       `json:"nextCursor,omitempty"`
+}
+
+// ListRunsOptions are the query options for ListRuns (RFC 0182 §A.1). Zero
+// values are omitted from the query.
+type ListRunsOptions struct {
+	Limit      int    // clamped by the host to its advertised runList.maxPageSize
+	Cursor     string // opaque, from a previous page's NextCursor
+	WorkflowID string // exact-match filter (when runList.filters names it)
+	Status     string // exact-match filter (when runList.filters names it)
+}
+
 type CompensationProjection struct {
 	RunID    string                  `json:"runId"`
 	Status   string                  `json:"status"`

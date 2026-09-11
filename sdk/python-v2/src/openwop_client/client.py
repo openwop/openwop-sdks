@@ -43,6 +43,7 @@ from .types import (
     CompensationAttempt,
     CompensationPlanEntry,
     CompensationProjection,
+    RunListResponse,
     CompensationStatus,
     CreateAnnotationRequest,
     CreateRunRequest,
@@ -1330,6 +1331,40 @@ class OpenwopClient:
             lastSequence=int(d["lastSequence"]),
             status=cast(RunStatus, d["status"]),
             isTerminal=bool(d["isTerminal"]),
+        )
+
+    def runs_list(
+        self,
+        *,
+        limit: int | None = None,
+        cursor: str | None = None,
+        workflow_id: str | None = None,
+        status: str | None = None,
+    ) -> RunListResponse | None:
+        """``GET /runs`` (RFC 0182) — one page of the caller's runs, newest
+        first, tenant-scoped with every ``runId`` bound. Gated on the
+        ``runList`` family; ``None`` on 404 (unadvertised). Walk
+        ``next_cursor`` for the next page; a cursor the host did not mint is
+        ``400 validation_error`` and raises."""
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        if workflow_id is not None:
+            params["workflowId"] = workflow_id
+        if status is not None:
+            params["status"] = status
+        qs = "?" + urlencode(params) if params else ""
+        try:
+            d = self._request_json("GET", f"/runs{qs}")
+        except WopError as err:
+            if err.status == 404:
+                return None
+            raise
+        return RunListResponse(
+            runs=[_run_snapshot_from_dict(r) for r in d.get("runs", [])],
+            next_cursor=d.get("nextCursor"),
         )
 
     def runs_compensation(self, run_id: str) -> CompensationProjection | None:

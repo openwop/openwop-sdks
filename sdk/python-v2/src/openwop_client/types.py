@@ -512,6 +512,16 @@ class CompensationAttempt:
 
 
 @dataclass(frozen=True)
+class RunListResponse:
+    """``GET /runs`` (``run-list-response.schema.json``, RFC 0182) — one page of
+    the caller's runs as full ``RunSnapshot``s, newest first; ``next_cursor`` is
+    ``None`` on the last page."""
+
+    runs: list[RunSnapshot]
+    next_cursor: str | None = None
+
+
+@dataclass(frozen=True)
 class CompensationProjection:
     """``GET /runs/{runId}/compensation`` (``compensation-projection.schema.json``)."""
 
