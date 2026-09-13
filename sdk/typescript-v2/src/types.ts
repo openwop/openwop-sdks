@@ -739,7 +739,32 @@ export interface MemoryListOptions {
 /** Mirror of `schemas/agent-ref.schema.json`. */
 export interface AgentRef {
   agentId: string;
-  modelClass?: 'reasoning' | 'tool-using' | 'chat';
+  /**
+   * The CLOSED nine-member enum from `agent-ref.schema.json`, not a subset.
+   *
+   * This listed three of the nine until 2026-09-13, so a strict consumer using
+   * the SDK type refused six values the spec allows — `code`, `vision`,
+   * `multimodal`, `embedding`, `classification`, `retrieval`. Found by a tier-1
+   * host bumping this SDK 1.7 → 2.1 and reading the type errors instead of
+   * casting them away; it had deliberately kept a wider type of its own.
+   *
+   * The narrow union is correct HERE and would be wrong for most fields in this
+   * file: the header's rule is `string` for values that may grow, and this enum
+   * is closed by construction. The schema is explicit that vendor extensions
+   * (`<vendor>.<class>`, `host-extensions.md`) are **not** members and "MUST
+   * surface as unknown to strict consumers" — so no `string` escape hatch, and
+   * refusing them is the specified behaviour rather than a gap.
+   */
+  modelClass?:
+    | 'reasoning'
+    | 'tool-using'
+    | 'chat'
+    | 'code'
+    | 'vision'
+    | 'multimodal'
+    | 'embedding'
+    | 'classification'
+    | 'retrieval';
   memoryRef?: string;
   version?: string;
 }
