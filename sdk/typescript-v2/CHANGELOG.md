@@ -6,6 +6,27 @@ The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CH
 
 ### Fixed
 
+- `HttpRequestNodeConfig.method` omitted `OPTIONS`. Every published version of
+  `core.openwop.http` — 1.0.0 through 2.0.1 — declares seven methods in
+  `fetch.config.json`; this listed six, so a strict consumer could not express
+  an `OPTIONS` request the pack accepts. Same shape as the `AgentRef.modelClass`
+  defect (#39), found the same way: by a checker naming what it could not
+  resolve, and then going and looking.
+
+### Added
+
+- `scripts/check-narrow-union-drift.mjs` (`npm run check:unions`, wired into
+  `sdks-check.sh`). A hand-authored narrow union is a CLAIM about a closed
+  schema enum, and nothing checked those claims. **30 unions now resolve to a
+  schema enum and are verified equal**, where exactly one was checkable before;
+  the remaining 9 are reported by name with the reason they cannot be resolved,
+  because an unresolved union is one nobody can check and the remedy is one
+  `Mirror of` line.
+
+## [Unreleased]
+
+### Fixed
+
 - `AgentRef.modelClass` listed three of the **nine** members of the closed enum
   in `agent-ref.schema.json`, so a strict consumer using the SDK type refused
   six values the spec allows: `code`, `vision`, `multimodal`, `embedding`,

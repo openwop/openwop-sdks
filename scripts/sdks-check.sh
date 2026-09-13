@@ -133,4 +133,6 @@ node "$ROOT/scripts/check-sdk-parity.mjs" --manifest spec/v2/path-manifest.json 
 echo "[8/8] Python + Go (+ TS 2.x) release-surface metadata..."
 bash "$ROOT/scripts/check-python-go-release-surface.sh"
 
+echo "[sdks] narrow unions equal the closed enums they mirror..."
+node "$(dirname "$0")/check-narrow-union-drift.mjs"
 echo "=== sdks:check OK ==="
