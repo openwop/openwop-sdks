@@ -2,6 +2,19 @@
 
 The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop/v2.Y.Z` tracking a published corpus tag) published from `sdk/typescript-v2/`.
 
+## [Unreleased]
+
+### Fixed
+
+- `AgentRef.modelClass` listed three of the **nine** members of the closed enum
+  in `agent-ref.schema.json`, so a strict consumer using the SDK type refused
+  six values the spec allows: `code`, `vision`, `multimodal`, `embedding`,
+  `classification`, `retrieval`. Found by a tier-1 host bumping this SDK
+  1.7 → 2.1 and reading the resulting type errors rather than casting them
+  away. No escape hatch added: the schema is explicit that vendor extensions
+  (`<vendor>.<class>`) are not members and "MUST surface as unknown to strict
+  consumers", so refusing those is specified behaviour, not a gap.
+
 ## [2.1.0] — 2026-09-11 — `runs.list` (RFC 0182) on corpus `v2.1.0`
 
 **Added:** `runs.list({ limit?, cursor?, workflowId?, status? })` → `RunListResponse | null` — `GET /runs` (RFC 0182): one page of the caller's runs as full `RunSnapshot`s, newest first, tenant-scoped with every `runId` bound; walk `nextCursor`; `null` on `404` (the `runList` family is not advertised); a cursor the host did not mint is `400 validation_error` and throws. New types `RunListResponse`, `ListRunsOptions`.
