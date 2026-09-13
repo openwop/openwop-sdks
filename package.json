@@ -8,6 +8,7 @@
     "check": "bash scripts/sdks-check.sh",
     "check:parity": "node scripts/check-sdk-parity.mjs",
     "check:vendored": "node scripts/check-vendored-sync.mjs",
-    "check:parity:v2": "node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json"
+    "check:parity:v2": "node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json",
+    "check:unions": "node scripts/check-narrow-union-drift.mjs"
   }
 }

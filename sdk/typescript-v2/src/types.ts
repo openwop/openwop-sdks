@@ -622,7 +622,11 @@ export interface EffectSeamManifest {
 
 // ─── Host events channel (`/host/events`; events.md §Host events) ─────────
 
-/** `heartbeat.evaluated` (`schemas/v2/heartbeat-evaluated.schema.json`). */
+/** `heartbeat.evaluated` (`schemas/v2/heartbeat-evaluated.schema.json`).
+ *
+ * Mirror of `schemas/heartbeat-evaluated.schema.json` — the closed enums below are that file's,
+ * verified member-for-member by `check-narrow-union-drift`.
+ */
 export interface HeartbeatEvaluatedPayload {
   heartbeatId: string;
   status: 'ok' | 'timeout' | 'error';
@@ -691,10 +695,25 @@ export interface McpInvokedSummary {
 
 // ─── HTTP client (Phase H.3) ────────────────────────────────────────────
 
-/** Wire shape of the `core.http.request` node config. */
+/**
+ * Wire shape of the `core.http.request` node config.
+ *
+ * NOT resolvable against `schemas/v2/` — this is PACK surface, and its schema
+ * is `core.openwop.http`'s `fetch.config.json` in the registry. The corpus's
+ * only `method` enums belong to other concepts entirely (pack signing
+ * `manual|sigstore`, trigger delivery `POST|PUT|PATCH`), which is why matching
+ * a union to a schema by property name is worthless here and why
+ * `check-narrow-union-drift` reports this one rather than guessing.
+ *
+ * `OPTIONS` was missing until 2026-09-13. Every published version of the pack,
+ * 1.0.0 through 2.0.1, declares seven methods; this listed six, so a strict
+ * consumer could not express an OPTIONS request the pack accepts. Same shape as
+ * the `AgentRef.modelClass` defect (#39) and found the same way — by a checker
+ * naming what it could not resolve, then going and looking.
+ */
 export interface HttpRequestNodeConfig {
   url: string;
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD';
+  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'HEAD' | 'OPTIONS';
   headers?: Record<string, string>;
   body?: unknown;
   timeoutMs?: number;
@@ -1074,7 +1093,11 @@ export interface TypedRunEvent<T> extends RunEventDoc {
 // `Capabilities.schemaVersions`. See spec doc for full normative prose.
 // ---------------------------------------------------------------------------
 
-/** Wire metadata on every AI Envelope. */
+/** Wire metadata on every AI Envelope.
+ *
+ * Mirror of `schemas/ai-envelope.schema.json` — the closed enums below are that file's,
+ * verified member-for-member by `check-narrow-union-drift`.
+ */
 export interface EnvelopeMeta {
   /** Provenance of this emission. */
   source: 'ai-generation' | 'user' | 'system';
@@ -1217,6 +1240,9 @@ export interface A2UISurfacePayload {
  * {@link A2uiSurfaceDeltaFrame}. The `test` op is deliberately EXCLUDED (a
  * fire-and-forget transport frame cannot act on a failed conditional);
  * `move`/`copy` are permitted but OPTIONAL for a host to emit.
+ *
+ * Mirror of `schemas/a2ui-surface-delta-frame.schema.json` — the closed enums below are that file's,
+ * verified member-for-member by `check-narrow-union-drift`.
  */
 export interface A2uiSurfacePatchOp {
   /** RFC 6902 operation. `test` is excluded by RFC 0114. */
@@ -1269,6 +1295,9 @@ export type PromptKind = 'system' | 'user' | 'few-shot' | 'schema-hint';
  * Typed interpolation slot in a PromptTemplate. Bindings are validated
  * against this declaration before composition. Per
  * `schemas/prompt-template.schema.json#/$defs/PromptVariable`.
+ *
+ * Mirror of `schemas/prompt-template.schema.json` — the closed enums below are that file's,
+ * verified member-for-member by `check-narrow-union-drift`.
  */
 export interface PromptVariable {
   name: string;
@@ -1329,7 +1358,11 @@ export type PromptRef =
       variableOverrides?: Record<string, unknown>;
     };
 
-/** Filter set for `client.prompts.list(...)` per RFC 0028 §A. */
+/** Filter set for `client.prompts.list(...)` per RFC 0028 §A.
+ *
+ * Mirror of `schemas/prompt-template.schema.json` — the closed enums below are that file's,
+ * verified member-for-member by `check-narrow-union-drift`.
+ */
 export interface ListPromptsRequest {
   kind?: PromptKind;
   tag?: string;
@@ -1353,7 +1386,11 @@ export interface GetPromptRequest {
   libraryId?: string;
 }
 
-/** Request shape for `client.prompts.render(...)` per RFC 0028 §A. */
+/** Request shape for `client.prompts.render(...)` per RFC 0028 §A.
+ *
+ * Mirror of `schemas/ai-envelope.schema.json` — the closed enums below are that file's,
+ * verified member-for-member by `check-narrow-union-drift`.
+ */
 export interface RenderPromptRequest {
   ref: PromptRef;
   variables: Record<string, unknown>;
@@ -1367,7 +1404,11 @@ export interface RenderPromptRequest {
 /** Response shape for `client.prompts.render(...)`. The `hash` and
  *  `variableHashes` are always present; `composed` populates only under
  *  `capabilities.prompts.observability: "full"`. Same deterministic-hash
- *  invariant as `prompt.composed` events (RFC 0027 §F). */
+ *  invariant as `prompt.composed` events (RFC 0027 §F).
+ *
+ * Mirror of `schemas/ai-envelope.schema.json` — the closed enums below are that file's,
+ * verified member-for-member by `check-narrow-union-drift`.
+ */
 export interface RenderPromptResponse {
   hash: string;
   refs: string[];
