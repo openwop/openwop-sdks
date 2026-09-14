@@ -1161,8 +1161,10 @@ export interface AIEnvelope<TPayload = unknown> {
 }
 
 /** Per-typeId envelope-kind permission set per `ai-envelope.md` §"Envelope Contract". *
- * Authority `the v1 spec's ai-envelope.md §refusalMode — prose only. No JSON Schema defines
- * this set in either major, so nothing here can machine-check it`.
+ * Authority `host engine interface, not a wire shape — EnvelopeOutcome is returned by the
+ * engine's acceptEnvelope path, so it crosses no endpoint and no client method. The set is
+ * described in the v1 spec's ai-envelope.md §refusalMode. There is deliberately no JSON
+ * Schema: schemas/v2 describes what goes on the wire, and this does not`.
  */
 export interface EnvelopeContract {
   /** Kinds the engine will accept from this node. */
@@ -1179,8 +1181,10 @@ export type EnvelopeOutcome =
   | { status: 'breached'; reason: string; capKind: 'envelopes' | 'schema' | 'clarification' };
 
 /**
- * Authority `the v1 spec's ai-envelope.md §refusalMode — prose only. No JSON Schema defines
- * this set in either major, so nothing here can machine-check it`.
+ * Authority `host engine interface, not a wire shape — EnvelopeOutcome is returned by the
+ * engine's acceptEnvelope path, so it crosses no endpoint and no client method. The set is
+ * described in the v1 spec's ai-envelope.md §refusalMode. There is deliberately no JSON
+ * Schema: schemas/v2 describes what goes on the wire, and this does not`.
  */
 export interface EnvelopeContractRefusal {
   refusedType: string;
