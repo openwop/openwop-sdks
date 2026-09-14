@@ -69,7 +69,16 @@ function enumsOf(doc) {
     if (Array.isArray(node)) return node.forEach((n) => collect(n, into));
     if (!node || typeof node !== 'object') return;
     for (const [k, v] of Object.entries(node)) {
-      if (v && typeof v === 'object' && !Array.isArray(v) && v.type === 'string' && Array.isArray(v.enum)) {
+      // `type: 'string'` is NOT required. Requiring it made 239 of the corpus's
+      // 532 string enums invisible to this checker — 45% — including
+      // `a2ui-surface-delta-frame`'s `op`, which is written as a bare `enum`
+      // with a description and no `type`. Both spellings are valid JSON Schema
+      // and mean the same closed set; a checker that only sees one of them is
+      // reporting coverage it does not have.
+      if (
+        v && typeof v === 'object' && !Array.isArray(v) &&
+        Array.isArray(v.enum) && v.enum.length > 0 && v.enum.every((x) => typeof x === 'string')
+      ) {
         if (!into.has(k)) into.set(k, new Set(v.enum));
       }
       collect(v, into);
@@ -90,6 +99,7 @@ for (const f of files) {
   let doc;
   try { doc = JSON.parse(readFileSync(join(SCHEMAS, f), 'utf8')); } catch { continue; }
   const e = enumsOf(doc);
+  e.doc = doc;
   perFile.set(f, e);
   for (const [prop, members] of e.flat) {
     if (!byProp.has(prop)) byProp.set(prop, new Map());
@@ -110,21 +120,58 @@ const NARROW = /(\w+)\??:\s*\|?\s*('[^']+'(?:\s*\|\s*'[^']+')+)\s*;/g;
 
 const mismatches = [];
 const unresolved = [];
+const attributed = [];
 let checked = 0;
 
 for (const [, doc, iface, body] of blocks) {
-  const declared = doc && /Mirror of `schemas\/([^`]+\.schema\.json)`/.exec(doc)?.[1];
+  // Three declaration forms, because the nine unions this gate could not
+  // resolve were not nine of the same thing. Telling all of them "add a Mirror
+  // of line" was advice that is wrong for five of them.
+  //
+  //   Mirror of    — the union equals a closed schema enum.
+  //   Narrowing of — the union is a deliberate SUBSET of one (a cancel response
+  //                  can only answer with two of run-snapshot's ten statuses).
+  //                  Checked as ⊆: a value the schema does not have is still a
+  //                  failure, so drift in the narrowed direction is caught.
+  //   Authority    — the closed set's authority is not in schemas/v2 at all.
+  //                  `HttpRequestNodeConfig.method` is declared by the registry
+  //                  node type; `refusalMode` exists only as v1 prose in
+  //                  ai-envelope.md and has never had a JSON Schema in either
+  //                  major. Naming the authority is not a check, and is not
+  //                  pretending to be one — it converts "nobody knows" into a
+  //                  written claim someone can falsify.
+  const declared = doc && /Mirror of `schemas\/([^`]+)`/.exec(doc)?.[1];
+  const narrowed = doc && /Narrowing of `schemas\/([^`]+)`/.exec(doc)?.[1];
+  const authority = doc && /Authority `([^`]+)`/.exec(doc)?.[1]?.replace(/\s*\n\s*\*\s*/g, ' ');
   for (const m of [...body.matchAll(NARROW)]) {
     const prop = m[1];
     const members = new Set([...m[2].matchAll(/'([^']+)'/g)].map((x) => x[1]));
     let expected = null;
     let via = null;
+    let subsetOnly = false;
+    if (authority) { attributed.push([iface, prop, authority]); continue; }
     // A `$defs.<Interface>` node is a more precise address than the file, and
     // is tried first wherever a file is named — see enumsOf's docblock for the
     // schema that made this necessary.
+    const atPointer = (docRoot, pointer) => {
+      let node = docRoot;
+      for (const raw of pointer.replace(/^#/, '').split('/').filter(Boolean)) {
+        const seg = raw.replace(/~1/g, '/').replace(/~0/g, '~');
+        node = Array.isArray(node) ? node[Number(seg)] : node?.[seg];
+        if (node === undefined) return null;
+      }
+      return Array.isArray(node?.enum) ? new Set(node.enum) : null;
+    };
     const pick = (file, pointer) => {
       const e = perFile.get(file);
       if (!e) return null;
+      // A pointer that is not the `#/$defs/Name` shorthand is resolved literally
+      // against the document, so an enum living at
+      // `#/properties/replay/properties/modes/items` is addressable.
+      if (pointer && !/^#\/\$defs\/[^/]+$/.test(pointer)) {
+        const hit = atPointer(e.doc, pointer);
+        return hit ? [hit, `${file}${pointer}`] : null;
+      }
       const defName = pointer?.replace(/^#\/\$defs\//, '') ?? iface;
       if (e.defs.get(defName)?.has(prop)) return [e.defs.get(defName).get(prop), `${file}#/$defs/${defName}`];
       if (!pointer && e.flat.has(prop)) return [e.flat.get(prop), file];
@@ -135,6 +182,11 @@ for (const [, doc, iface, body] of blocks) {
     if (declaredFile) {
       const hit = pick(declaredFile, declaredPointer ? `#${declaredPointer}` : undefined);
       if (hit) { [expected, via] = [hit[0], `Mirror of ${hit[1]}`]; }
+    }
+    if (!expected && narrowed) {
+      const [np, npointer] = narrowed.split('#');
+      const hit = pick(np.split('/').pop(), npointer ? `#${npointer}` : undefined);
+      if (hit) { [expected, via, subsetOnly] = [hit[0], `Narrowing of ${hit[1]}`, true]; }
     }
     if (!expected) {
       const named = `${kebab(iface)}.schema.json`;
@@ -147,7 +199,7 @@ for (const [, doc, iface, body] of blocks) {
     }
     if (!expected) { unresolved.push([iface, prop, byProp.has(prop) ? `${byProp.get(prop).size} distinct enum sets carry "${prop}"` : `no v2 schema enum named "${prop}"`]); continue; }
     checked += 1;
-    const missing = [...expected].filter((v) => !members.has(v)).sort();
+    const missing = subsetOnly ? [] : [...expected].filter((v) => !members.has(v)).sort();
     const extra = [...members].filter((v) => !expected.has(v)).sort();
     if (missing.length || extra.length) mismatches.push([iface, prop, via, missing, extra]);
   }
@@ -156,9 +208,26 @@ for (const [, doc, iface, body] of blocks) {
 if (checked === 0) { console.error('✗ check-narrow-union-drift: resolved 0 unions — the sweep is broken, not the types'); process.exit(1); }
 
 if (unresolved.length) {
-  console.log(`check-narrow-union-drift: ${unresolved.length} union(s) cannot be resolved to a schema and are NOT checked.`);
-  console.log('  Each is one `Mirror of `schemas/<file>.schema.json`` line in the interface docblock away from being checked:');
-  for (const [iface, prop, why] of unresolved) console.log(`   – ${iface}.${prop}: ${why}`);
+  console.error(`\u2717 check-narrow-union-drift \u2014 ${unresolved.length} narrow union(s) declare no authority:`);
+  for (const [iface, prop, why] of unresolved) console.error(`   \u2013 ${iface}.${prop}: ${why}`);
+  console.error('');
+  console.error('  A union nobody can resolve is a union nobody checks, and a list that is only');
+  console.error('  printed gets rediscovered instead of shrinking. Add ONE line to the interface');
+  console.error('  docblock saying where the closed set comes from:');
+  console.error('');
+  console.error('    Mirror of `schemas/v2/<file>.schema.json`          \u2014 equals that enum');
+  console.error('    Mirror of `schemas/v2/<file>.schema.json#/a/b`     \u2014 ... at a JSON pointer');
+  console.error('    Narrowing of `schemas/v2/<file>.schema.json#/a/b`  \u2014 a deliberate subset of it');
+  console.error('    Authority `<where the set is actually defined>`    \u2014 not in schemas/v2 at all');
+  console.error('');
+  console.error('  Pick by what is TRUE, not by what makes this pass: a wrong `Mirror of` turns a');
+  console.error('  real subset into a false failure, and a lazy `Authority` hides real drift.');
+  process.exit(1);
+}
+
+if (attributed.length) {
+  console.log(`check-narrow-union-drift: ${attributed.length} union(s) attributed to an authority outside schemas/v2 \u2014 recorded, not machine-checked:`);
+  for (const [iface, prop, who] of attributed) console.log(`   \u2013 ${iface}.${prop}: ${who}`);
   console.log('');
 }
 
@@ -173,4 +242,4 @@ if (mismatches.length) {
   process.exit(1);
 }
 
-console.log(`OK: ${checked} narrow union(s) resolved to a schema enum and equal it${unresolved.length ? `; ${unresolved.length} unresolved and reported above` : ''}`);
+console.log(`=== check-narrow-union-drift OK \u2014 ${checked} narrow union(s) checked against a schema enum, ${attributed.length} attributed to a named non-schema authority, 0 unresolved ===`);

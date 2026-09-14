@@ -209,6 +209,10 @@ export interface CancelRunRequest {
   reason?: string;
 }
 
+/**
+ * Narrowing of `schemas/v2/run-snapshot.schema.json` — a cancel can only answer with
+ * two of the ten run statuses, so this is a deliberate subset, not a mirror.
+ */
 export interface CancelRunResponse {
   runId: string;
   status: 'cancelled' | 'cancelling';
@@ -265,6 +269,10 @@ export interface BulkCancelRunsRequest {
   reason?: string;
 }
 
+/**
+ * Narrowing of `schemas/v2/run-snapshot.schema.json` — a cancel can only answer with
+ * two of the ten run statuses, so this is a deliberate subset, not a mirror.
+ */
 export interface BulkCancelRunResult {
   runId: string;
   ok: boolean;
@@ -302,12 +310,20 @@ export interface AuditVerifyAnomaly {
   actualPrevHash: string;
 }
 
+/**
+ * Mirror of `schemas/v2/capabilities.schema.json#/properties/replay/properties/modes/items` —
+ * the same closed set a host advertises as the fork modes it supports.
+ */
 export interface ForkRunRequest {
   fromSeq: number;
   mode: 'replay' | 'branch';
   runOptionsOverlay?: Record<string, unknown>;
 }
 
+/**
+ * Mirror of `schemas/v2/capabilities.schema.json#/properties/replay/properties/modes/items` —
+ * the same closed set a host advertises as the fork modes it supports.
+ */
 export interface ForkRunResponse {
   runId: string;
   sourceRunId: string;
@@ -366,7 +382,9 @@ export interface RunAncestryResponse {
 
 /** RFC 0054 — response from `GET /runs/{runId}:diff?against={otherRunId}`.
  *  Mirror of `run-diff-response.schema.json`. Deterministic, replay-aware
- *  structured diff of two runs' event sequences + terminal states. */
+ *  structured diff of two runs' event sequences + terminal states. *
+ * Mirror of `schemas/v2/run-diff-response.schema.json`.
+ */
 export interface RunDiffEventDiff {
   seq: number;
   op: 'added' | 'removed' | 'changed';
@@ -710,6 +728,9 @@ export interface McpInvokedSummary {
  * consumer could not express an OPTIONS request the pack accepts. Same shape as
  * the `AgentRef.modelClass` defect (#39) and found the same way — by a checker
  * naming what it could not resolve, then going and looking.
+ *
+ * Authority `openwop-registry core.openwop.http — the node type declares its methods
+ * per published version; schemas/v2 does not carry an HTTP-method enum`.
  */
 export interface HttpRequestNodeConfig {
   url: string;
@@ -1139,7 +1160,10 @@ export interface AIEnvelope<TPayload = unknown> {
   partial?: PartialInfo;
 }
 
-/** Per-typeId envelope-kind permission set per `ai-envelope.md` §"Envelope Contract". */
+/** Per-typeId envelope-kind permission set per `ai-envelope.md` §"Envelope Contract". *
+ * Authority `the v1 spec's ai-envelope.md §refusalMode — prose only. No JSON Schema defines
+ * this set in either major, so nothing here can machine-check it`.
+ */
 export interface EnvelopeContract {
   /** Kinds the engine will accept from this node. */
   accepts: string[];
@@ -1154,6 +1178,10 @@ export type EnvelopeOutcome =
   | { status: 'invalid'; reason: string; details: ValidationDetail[] }
   | { status: 'breached'; reason: string; capKind: 'envelopes' | 'schema' | 'clarification' };
 
+/**
+ * Authority `the v1 spec's ai-envelope.md §refusalMode — prose only. No JSON Schema defines
+ * this set in either major, so nothing here can machine-check it`.
+ */
 export interface EnvelopeContractRefusal {
   refusedType: string;
   acceptedTypes: string[];
@@ -1243,6 +1271,8 @@ export interface A2UISurfacePayload {
  *
  * Mirror of `schemas/a2ui-surface-delta-frame.schema.json` — the closed enums below are that file's,
  * verified member-for-member by `check-narrow-union-drift`.
+ *
+ * Mirror of `schemas/v2/a2ui-surface-delta-frame.schema.json`.
  */
 export interface A2uiSurfacePatchOp {
   /** RFC 6902 operation. `test` is excluded by RFC 0114. */
