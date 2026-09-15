@@ -109,7 +109,82 @@ for (const f of files) {
 
 const kebab = (n) => n.replace(/(?<!^)(?=[A-Z])/g, '-').toLowerCase();
 const src = readFileSync(TYPES, 'utf8');
-const blocks = [...src.matchAll(/(\/\*\*(?:[^*]|\*(?!\/))*\*\/\s*)?export interface (\w+) \{((?:[^{}]|\{[^{}]*\})*)\}/g)];
+/**
+ * Interface bodies are extracted by COUNTING BRACES, not by a regex.
+ *
+ * The regex this replaces was `((?:[^{}]|\{[^{}]*\})*)` — one level of
+ * nesting. `EffectSeamManifest` nests two (`host: { build: { … } }`), so the
+ * whole interface failed to match and EVERY union inside it was invisible:
+ * `build.kind` and `seams[].kind`, plus `InterruptByTokenInspection.kind`.
+ * Three of 42.
+ *
+ * The gate's VERDICT was right on the 39 it saw. Its COVERAGE was not, and the
+ * output is indistinguishable between the two — which is exactly the shape the
+ * tier-2 host reported in an era-3 guard covering 22 of 28 appended types on
+ * the same day. A right verdict on partial coverage re-runs clean forever.
+ */
+function interfaceBlocks(text) {
+  const out = [];
+  const head = /(\/\*\*(?:[^*]|\*(?!\/))*\*\/\s*)?export interface (\w+)[^{]*\{/g;
+  let m;
+  while ((m = head.exec(text)) !== null) {
+    let depth = 1;
+    let i = head.lastIndex;
+    for (; i < text.length && depth > 0; i += 1) {
+      if (text[i] === '{') depth += 1;
+      else if (text[i] === '}') depth -= 1;
+    }
+    out.push([m[0], m[1], m[2], text.slice(head.lastIndex, i - 1)]);
+    head.lastIndex = i;
+  }
+  return out;
+}
+const blocks = interfaceBlocks(src);
+
+/**
+ * SELF-TEST, run on every invocation.
+ *
+ * "The sweep found N unions" proves the LOOP ran. It does not prove the
+ * extractor can still see a union — which is the claim the whole gate rests on,
+ * and the one that rots silently when someone reformats types.ts. Three of 42
+ * unions were invisible here until today for exactly that reason: two behind
+ * a brace-depth limit, one behind a comment between alternatives.
+ *
+ * So the extractor is exercised against a known-good fixture that contains both
+ * traps. If it cannot find them, the gate refuses to report on the real file.
+ * Distinction owed to the tier-2 host: "there was data to compare" and "the
+ * comparison can fail" are different claims, and only the second is worth
+ * asserting.
+ */
+const SELFTEST = [
+  '/** doc */',
+  'export interface __SelfTestNested {',
+  '  outer: {',
+  '    inner: { deep: \'a\' | \'b\'; id: string };',
+  '  };',
+  '  listed: readonly {',
+  '    tagged: \'x\' | \'y\';',
+  '  }[];',
+  '  commented:',
+  '    | \'one\'',
+  '    // a comment between alternatives',
+  '    | \'two\';',
+  '}',
+].join('\n');
+{
+  const found = [];
+  for (const [, , , rawBody] of interfaceBlocks(SELFTEST)) {
+    const b = rawBody.replace(/^[ \t]*\/\/.*$/gm, '');
+    for (const m of b.matchAll(/(\w+)\??:\s*\|?\s*('[^']+'(?:\s*\|\s*'[^']+')+)\s*;/g)) found.push(m[1]);
+  }
+  const want = ['deep', 'tagged', 'commented'];
+  const missing = want.filter((w) => !found.includes(w));
+  if (missing.length) {
+    console.error(`✗ check-narrow-union-drift self-test: the extractor did not find ${missing.join(', ')} (found: ${found.join(', ') || 'nothing'}).`);
+    console.error('  The sweep cannot see a union it is supposed to see, so a green run on the real file would mean nothing.');
+    process.exit(1);
+  }
+}
 // Multi-line unions count. The first cut of this was single-line and therefore
 // did not match `AgentRef.modelClass` — the ONE defect this checker exists
 // because of, which prettier had wrapped across ten lines. It reported OK over
@@ -123,7 +198,18 @@ const unresolved = [];
 const attributed = [];
 let checked = 0;
 
-for (const [, doc, iface, body] of blocks) {
+for (const [, doc, iface, rawBody] of blocks) {
+  // Strip WHOLE-LINE `//` comments before matching. A union may be documented
+  // between its alternatives —
+  //     kind:
+  //       | 'custom'
+  //       // Phase 4 — multi-turn user interjections.
+  //       | 'conversation.start'
+  // — and the alternation regex admits only whitespace between members, so one
+  // interleaved comment made `InterruptByTokenInspection.kind` (8 values)
+  // invisible. Only full-line comments are removed, so a `//` inside a string
+  // literal survives.
+  const body = rawBody.replace(/^[ \t]*\/\/.*$/gm, '');
   // Three declaration forms, because the nine unions this gate could not
   // resolve were not nine of the same thing. Telling all of them "add a Mirror
   // of line" was advice that is wrong for five of them.
@@ -140,6 +226,23 @@ for (const [, doc, iface, body] of blocks) {
   //                  major. Naming the authority is not a check, and is not
   //                  pretending to be one — it converts "nobody knows" into a
   //                  written claim someone can falsify.
+  // Per-PROPERTY form, needed once an interface carries the same property name
+  // at two different paths. `EffectSeamManifest` has `host.build.kind` and
+  // `seams[].kind` — different enums, one interface — so a single file-level
+  // declaration cannot say which is which.
+  //   Mirror of `kind` at `schemas/v2/x.schema.json#/properties/a/properties/kind`
+  // A prop may be declared MORE THAN ONCE: `EffectSeamManifest` carries
+  // `host.build.kind` and `seams[].kind`, different enums under one name. Each
+  // declaration is a pointer; the interface's unions for that name must pair
+  // with them one-to-one, so the check is a multiset match rather than a lookup.
+  const perProp = new Map();
+  if (doc) {
+    for (const m of doc.matchAll(/Mirror of `(\w+)` at `schemas\/([^`]+)`/g)) {
+      if (!perProp.has(m[1])) perProp.set(m[1], []);
+      perProp.get(m[1]).push(m[2]);
+    }
+  }
+  const multiDeclared = new Set([...perProp].filter(([, v]) => v.length > 1).map(([k]) => k));
   const declared = doc && /Mirror of `schemas\/([^`]+)`/.exec(doc)?.[1];
   const narrowed = doc && /Narrowing of `schemas\/([^`]+)`/.exec(doc)?.[1];
   const authority = doc && /Authority `([^`]+)`/.exec(doc)?.[1]?.replace(/\s*\n\s*\*\s*/g, ' ');
@@ -177,9 +280,34 @@ for (const [, doc, iface, body] of blocks) {
       if (!pointer && e.flat.has(prop)) return [e.flat.get(prop), file];
       return null;
     };
+    const decls = perProp.get(prop) ?? [];
+    if (multiDeclared.has(prop)) {
+      // Pair by CONTENT: this union must equal one of the declared enums, and
+      // each declared enum must be claimed by exactly one union. Pairing by
+      // order would make the check depend on source layout.
+      const cands = decls
+        .map((d) => { const [f, ptr] = d.split('#'); return pick(f.split('/').pop(), ptr ? `#${ptr}` : undefined); })
+        .filter(Boolean);
+      const eq = cands.find(([en]) => en.size === members.size && [...en].every((v) => members.has(v)));
+      if (eq) { checked += 1; continue; }                       // paired and equal
+      // No exact pair. Report against the CLOSEST declared enum by symmetric
+      // difference, not the first one: with two `kind` pointers on this
+      // interface, `cands[0]` named `build.kind`'s values for a drift in
+      // `seams[].kind` — a failure message that sends the reader to the wrong
+      // enum is worse than a vague one.
+      if (cands.length) {
+        const dist = ([en]) => [...en].filter((v) => !members.has(v)).length + [...members].filter((v) => !en.has(v)).length;
+        const best = cands.reduce((a, b) => (dist(b) < dist(a) ? b : a));
+        [expected, via] = [best[0], `Mirror of ${best[1]} (closest of ${decls.length} declared pointers)`];
+      }
+    } else if (decls.length === 1) {
+      const [pp, ppointer] = decls[0].split('#');
+      const hit = pick(pp.split('/').pop(), ppointer ? `#${ppointer}` : undefined);
+      if (hit) { [expected, via] = [hit[0], `Mirror of ${hit[1]}`]; }
+    }
     const [declaredPath, declaredPointer] = (declared ?? '').split('#');
     const declaredFile = declaredPath ? declaredPath.split('/').pop() : null;
-    if (declaredFile) {
+    if (!expected && declaredFile) {
       const hit = pick(declaredFile, declaredPointer ? `#${declaredPointer}` : undefined);
       if (hit) { [expected, via] = [hit[0], `Mirror of ${hit[1]}`]; }
     }

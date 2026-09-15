@@ -421,6 +421,8 @@ export interface ResolveInterruptResponse {
 /**
  * Token-scoped interrupt inspection response — mirrors `suspend-request.schema.json`
  * (the `InterruptPayload` shape).
+ *
+ * Mirror of `schemas/v2/suspend-request.schema.json`.
  */
 export interface InterruptByTokenInspection {
   kind:
@@ -620,7 +622,10 @@ export interface EffectLedgerProjection {
   }[];
 }
 
-/** `GET /host/effect-seams` (`schemas/v2/effect-seam-manifest.schema.json`). */
+/** `GET /host/effect-seams` (`schemas/v2/effect-seam-manifest.schema.json`). *
+ * Mirror of `kind` at `schemas/v2/effect-seam-manifest.schema.json#/properties/host/properties/build/properties/kind`.
+ * Mirror of `kind` at `schemas/v2/effect-seam-manifest.schema.json#/properties/seams/items/properties/kind`.
+ */
 export interface EffectSeamManifest {
   manifestVersion: '1';
   host: {
@@ -630,7 +635,7 @@ export interface EffectSeamManifest {
   seams: readonly {
     /** The outbound effect path, host-named (e.g. `http.fetch`). */
     seam: string;
-    kind: 'http' | 'queue' | 'storage' | 'provider-sdk' | 'webhook-fanout';
+    kind: 'http' | 'smtp' | 'queue' | 'storage' | 'provider-sdk' | 'webhook-fanout' | 'other';
     guarded: true;
     guardedBy: string;
     branchReFires?: boolean;
