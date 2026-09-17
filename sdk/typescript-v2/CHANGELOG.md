@@ -4,6 +4,12 @@ The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CH
 
 ## [Unreleased]
 
+## [2.2.0] — 2026-09-17 — corpus `v2.3.0`: RFC 0184–0186 vendored
+
+### Changed
+
+- `CORPUS_TAG` `v2.1.0` → `v2.3.0`; 8 vendored artifacts re-synced (190/190 match). Carries the `anon:` tenant grammar (RFC 0184), the 53-def vendor hatch (RFC 0185), the `conversationExchanged` union + `reason` on `interruptResolved`/`nodeSuspended` + `ApprovalData.onTimeout` (RFC 0186). `generated.ts` is unchanged — 2.3.0 added no error code or capability family — and event payloads remain `unknown` in `types.ts`, a pre-existing gap recorded here rather than fixed.
+
 ### Fixed
 
 - `HttpRequestNodeConfig.method` omitted `OPTIONS`. Every published version of
