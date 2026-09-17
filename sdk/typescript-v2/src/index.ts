@@ -136,6 +136,8 @@ export {
   CAPABILITY_METADATA_KEYS,
 } from './generated.js';
 export type { ErrorCode, CapabilityFamilyKey, CapabilityMetadataKey } from './generated.js';
+export { KNOWN_RUN_EVENT_TYPES, isKnownRunEventType, narrowRunEvent } from './generated-payloads.js';
+export type { RunEventPayloads, KnownRunEventType, KnownRunEvent } from './generated-payloads.js';
 
 // Typed event helpers — type guards over `RunEventDoc` plus a high-level
 // streaming-reasoning subscription helper.

@@ -70,6 +70,7 @@ echo "[4/8] TypeScript SDK 2.x (generated registries --check + strict typecheck 
   cd "$ROOT/sdk/typescript-v2"
   [[ -d node_modules ]] || npm_config_cache="$NPM_CACHE" npm install --no-audit --no-fund --prefer-offline >/dev/null
   node scripts/generate.mjs --check
+  node scripts/generate-payloads.mjs --check
   npx tsc --noEmit
   npm run build >/dev/null
   # (tests may assert the literal's ABSENCE, so only the shipped sources are scanned)

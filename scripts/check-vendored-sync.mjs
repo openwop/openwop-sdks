@@ -65,6 +65,7 @@ for (const extra of [
   'api/v2/asyncapi.yaml',
   'spec/v2/path-manifest.json',
   'spec/v2/errors.json',
+  'spec/v2/event-codemap.json',
 ]) {
   if (existsSync(join(ROOT, extra))) vendored.push(extra);
 }
