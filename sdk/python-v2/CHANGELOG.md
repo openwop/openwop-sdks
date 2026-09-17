@@ -2,6 +2,10 @@
 
 The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
+## [2.2.0] — 2026-09-17 — corpus `v2.3.0`: RFC 0184–0186 vendored
+
+- `CORPUS_TAG` `v2.1.0` → `v2.3.0`; vendored artifacts re-synced. No wire method added; payload seats land in vendored schemas the client does not model as typed shapes (pre-existing gap, recorded).
+
 ## [2.1.0] — 2026-09-11 — `runs_list` (RFC 0182) on corpus `v2.1.0`
 
 **Added:** `runs_list(*, limit=None, cursor=None, workflow_id=None, status=None) -> RunListResponse | None` — `GET /runs` (RFC 0182): one page of the caller's runs as full `RunSnapshot`s, newest first, tenant-scoped with every `runId` bound; walk `next_cursor`; `None` on 404 (the `runList` family is not advertised); a cursor the host did not mint is `400 validation_error` and raises. New dataclass `RunListResponse`.
