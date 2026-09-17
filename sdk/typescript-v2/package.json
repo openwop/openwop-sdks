@@ -1,6 +1,6 @@
 {
   "name": "@openwop/openwop",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "TypeScript reference SDK for OpenWOP v2 hosts — bare-origin unversioned paths, OpenWOP-Version negotiation, the closed discovery root, and the generated error-code registry.",
   "repository": {
     "type": "git",
@@ -33,8 +33,8 @@
   "scripts": {
     "build": "rm -rf dist && tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
-    "generate": "node scripts/generate.mjs",
-    "generate:check": "node scripts/generate.mjs --check",
+    "generate": "node scripts/generate.mjs && node scripts/generate-payloads.mjs",
+    "generate:check": "node scripts/generate.mjs --check && node scripts/generate-payloads.mjs --check",
     "test": "vitest run",
     "prepublishOnly": "npm run generate:check && npm run build"
   },

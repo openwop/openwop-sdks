@@ -2,6 +2,12 @@
 
 The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
+## [2.3.0] — 2026-09-17 — corpus `v2.3.3`
+
+### Changed
+
+- Re-published on corpus `v2.3.3` with the TypeScript package (one tag, three packages). Generated registries re-synced (`payload_unprojectable`, 98 codes). Typed event payloads land here in a later cut.
+
 ## [2.2.0] — 2026-09-17 — corpus `v2.3.0`: RFC 0184–0186 vendored
 
 - `CORPUS_TAG` `v2.1.0` → `v2.3.0`; vendored artifacts re-synced. No wire method added; payload seats land in vendored schemas the client does not model as typed shapes (pre-existing gap, recorded).

@@ -2,6 +2,12 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2.Y.Z`).
 
+## [2.3.0] — 2026-09-17 — corpus `v2.3.3`
+
+### Changed
+
+- Re-published on corpus `v2.3.3` with the TypeScript package (one tag, three packages). Generated registries re-synced (`payload_unprojectable`, 98 codes). Typed event payloads land here in a later cut.
+
 ## [v2.2.0] — 2026-09-17 (tag `go/v2.2.0`) — corpus `v2.3.0`: RFC 0184–0186 vendored
 
 - `CORPUS_TAG` `v2.1.0` → `v2.3.0`; vendored artifacts re-synced. No exported symbol added.
