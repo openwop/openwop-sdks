@@ -23,7 +23,7 @@ This matrix records per-protocol-surface feature parity across the three referen
 
 ## Headline
 
-The three SDKs have a first-class typed helper for **51 of the 56 OpenAPI
+The three SDKs have a first-class typed helper for **52 of the 57 OpenAPI
 operations** in TypeScript, Python, and Go. The 5 excluded ops are all
 **`/v1/host/sample/*` or `packs-test` server-side conformance seams**, not
 client surfaces:
@@ -154,6 +154,7 @@ These landed during Track 1 / T1.1 / T1.2 / T1.4 / T1.7 work. Audit-log verifica
 | Audit-log integrity: `GET /v1/audit/verify` (Phase B, 2026-05-12) | ✅ `client.audit.verify(from, to)` | ✅ `client.audit_verify(from, to)` | ✅ `client.VerifyAuditLog(ctx, from, to)` |
 | Webhooks: `POST /v1/webhooks` register (T1.7) | ✅ `client.webhooks.register(body, opts?)` (SDK-3, 2026-05-15) | ✅ `client.webhooks_register(body, idempotency_key=...)` (SDK-3, 2026-05-15) | ✅ `client.RegisterWebhook(ctx, body, opts)` (SDK-3, 2026-05-15) |
 | Webhooks: `DELETE /v1/webhooks/{id}` unregister | ✅ `client.webhooks.unregister(subscriptionId)` (SDK-3, 2026-05-15) | ✅ `client.webhooks_unregister(subscription_id)` (SDK-3, 2026-05-15) | ✅ `client.UnregisterWebhook(ctx, subscriptionID)` (SDK-3, 2026-05-15) |
+| Webhooks: `POST /v1/webhooks/{id}/rotate-secret` rotate (RFC 0201 §E.18) | ✅ `client.webhooks.rotateSecret(subscriptionId, body, opts?)` (2026-09-23) | ✅ `client.webhooks_rotate_secret(subscription_id, body, idempotency_key=...)` (2026-09-23) | ✅ `client.RotateWebhookSecret(ctx, subscriptionID, body, opts)` (2026-09-23) |
 | Webhook HMAC verification helper (receiver-side) | ✅ `verifyWebhookSignature` + `signWebhookDelivery` (SDK-3, 2026-05-15) | ✅ `verify_webhook_signature` + `sign_webhook_delivery` (SDK-3, 2026-05-15) | ✅ `VerifyWebhookSignature` + `SignWebhookDelivery` (SDK-3, 2026-05-15) |
 | Debug bundle: `GET /v1/runs/{id}/debug-bundle` | ✅ `client.runs.debugBundle(id, opts?)` (SDK-4, 2026-05-15) | ✅ `client.runs_debug_bundle(id, max_events=...)` (SDK-4, 2026-05-15) | ✅ `client.GetDebugBundle(ctx, id, opts)` (SDK-4, 2026-05-15) |
 | Registry: `GET /v1/packs/*` read surface (SDK-5, 2026-05-15) | ✅ `RegistryClient` (`discovery / index / pack / version / tarball / signature / publicKey`) | ✅ `RegistryClient` (`discovery / index / pack / version / tarball / signature / public_key`) | ✅ `RegistryClient` (`Discovery / Index / Pack / Version / Tarball / Signature / PublicKey`) |

@@ -36,6 +36,8 @@ export type {
   DebugBundleOptions,
   RegisterWebhookRequest,
   RegisterWebhookResponse,
+  RotateWebhookSecretRequest,
+  RotateWebhookSecretResponse,
   InterruptByTokenInspection,
   PauseRunRequest,
   PauseRunResponse,

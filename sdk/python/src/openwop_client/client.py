@@ -83,6 +83,8 @@ from .types import (
     PromptTemplate,
     RegisterWebhookRequest,
     RegisterWebhookResponse,
+    RotateWebhookSecretRequest,
+    RotateWebhookSecretResponse,
     PollEventsResponse,
     RenderPromptRequest,
     RenderPromptResponse,
@@ -885,6 +887,40 @@ class OpenwopClient:
         """
 
         self._request_json("DELETE", f"/v1/webhooks/{subscription_id}")
+
+    def webhooks_rotate_secret(
+        self,
+        subscription_id: str,
+        tenant_id: str,
+        body: RotateWebhookSecretRequest,
+        *,
+        idempotency_key: str | None = None,
+    ) -> RotateWebhookSecretResponse:
+        """Rotate a subscription's signing secret with an overlap.
+
+        ``spec/v1/webhooks.md`` section "Standard Webhooks companion
+        scheme" -> **Rotation** (RFC 0201 E.18). Gated on
+        ``capabilities.webhooks.secretRotation``: a host that does not
+        advertise the facet answers ``404``, and a subscription that did
+        not opt into ``standard-webhooks-1`` gets
+        ``400 validation_error``. The response carries NO secret.
+
+        ``tenant_id`` is a required query parameter: the route is not
+        path-nested under workspaces (``spec/v1/webhooks.md``).
+        """
+
+        headers = self._mutation_headers(idempotency_key=idempotency_key)
+        d = self._request_json(
+            "POST",
+            f"/v1/webhooks/{quote(subscription_id, safe='')}"
+            f"/rotate-secret?tenantId={quote(tenant_id, safe='')}",
+            body=_to_jsonable(body),
+            headers=headers,
+        )
+        return RotateWebhookSecretResponse(
+            rotatedAt=str(d["rotatedAt"]),
+            previousSecretExpiresAt=str(d["previousSecretExpiresAt"]),
+        )
 
     def runs_fork(
         self,

@@ -582,6 +582,30 @@ class RegisterWebhookResponse:
     createdAt: str
 
 
+@dataclass
+class RotateWebhookSecretRequest:
+    """Body of POST /v1/webhooks/{webhookId}/rotate-secret (RFC 0201 E.18).
+
+    ``secret`` is the NEW secret in the Standard Webhooks form
+    ``whsec_<base64>`` decoding to 24-64 bytes. It is never echoed back.
+    """
+
+    secret: str
+
+
+@dataclass(frozen=True)
+class RotateWebhookSecretResponse:
+    """Response from POST /v1/webhooks/{webhookId}/rotate-secret.
+
+    Carries NO secret. Until ``previousSecretExpiresAt`` every delivery
+    carries one ``webhook-signature`` entry under each secret and
+    ``X-openwop-Signature`` stays on the previous secret.
+    """
+
+    rotatedAt: str
+    previousSecretExpiresAt: str
+
+
 # spec/v1/debug-bundle.md — portable JSON diagnostic export.
 @dataclass(frozen=True)
 class DebugBundle:

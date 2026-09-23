@@ -589,6 +589,24 @@ type RegisterWebhookResponse struct {
 	CreatedAt      string   `json:"createdAt"`
 }
 
+// RotateWebhookSecretRequest is the body for
+// POST /v1/webhooks/{webhookId}/rotate-secret per spec/v1/webhooks.md
+// §"Standard Webhooks companion scheme" → Rotation (RFC 0201 §E.18).
+// Secret is the NEW secret in the whsec_<base64> form (24–64 decoded
+// bytes); it is never echoed back.
+type RotateWebhookSecretRequest struct {
+	Secret string `json:"secret"`
+}
+
+// RotateWebhookSecretResponse mirrors the 200 rotate-secret payload.
+// It carries NO secret. Until PreviousSecretExpiresAt every delivery
+// carries one webhook-signature entry under each secret and
+// X-openwop-Signature stays on the previous secret.
+type RotateWebhookSecretResponse struct {
+	RotatedAt               string `json:"rotatedAt"`
+	PreviousSecretExpiresAt string `json:"previousSecretExpiresAt"`
+}
+
 // AuditVerifyCheckpoint is one entry in AuditVerifyResult.Checkpoints
 // per auth-profiles.md §"openwop-audit-log-integrity" §4.
 type AuditVerifyCheckpoint struct {
