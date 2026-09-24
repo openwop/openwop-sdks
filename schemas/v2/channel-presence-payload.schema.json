@@ -37,7 +37,6 @@
   },
   "examples": [
     {
-      "$comment": "RFC 0110 POSITIVE — two members present in a channel, one typing.",
       "conversationId": "chan-eng",
       "present": [
         "user:alice",
@@ -48,7 +47,6 @@
       ]
     },
     {
-      "$comment": "RFC 0110 POSITIVE — typing is OPTIONAL; a presence snapshot with no one typing.",
       "conversationId": "chan-eng",
       "present": [
         "user:alice"

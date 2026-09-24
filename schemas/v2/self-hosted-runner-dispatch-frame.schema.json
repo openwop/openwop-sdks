@@ -89,7 +89,7 @@
   ],
   "examples": [
     {
-      "runId": "run_x",
+      "runId": "acme/run_x-xxxxxxxxxx",
       "stepId": "step_3",
       "seq": 12,
       "kind": "model",
@@ -105,7 +105,7 @@
       }
     },
     {
-      "runId": "run_y",
+      "runId": "acme/run_y-xxxxxxxxxx",
       "stepId": "step_1",
       "seq": 0,
       "kind": "tool",

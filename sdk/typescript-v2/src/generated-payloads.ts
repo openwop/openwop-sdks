@@ -424,14 +424,67 @@ export type AgentVerifiedPayload = {
 
 export type IdsSchema_InterruptId = string;
 
+/** Issuer-scoped, stable, opaque (RFC 0170 §A); the issuer's grammar, never PII. */
+export type IdsSchema_SubjectId = string;
+
+/** A tenant identifier. The optional `anon:` prefix is the ONLY colon admitted. Its ORIGINAL rationale here cited RFC 0132, and that citation was WRONG: RFC 0132 puts `anon:` on the **principal** and §C.1 requires the host to resolve a real `tenant` (the surface owner) — `{tenant: "acme", principal: "anon:sess-3f9c"}`. The prefix is kept because a REPORTING HOST was observed minting `tenantId: "anon:<sid>"` (`conformance/src/scenarios/test-seam-unauthenticated.test.ts`), and that grammar shipped in v2.0.0; removing it is a major-version change, not an erratum. Whether it belongs on a tenant at all is deferred to v3 (RFC 0184 §A.3). `:` is a legal path character (RFC 3986 pchar), but the claim that it "stays safe inside the `<tenantId>/<opaque>` run-id form" was FALSE ON ARRIVAL: this pattern admitted `anon:`, and all five tenant-bound kinds rejected it, so every runId an anon-tenant host minted was schema-invalid. RFC 0184 §A.3 widened those five to match. On the wire the question is moot — the §A.1 projection escapes `:` to `~3A` like any other non-passthrough byte. The alternative — renaming anonymous tenants at the cut — was rejected: it is a write to historical identity, which is the one thing the v2 migration does not do. */
+export type IdsSchema_TenantId = string;
+
+export type SubjectSchema_Actor4 = {
+  /** Trust root (RFC 0170 §B.2); urn:openwop:legacy for a run that predates subject emission (§A.3). */ "issuer": string;
+  "subjectId": IdsSchema_SubjectId;
+  "tenant": IdsSchema_TenantId;
+  "lane": "api-key" | "oauth2" | "oidc" | "mtls" | "saml" | "scim" | "ldap" | "workload" | "session" | "anonymous";
+  "kind": "user" | "agent" | "anonymous" | "workload";
+  "keyClass"?: "opaque-idp" | "configured-immutable";
+};
+
+export type SubjectSchema_Actor3 = {
+  /** Trust root (RFC 0170 §B.2); urn:openwop:legacy for a run that predates subject emission (§A.3). */ "issuer": string;
+  "subjectId": IdsSchema_SubjectId;
+  "tenant": IdsSchema_TenantId;
+  "lane": "api-key" | "oauth2" | "oidc" | "mtls" | "saml" | "scim" | "ldap" | "workload" | "session" | "anonymous";
+  "kind": "user" | "agent" | "anonymous" | "workload";
+  "keyClass"?: "opaque-idp" | "configured-immutable";
+  /** Who acts on this subject's behalf; depth bounded at four by the $defs chain (RFC 0170 §A.2). */ "actor"?: SubjectSchema_Actor4;
+};
+
+export type SubjectSchema_Actor2 = {
+  /** Trust root (RFC 0170 §B.2); urn:openwop:legacy for a run that predates subject emission (§A.3). */ "issuer": string;
+  "subjectId": IdsSchema_SubjectId;
+  "tenant": IdsSchema_TenantId;
+  "lane": "api-key" | "oauth2" | "oidc" | "mtls" | "saml" | "scim" | "ldap" | "workload" | "session" | "anonymous";
+  "kind": "user" | "agent" | "anonymous" | "workload";
+  "keyClass"?: "opaque-idp" | "configured-immutable";
+  /** Who acts on this subject's behalf; depth bounded at four by the $defs chain (RFC 0170 §A.2). */ "actor"?: SubjectSchema_Actor3;
+};
+
+export type SubjectSchema_Actor1 = {
+  /** Trust root (RFC 0170 §B.2); urn:openwop:legacy for a run that predates subject emission (§A.3). */ "issuer": string;
+  "subjectId": IdsSchema_SubjectId;
+  "tenant": IdsSchema_TenantId;
+  "lane": "api-key" | "oauth2" | "oidc" | "mtls" | "saml" | "scim" | "ldap" | "workload" | "session" | "anonymous";
+  "kind": "user" | "agent" | "anonymous" | "workload";
+  "keyClass"?: "opaque-idp" | "configured-immutable";
+  /** Who acts on this subject's behalf; depth bounded at four by the $defs chain (RFC 0170 §A.2). */ "actor"?: SubjectSchema_Actor2;
+};
+
 /** The owner of a run. Required on RunSnapshot.owner and the run.started echo. Legacy subjects (issuer urn:openwop:legacy) MUST NOT participate in a link, an actor chain, or a delegation decision (§A.3). */
-export type SubjectSchema = (unknown & unknown & unknown);
+export type SubjectSchema = {
+  /** Trust root (RFC 0170 §B.2); urn:openwop:legacy for a run that predates subject emission (§A.3). */ "issuer": string;
+  "subjectId": IdsSchema_SubjectId;
+  "tenant": IdsSchema_TenantId;
+  "lane": "api-key" | "oauth2" | "oidc" | "mtls" | "saml" | "scim" | "ldap" | "workload" | "session" | "anonymous";
+  "kind": "user" | "agent" | "anonymous" | "workload";
+  "keyClass"?: "opaque-idp" | "configured-immutable";
+  /** Who acts on this subject's behalf; depth bounded at four by the $defs chain (RFC 0170 §A.2). */ "actor"?: SubjectSchema_Actor1;
+};
 
 /** Emitted when an interrupt is resolved (any kind). */
 export type InterruptResolvedPayload = {
   "nodeId": IdsSchema_NodeId;
   "interruptId": IdsSchema_InterruptId;
-  /** RFC 0094 §E — the full kind union `interrupt.md` defines (mirrors suspend-request.schema.json). Conversation kinds are gated on the conversation capability per capabilities.md. */ "kind"?: "approval" | "clarification" | "external-event" | "custom" | "conversation.start" | "conversation.exchange" | "conversation.close" | "low-confidence";
+  /** RFC 0094 §E — the full kind union `interrupt.md` defines (mirrors suspend-request.schema.json). Conversation kinds are gated on the conversation capability per capabilities.md. */ "kind"?: "approval" | "clarification" | "external-event" | "custom" | "conversation.start" | "conversation.exchange" | "conversation.close" | "low-confidence" | "credential";
   /** RFC 0186 §A.2 — WHY this happened without a human, a CAUSE axis disjoint from `kind` (the interrupt kind), RFC 0183 `decision` (what was decided) and `action` (how the resume applied). A string with a documented domain rather than an enum, because the domain is host-grown: `timeout`, `condition`, `false-positive`, `over-threshold`, `quorum-reject`, `timer` are the values two production hosts record today. Measured single-valued `timeout` on one host at `interrupt.resolved`; dropped on 350 rows of `node.suspended` on the other. */ "reason"?: string;
   "resumeValue"?: unknown;
   /** v1 interrupt.md MUST (`decidedBy` on approval.received / `resolvedBy` on interrupt.resolved) carried into v2 as the resolving Subject. */ "resolvedBy"?: SubjectSchema;
@@ -538,15 +591,92 @@ export type SuspendRequestSchema_LowConfidenceData = {
   /** Optional sketch of the decision the agent WOULD have emitted at threshold-or-above. Lets operators see the un-ratified choice. Shape mirrors `OrchestratorDecision` or the agent's domain-specific decision type. */ "decision"?: unknown;
 };
 
-export type SuspendRequestSchema = {
-  /** Discriminator for resume-time routing + UI rendering + observability. Multi-Agent Shift Phase 4 adds `conversation.start` / `conversation.exchange` / `conversation.close` for multi-turn user interjections (see ConversationStartData / ConversationExchangeData / ConversationCloseData below). Phase 1 adds `low-confidence` for the confidence-escalation contract (orchestrator-supervisor suspends below threshold; see LowConfidenceData). */ "kind": "approval" | "clarification" | "external-event" | "custom" | "conversation.start" | "conversation.exchange" | "conversation.close" | "low-confidence";
+/** RFC 0046. An opaque, host-issued handle to a stored credential. This is the ONLY credential artifact permitted on the wire — it NEVER carries key material. The host's host.credentials resolver dereferences it into the node sandbox at execution time (SECURITY invariant `credential-payload-redaction`). */
+export type CredentialReferenceSchema = {
+  /** Opaque host-issued identifier, e.g. `cred_a3b9c2`. Hosts MUST NOT encode secret material in the ref. */ "ref": string;
+  /** Resolution scope. MUST match a scope in `capabilities.credentials.scopes`. Absent ⇒ the host's default scope. */ "scope"?: "user" | "workspace" | "tenant";
+};
+
+/** Payload for kind='credential' (RFC 0199 §C.3). Closed: it names the provider, scopes and reason and carries the host-owned `connectUrl`; it NEVER carries credential material, the interrupt's token, or any value that resolves the interrupt. Gated on `oauth.credentialInterrupt`. */
+export type SuspendRequestSchema_CredentialData = {
+  /** An advertised `oauth.providers[].id`. */ "provider": string;
+  "scopes": Array<string>;
+  "reason": "missing" | "expired" | "insufficient_scope";
+  /** Host-owned https URL on the host's own origin that begins the authorization-code grant for the interrupt's initiating Subject. MUST NOT be pre-authenticated and MUST NOT embed the interrupt token. */ "connectUrl": string;
+  /** The reference being re-authorized; never material. */ "credentialRef"?: CredentialReferenceSchema;
+};
+
+export type SuspendRequestSchema = ({
+  "kind": "approval";
   /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
   /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
-  "data": (SuspendRequestSchema_ApprovalData | SuspendRequestSchema_ClarificationData | SuspendRequestSchema_ExternalEventData | SuspendRequestSchema_CustomData | SuspendRequestSchema_ConversationStartData | SuspendRequestSchema_ConversationExchangeData | SuspendRequestSchema_ConversationCloseData | SuspendRequestSchema_LowConfidenceData);
-};
+  "data": SuspendRequestSchema_ApprovalData;
+} | {
+  "kind": "clarification";
+  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
+    [key: string]: unknown;
+  };
+  /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
+  "data": SuspendRequestSchema_ClarificationData;
+} | {
+  "kind": "external-event";
+  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
+    [key: string]: unknown;
+  };
+  /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
+  "data": SuspendRequestSchema_ExternalEventData;
+} | {
+  "kind": "custom";
+  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
+    [key: string]: unknown;
+  };
+  /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
+  "data": SuspendRequestSchema_CustomData;
+} | {
+  "kind": "conversation.start";
+  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
+    [key: string]: unknown;
+  };
+  /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
+  "data": SuspendRequestSchema_ConversationStartData;
+} | {
+  "kind": "conversation.exchange";
+  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
+    [key: string]: unknown;
+  };
+  /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
+  "data": SuspendRequestSchema_ConversationExchangeData;
+} | {
+  "kind": "conversation.close";
+  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
+    [key: string]: unknown;
+  };
+  /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
+  "data": SuspendRequestSchema_ConversationCloseData;
+} | {
+  "kind": "low-confidence";
+  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
+    [key: string]: unknown;
+  };
+  /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
+  "data": SuspendRequestSchema_LowConfidenceData;
+} | {
+  "kind": "credential";
+  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  "resumeSchema": {"type":"object","additionalProperties":false,"required":["outcome"],"properties":{"outcome":{"enum":["authorized","declined"]}}};
+  /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
+  "data": SuspendRequestSchema_CredentialData;
+});
 
 /** Canonical HITL primitive — discriminated union over kind. Payload mirrors `suspend-request.schema.json` (InterruptPayload) plus engine-assigned identity fields. */
 export type InterruptRequestedPayload = SuspendRequestSchema;
@@ -748,8 +878,27 @@ export type ConversationClosedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
+/** RFC 0205 §D. An A2A v1.0.1 `Part`, transcribed from `specification/a2a.proto` `message Part` at tag v1.0.1 with the JSON member names A2A spec §5.5 requires (camelCase). Exactly one of `text`, `raw`, `url`, `data` is present: member presence is the discriminator (A2A spec §14 "Current Pattern (v1.0)"), and the v0.3 `kind` member is not part of the shape. A2A commits no JSON Schema of its own (`specification/json/README.md`: `a2a.json` is a non-normative build artifact), so this file is the corpus's transcription. `oneOf` is deliberate: this schema describes a host-emitted wire object, not an LLM-emitted envelope payload (ai-envelope.md §"Schema discipline" scopes its `oneOf` ban to the latter). */
+export type PartSchema = (unknown | unknown | unknown | unknown);
+
 /** One turn in a multi-turn conversation. Mirror of `conversation-turn.schema.json`; kept in sync. Structural superset of `ConversationMessage` (RFC 0002 §G). */
-export type ConversationEventSchema_ConversationTurn = (unknown);
+export type ConversationEventSchema_ConversationTurn = ({
+  "messageId": string;
+  "from": string;
+  "to"?: string;
+  "groupId"?: string;
+  "content": Record<string, never> | Array<unknown> | string | number | boolean | null;
+  /** RFC 0205 §B. OPTIONAL. The turn's content as A2A `Part`s (A2A v1.0.1 `Message.parts`). PRESENCE IS THE DISCRIMINATOR: a turn carrying `parts` is A2A-shaped and projects to an A2A `Message` via `messageId`, `role` (user→ROLE_USER, agent→ROLE_AGENT) and `parts`. A producer SHOULD emit it and keep `content` displayable to readers that predate it. A turn without `parts` stays valid on emission, read, replay and fork for the life of the major. Kept in sync with `conversation-event.schema.json#/$defs/ConversationTurn/properties/parts`. */ "parts"?: Array<PartSchema>;
+  "ts": number;
+  "role": "agent";
+  "agent"?: {
+    "agentId"?: IdsSchema_AgentId;
+    "agentSharing"?: "isolated" | "shared" | "shared:%shared%";
+    "memoryRef"?: string;
+  };
+  "turnIndex": number;
+  /** RFC 0101. Roster INSTANCE id of this turn's speaker (`host:<id>` AgentRef per RFC 0086). REQUIRED when `role: 'agent'` (the `allOf`/`if` conditional below). Mirror of `conversation-turn.schema.json`'s `speakerId`; kept in sync. */ "speakerId": string;
+});
 
 /** Multi-Agent Shift Phase 4. Emitted when a single turn completes within an open conversation (`core.conversationGate.exchange`). Carries the validated outcome of the suspend/resume cycle. */
 export type ConversationExchangedPayload = {
@@ -1108,7 +1257,7 @@ export type NodeSuspendFailedPayload = {
 export type NodeSuspendedPayload = {
   "nodeId": IdsSchema_NodeId;
   "interruptId": IdsSchema_InterruptId;
-  /** RFC 0094 §E — the full kind union `interrupt.md` defines (mirrors suspend-request.schema.json). Conversation kinds are gated on the conversation capability per capabilities.md. */ "kind"?: "approval" | "clarification" | "external-event" | "custom" | "conversation.start" | "conversation.exchange" | "conversation.close" | "low-confidence";
+  /** RFC 0094 §E — the full kind union `interrupt.md` defines (mirrors suspend-request.schema.json). Conversation kinds are gated on the conversation capability per capabilities.md. */ "kind"?: "approval" | "clarification" | "external-event" | "custom" | "conversation.start" | "conversation.exchange" | "conversation.close" | "low-confidence" | "credential";
   /** RFC 0186 §A.2 — WHY this happened without a human, a CAUSE axis disjoint from `kind` (the interrupt kind), RFC 0183 `decision` (what was decided) and `action` (how the resume applied). A string with a documented domain rather than an enum, because the domain is host-grown: `timeout`, `condition`, `false-positive`, `over-threshold`, `quorum-reject`, `timer` are the values two production hosts record today. Measured single-valued `timeout` on one host at `interrupt.resolved`; dropped on 350 rows of `node.suspended` on the other. */ "reason"?: string;
   "key"?: string;
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
@@ -1260,7 +1409,7 @@ export type RosterRunInitiatedPayload = {
 
 /** Emitted once when the run reaches the cancelled terminal state. */
 export type RunCancelledPayload = {
-  /** `v1_pin_unsupported` (RFC 0176 §B.1) is a registered reason. */ "reason"?: string;
+  /** Registered reasons: `v1_pin_unsupported` (RFC 0176 §B.1); `mcp-request-cancelled` (RFC 0198 — the MCP request that owned the run was cancelled or disconnected before the host answered it). */ "reason"?: string;
   /** RFC 0176 §B.1 — `v2-cutover` when a v2 host cancels an inherited run whose pin it no longer implements. */ "cancelledBy"?: string;
   "durationMs"?: number;
   /** When this cancellation was triggered by a parent-cancel cascade (`interrupt-profiles.md §openwop-interrupt-cascade-cancel`), the parent runId that initiated it. Pairs with `reason: 'parent-cancelled'`. Absent for direct cancellations. */ "parentRunId"?: IdsSchema_RunId;
@@ -1322,9 +1471,6 @@ export type InputsObjectPayload = {
   [key: string]: unknown;
 };
 
-/** A tenant identifier. The optional `anon:` prefix is the ONLY colon admitted. Its ORIGINAL rationale here cited RFC 0132, and that citation was WRONG: RFC 0132 puts `anon:` on the **principal** and §C.1 requires the host to resolve a real `tenant` (the surface owner) — `{tenant: "acme", principal: "anon:sess-3f9c"}`. The prefix is kept because a REPORTING HOST was observed minting `tenantId: "anon:<sid>"` (`conformance/src/scenarios/test-seam-unauthenticated.test.ts`), and that grammar shipped in v2.0.0; removing it is a major-version change, not an erratum. Whether it belongs on a tenant at all is deferred to v3 (RFC 0184 §A.3). `:` is a legal path character (RFC 3986 pchar), but the claim that it "stays safe inside the `<tenantId>/<opaque>` run-id form" was FALSE ON ARRIVAL: this pattern admitted `anon:`, and all five tenant-bound kinds rejected it, so every runId an anon-tenant host minted was schema-invalid. RFC 0184 §A.3 widened those five to match. On the wire the question is moot — the §A.1 projection escapes `:` to `~3A` like any other non-passthrough byte. The alternative — renaming anonymous tenants at the cut — was rejected: it is a write to historical identity, which is the one thing the v2 migration does not do. */
-export type IdsSchema_TenantId = string;
-
 export type IdsSchema_WorkspaceId = string;
 
 /** Emitted once per run when execution begins. */
@@ -1366,7 +1512,7 @@ export type TriggerDeliveryAttemptedPayload = {
   /** The de-duplication key (§C-1). MUST be a **host-opaque** stable key (e.g. `hash(subscriptionId + inbound-event-id)`); it MUST NOT embed inbound body / path / header content in cleartext (SR-1 — a key like `POST /webhook/orders/12345?token=…` would leak). A repeat within retention is a no-op returning the prior runId. */ "dedupKey": string;
   /** 1-based attempt counter. */ "attempt": number;
   /** `delivered`: the run started; `retrying`: failed, will retry per policy; `dead-lettered`: retries exhausted, routed to the RFC 0053 sink (no run). */ "outcome": "delivered" | "retrying" | "dead-lettered";
-  /** MAY — the run started by a `delivered` outcome (the run's `run.started` carries this delivery's id as `causationId`, RFC 0040). Absent for `retrying` / `dead-lettered`. */ "runId"?: IdsSchema_RunId;
+  /** MAY — the run started by a `delivered` outcome. Absent for `retrying` / `dead-lettered`. **It does NOT carry this delivery's id as `causationId`:** `deliveryId` is tenant-bound and REQUIRES a `/`, while `causationId` is bound to the `eventId` kind whose grammar admits none — no string is both. An earlier revision asserted that equality here and in `trigger-event.schema.json`; 2.6.0 corrected the latter and missed this one, which is the more load-bearing of the two: `triggerDeliveryAttempted` is a DURABLE event-log payload and rides replay and `:fork`, where `trigger-event` is an in-run payload that never reaches the log. How a run points back at its causing delivery is deliberately left open — RFC 0040 §Alternatives already rejected overloading `causationId` for a cross-space pointer in favour of a sibling field, and the v2 seat needs a trigger-ingestion document that `spec/v2/core/` does not yet have. */ "runId"?: IdsSchema_RunId;
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 

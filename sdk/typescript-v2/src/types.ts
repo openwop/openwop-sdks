@@ -242,6 +242,50 @@ export interface RegisterWebhookResponse {
   createdAt: string;
 }
 
+/** `POST /webhooks/{webhookId}/rotate-secret` body (RFC 0201 §E.18). */
+export interface RotateWebhookSecretRequest {
+  /** The new secret, `whsec_<base64>` decoding to 24–64 bytes (RFC 0201 §B.6). Never echoed. */
+  secret: string;
+}
+
+/** `POST /webhooks/{webhookId}/rotate-secret` → `200`. No secret is returned. */
+export interface RotateWebhookSecretResponse {
+  rotatedAt: string;
+  /** `rotatedAt + overlapSeconds`: until then the previous secret still signs beside the new one. */
+  previousSecretExpiresAt: string;
+}
+
+/** `GET /webhooks/{webhookId}/dead-letters` query (RFC 0188 §A.1). */
+export interface ListWebhookDeadLettersRequest {
+  limit?: number;
+  cursor?: string;
+}
+
+/**
+ * One dead-lettered delivery — content-free by construction (RFC 0188 §B.1): no body, headers or secret.
+ * Mirror of `reason` at `schemas/v2/webhook-dead-letter-page.schema.json#/$defs/deadLetteredDelivery/properties/reason`
+ */
+export interface DeadLetteredDelivery {
+  deliveryId: string;
+  webhookId: string;
+  runId: string;
+  eventId: string;
+  eventType: string;
+  attempts: number;
+  deadLetteredAt: string;
+  /** When the record ages out; `expiresAt − deadLetteredAt` makes `retentionDays` observable. */
+  expiresAt: string;
+  reason: 'retries_exhausted' | 'payload_unprojectable';
+  /** HTTP status of the final attempt; absent when every attempt failed to connect. */
+  lastStatus?: number;
+}
+
+/** `webhook-dead-letter-page.schema.json` — newest first. */
+export interface WebhookDeadLetterPage {
+  deliveries: readonly DeadLetteredDelivery[];
+  nextCursor?: string;
+}
+
 export interface PauseRunRequest {
   reason?: string;
   drainPolicy?: 'immediate' | 'drain-current-node';
@@ -435,7 +479,9 @@ export interface InterruptByTokenInspection {
     | 'conversation.exchange'
     | 'conversation.close'
     // Phase 1 — confidence-escalation contract.
-    | 'low-confidence';
+    | 'low-confidence'
+    // RFC 0199 §C — the host needs a user credential (OAuth) to continue.
+    | 'credential';
   key: string;
   resumeSchema?: Record<string, unknown>;
   timeoutMs?: number;

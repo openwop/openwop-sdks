@@ -388,6 +388,43 @@ type RegisterWebhookResponse struct {
 	CreatedAt      string   `json:"createdAt"`
 }
 
+// RotateWebhookSecretRequest is the POST /webhooks/{webhookId}/rotate-secret
+// body (RFC 0201 §E.18). Secret is whsec_<base64> decoding to 24–64 bytes;
+// it is never echoed.
+type RotateWebhookSecretRequest struct {
+	Secret string `json:"secret"`
+}
+
+// RotateWebhookSecretResponse carries no secret. PreviousSecretExpiresAt is
+// RotatedAt + overlapSeconds.
+type RotateWebhookSecretResponse struct {
+	RotatedAt               string `json:"rotatedAt"`
+	PreviousSecretExpiresAt string `json:"previousSecretExpiresAt"`
+}
+
+// DeadLetteredDelivery is one dead-lettered delivery (RFC 0188 §A.1) —
+// content-free by construction: no body, headers or secret (§B.1).
+// LastStatus is nil when every attempt failed to connect.
+type DeadLetteredDelivery struct {
+	DeliveryID     string `json:"deliveryId"`
+	WebhookID      string `json:"webhookId"`
+	RunID          string `json:"runId"`
+	EventID        string `json:"eventId"`
+	EventType      string `json:"eventType"`
+	Attempts       int    `json:"attempts"`
+	DeadLetteredAt string `json:"deadLetteredAt"`
+	ExpiresAt      string `json:"expiresAt"`
+	Reason         string `json:"reason"`
+	LastStatus     *int   `json:"lastStatus,omitempty"`
+}
+
+// WebhookDeadLetterPage is one page, newest first; NextCursor is empty on
+// the last page.
+type WebhookDeadLetterPage struct {
+	Deliveries []DeadLetteredDelivery `json:"deliveries"`
+	NextCursor string                 `json:"nextCursor,omitempty"`
+}
+
 // AuditVerifyCheckpoint is one entry in AuditVerifyResult.Checkpoints
 // per auth-profiles.md §"openwop-audit-log-integrity" §4.
 type AuditVerifyCheckpoint struct {
@@ -498,7 +535,8 @@ type ResolveInterruptResponse struct {
 type InterruptByTokenInspection struct {
 	// Kind is the interrupt discriminator. One of "approval" |
 	// "clarification" | "external-event" | "custom" | "conversation.start" |
-	// "conversation.exchange" | "conversation.close" | "low-confidence"
+	// "conversation.exchange" | "conversation.close" | "low-confidence" |
+	// "credential" (RFC 0199 §C)
 	// (the Multi-Agent Shift Phase 4 conversation kinds + the Phase 1
 	// low-confidence escalation kind). Kept as an open string for
 	// forward-compat.

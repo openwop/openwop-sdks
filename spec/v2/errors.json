@@ -2,7 +2,7 @@
   "$schema": "https://openwop.dev/spec/v2/errors.schema.json",
   "$comment": "RFC 0171 §B.1 — the error registry: one row per code {code, httpStatus, retriable, details, since, deprecated?}. schemas/v2/error-envelope.schema.json is GENERATED from it (scripts/generate-error-envelope.mjs). Retry timing lives in Retry-After only (§B.2). statusSource records whether the status was stated in v1 prose, a v1 convention, or decided here. details is null until a code's details schema is registered (a null row means details is an open object for that code — closure over details is the RFC 0171 Phase 3 follow-up G-row).",
   "version": "2.0",
-  "updated": "2026-09-17",
+  "updated": "2026-09-23",
   "vendorCodePattern": "^(?!openwop\\.)[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9_]*$",
   "rows": [
     {
@@ -168,6 +168,15 @@
       "source": "spec/v1/node-packs.md"
     },
     {
+      "code": "unsupported_runtime",
+      "httpStatus": 400,
+      "statusSource": "v1 convention (node-packs.md)",
+      "retriable": false,
+      "details": null,
+      "since": "1.0",
+      "source": "spec/v1/node-packs.md"
+    },
+    {
       "code": "protocol_version_mismatch",
       "httpStatus": 400,
       "statusSource": "v2 decision",
@@ -262,6 +271,33 @@
       "source": "spec/v2/core/webhooks.md §Egress"
     },
     {
+      "code": "webhook_endpoint_unverified",
+      "httpStatus": 400,
+      "statusSource": "v2 decision",
+      "retriable": false,
+      "details": null,
+      "since": "2.36",
+      "source": "RFC 0201 §D"
+    },
+    {
+      "code": "connector_auth_declined",
+      "httpStatus": 401,
+      "statusSource": "v2 decision",
+      "retriable": false,
+      "details": null,
+      "since": "2.36",
+      "source": "RFC 0199 §C.4"
+    },
+    {
+      "code": "connection_auth_metadata_mismatch",
+      "httpStatus": 422,
+      "statusSource": "v2 decision",
+      "retriable": false,
+      "details": null,
+      "since": "2.36",
+      "source": "RFC 0199 §B.3"
+    },
+    {
       "code": "audience_mismatch",
       "httpStatus": 401,
       "statusSource": "v2 decision",
@@ -287,6 +323,15 @@
       "details": null,
       "since": "2.0",
       "source": "RFC 0170 §B.3"
+    },
+    {
+      "code": "credential_lifetime_exceeded",
+      "httpStatus": 401,
+      "statusSource": "v2 decision",
+      "retriable": false,
+      "details": null,
+      "since": "2.36",
+      "source": "RFC 0210 §B"
     },
     {
       "code": "delegation_expired",
@@ -359,6 +404,15 @@
       "details": null,
       "since": "1.0",
       "source": "spec/v1/rest-endpoints.md §Error response shape"
+    },
+    {
+      "code": "credential_scope_forbidden",
+      "httpStatus": 403,
+      "statusSource": "v1 prose",
+      "retriable": false,
+      "details": null,
+      "since": "1.0",
+      "source": "spec/v1/capabilities.md §B.8"
     },
     {
       "code": "delegation_scope_amplified",
@@ -654,11 +708,11 @@
     {
       "code": "interrupt_cancelled",
       "httpStatus": 410,
-      "statusSource": "v1 prose",
+      "statusSource": "registry (v1 prose said 422, run-scoped; RFC 0213 §C)",
       "retriable": false,
       "details": null,
       "since": "1.0",
-      "source": "spec/v1/interrupt.md (the run was cancelled while suspended)"
+      "source": "spec/v1/interrupt.md:434 (422, run-scoped). The v2 core resolve surfaces do not emit it — RFC 0171 C4.6 one code per state; RFC 0213 §C."
     },
     {
       "code": "interrupt_expired",
@@ -948,6 +1002,24 @@
       "details": null,
       "since": "1.0",
       "source": "spec/v1/rest-endpoints.md §Error response shape"
+    },
+    {
+      "code": "unknown_envelope_kind",
+      "httpStatus": 422,
+      "statusSource": "v1 prose",
+      "retriable": false,
+      "details": null,
+      "since": "1.0",
+      "source": "spec/v1/ai-envelope.md §\"Refusal taxonomy\" (unknown type, not in supportedEnvelopes)"
+    },
+    {
+      "code": "unknown_schema_version",
+      "httpStatus": 422,
+      "statusSource": "v1 prose",
+      "retriable": false,
+      "details": null,
+      "since": "1.0",
+      "source": "spec/v1/ai-envelope.md §\"Schema version advertisement\" (emitted schemaVersion above the advertised floor)"
     }
   ]
 }

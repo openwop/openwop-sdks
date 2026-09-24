@@ -78,6 +78,10 @@ from .types import (
     PutContentSectionRequest,
     RegisterWebhookRequest,
     RegisterWebhookResponse,
+    RotateWebhookSecretRequest,
+    RotateWebhookSecretResponse,
+    DeadLetteredDelivery,
+    WebhookDeadLetterPage,
     RenderPromptRequest,
     RenderPromptResponse,
     ResolveInterruptRequest,
@@ -767,6 +771,73 @@ class OpenwopClient:
         """
 
         self._request_json("DELETE", f"/webhooks/{subscription_id}")
+
+    def webhooks_rotate_secret(
+        self,
+        subscription_id: str,
+        body: RotateWebhookSecretRequest,
+        *,
+        idempotency_key: str | None = None,
+    ) -> RotateWebhookSecretResponse:
+        """Rotate a Standard Webhooks subscription's secret with an overlap.
+
+        RFC 0201 §E.18; gated on ``webhooks.secretRotation`` (``404`` when
+        unadvertised). Only for a subscription that opted into
+        ``standard-webhooks-1`` — any other gets ``400``. No secret is
+        returned.
+        """
+
+        headers = self._mutation_headers(idempotency_key=idempotency_key)
+        d = self._request_json(
+            "POST",
+            f"/webhooks/{quote(subscription_id, safe='')}/rotate-secret",
+            body=_to_jsonable(body),
+            headers=headers,
+        )
+        return RotateWebhookSecretResponse(
+            rotatedAt=str(d["rotatedAt"]),
+            previousSecretExpiresAt=str(d["previousSecretExpiresAt"]),
+        )
+
+    def webhooks_dead_letters(
+        self,
+        subscription_id: str,
+        *,
+        limit: int | None = None,
+        cursor: str | None = None,
+    ) -> WebhookDeadLetterPage:
+        """One page of dead-lettered deliveries, newest first (RFC 0188 §A.1).
+
+        Records name a delivery and never carry its bytes (§B.1).
+        """
+
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        qs = "?" + urlencode(params) if params else ""
+        d = self._request_json(
+            "GET", f"/webhooks/{quote(subscription_id, safe='')}/dead-letters{qs}"
+        )
+        return WebhookDeadLetterPage(
+            deliveries=[
+                DeadLetteredDelivery(
+                    deliveryId=str(x["deliveryId"]),
+                    webhookId=str(x["webhookId"]),
+                    runId=str(x["runId"]),
+                    eventId=str(x["eventId"]),
+                    eventType=str(x["eventType"]),
+                    attempts=int(x["attempts"]),
+                    deadLetteredAt=str(x["deadLetteredAt"]),
+                    expiresAt=str(x["expiresAt"]),
+                    reason=x["reason"],
+                    lastStatus=int(x["lastStatus"]) if x.get("lastStatus") is not None else None,
+                )
+                for x in d.get("deliveries", [])
+            ],
+            nextCursor=d.get("nextCursor"),
+        )
 
     def runs_fork(
         self,

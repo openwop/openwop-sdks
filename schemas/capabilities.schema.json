@@ -877,6 +877,10 @@
           "uniqueItems": true,
           "description": "OAuth 2.0 grant types the host performs on a node's behalf."
         },
+        "credentialInterrupt": {
+          "type": "boolean",
+          "description": "RFC 0199 §C. The host suspends a node on a `credential` interrupt instead of failing it when no credential resolves or refresh fails terminally. Absent ⇒ RFC 0047 §C.3 (fail the node with `connector_auth_expired`)."
+        },
         "providers": {
           "type": "array",
           "description": "Provider catalog the host can acquire tokens for. A connector node's `auth.provider` MUST match an `id` here.",
@@ -907,6 +911,19 @@
                   "type": "string"
                 },
                 "description": "Scopes this provider exposes."
+              },
+              "issuer": {
+                "type": "string",
+                "format": "uri",
+                "description": "RFC 0199 §A.4. The provider's authorization-server issuer identifier (RFC 8414 / RFC 9207). Absent ⇒ the host uses a provider-unique redirect URI (RFC 9700 §4.4.2.2)."
+              },
+              "pkce": {
+                "type": "string",
+                "enum": [
+                  "S256",
+                  "unsupported"
+                ],
+                "description": "RFC 0199 §A.1. Absent or `S256` ⇒ the host sends PKCE S256. `unsupported` ⇒ the host sends no PKCE for this provider; such a provider cannot back an MCP reach (§B.2)."
               }
             },
             "additionalProperties": false
@@ -2741,11 +2758,27 @@
             "type": "string"
           },
           "uniqueItems": true,
-          "description": "HMAC signature algorithm ids the host supports (e.g. `v1`)."
+          "description": "HMAC signature algorithm ids the host supports (e.g. `v1`). `standard-webhooks-1` (RFC 0201) names the Standard Webhooks 1.0.0 companion scheme a subscriber opts into per subscription; it is listed only beside `v1`."
         },
         "durable": {
           "type": "boolean",
           "description": "RFC 0083 §A — OPTIONAL opt-in. `true` ⇒ webhook delivery is durable (a trigger-bridge source); absent/`false` ⇒ the best-effort `webhooks.md` contract, unchanged. The best-effort default is NOT relaxed."
+        },
+        "secretRotation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "overlapSeconds"
+          ],
+          "description": "RFC 0201 §E — zero-downtime secret rotation for subscriptions opted into `standard-webhooks-1`. Advertised only by a host that serves `POST /v1/webhooks/{webhookId}/rotate-secret`.",
+          "properties": {
+            "overlapSeconds": {
+              "type": "integer",
+              "minimum": 60,
+              "maximum": 604800,
+              "description": "How long after a rotation `webhook-signature` carries an entry under the previous secret beside the new one."
+            }
+          }
         }
       }
     },

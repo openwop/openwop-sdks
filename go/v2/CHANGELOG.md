@@ -2,6 +2,16 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2.Y.Z`).
 
+## [Unreleased]
+
+### Added
+
+- **`RotateWebhookSecret`** and **`ListWebhookDeadLetters`** — RFC 0201 §E.18 and RFC 0188 §A.1, with `RotateWebhookSecretRequest` / `RotateWebhookSecretResponse` / `WebhookDeadLetterPage` / `DeadLetteredDelivery`.
+
+### Changed
+
+- **Corpus pin `v2.4.1` → `v2.37.0`**; `InterruptByTokenInspection.Kind` documents `"credential"` (RFC 0199 §C).
+
 ## [2.3.0] — 2026-09-17 — corpus `v2.3.3`
 
 ### Changed

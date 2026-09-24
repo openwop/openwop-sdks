@@ -119,7 +119,7 @@
         "schemaRef": {
           "type": "string",
           "minLength": 1,
-          "description": "Path inside the pack tarball to the artifact's JSON Schema (Draft 2020-12). The target schema MUST set `additionalProperties: false` at its top level and declare an `$id` under `{HostBase}/schemas/artifacts/{artifactTypeId}.schema.json`, mirroring the envelope convention in `ai-envelope.md` \u00a7\"Canonical schema location\"."
+          "description": "Path inside the pack tarball to the artifact's JSON Schema (Draft 2020-12). The target schema SHOULD set `additionalProperties: false` at its top level when `validation` is `closed` (RFC 0075 relaxed this from MUST; an `open` schema tolerates extra fields), and MUST declare an `$id` under the publishing host's `{HostBase}/schemas/artifacts/{artifactTypeId}.schema.json` namespace, mirroring the envelope convention in `ai-envelope.md` \u00a7\"Canonical schema location\". For a pack published through a registry, the publishing host is the registry: its origin is `{HostBase}`, and the `$id` carries no pack version \u2014 an artifact type's identity is stable across pack versions, and `schemaVersion` versions the schema."
         },
         "schemaVersion": {
           "type": "integer",
@@ -146,11 +146,11 @@
           "items": {
             "type": "string",
             "minLength": 1,
-            "maxLength": 64,
-            "pattern": "^([a-z][a-z0-9]*|vendor\\.[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*|x-[a-z][a-z0-9-]*)$"
+            "maxLength": 255,
+            "pattern": "^([a-z][a-z0-9]*|vendor\\.[a-z][a-z0-9-]*\\.[a-z][a-z0-9-]*|x-[a-z][a-z0-9-]*|[a-z0-9][a-z0-9!#$&^_.+-]{0,126}/[a-z0-9][a-z0-9!#$&^_.+-]{0,126})$"
           },
           "uniqueItems": true,
-          "description": "Export-format identifiers (hints) a renderer MAY offer. Spec-reserved core identifiers carry interoperable meaning (the lowercase file-extension / common name): `pdf`, `pptx`, `docx`, `xlsx`, `md`, `html`, `txt`, `csv`, `json`, `png`, `svg`, `jpeg`, `step`, `stl`, `dxf`. Domain-specific formats outside the core set MUST be `vendor.<org>.<format>`- or `x-<format>`-prefixed (mirrors the `requiredModelCapabilities` reserved-core + extension idiom). Advisory: this spec assigns no byte-level production semantics to any identifier \u2014 it standardizes the identifier so two hosts agree what `pptx` names, not how the bytes are produced."
+          "description": "Export-format identifiers (hints) a renderer MAY offer. Spec-reserved core identifiers carry interoperable meaning (the lowercase file-extension / common name): `pdf`, `pptx`, `docx`, `xlsx`, `md`, `html`, `txt`, `csv`, `json`, `png`, `svg`, `jpeg`, `step`, `stl`, `dxf`. Domain-specific formats outside the core set MUST be `vendor.<org>.<format>`- or `x-<format>`-prefixed (mirrors the `requiredModelCapabilities` reserved-core + extension idiom). An entry MAY instead be a lowercase RFC 6838 media type (`type/subtype`, no parameters; RFC 0205 §C); each reserved alias names exactly one media type per artifact-type-packs.md §\"Export-format aliases\", and a consumer MUST treat the two spellings as one format. Advisory: this spec assigns no byte-level production semantics to any identifier \u2014 it standardizes the identifier so two hosts agree what `pptx` names, not how the bytes are produced."
         },
         "syncOn": {
           "type": "string",
@@ -218,32 +218,26 @@
     },
     "Signing": {
       "type": "object",
-      "description": "Optional signing metadata. See node-packs.md \u00a7signing.",
       "additionalProperties": false,
+      "required": [
+        "keyId",
+        "scheme"
+      ],
       "properties": {
-        "publicKeyRef": {
-          "type": "string",
-          "description": "Path inside the tarball to the Ed25519 public key (PEM-encoded)."
+        "keyId": {
+          "$ref": "ids.schema.json#/$defs/keyId"
         },
-        "signatureRef": {
-          "type": "string",
-          "description": "Path to the detached signature over `pack.json`."
-        },
-        "method": {
-          "type": "string",
-          "enum": [
-            "manual",
-            "sigstore"
-          ],
-          "description": "Signing method. `manual` uses publicKeyRef + signatureRef; `sigstore` uses a Sigstore bundle at `pack.json.sigstore`."
+        "scheme": {
+          "const": "ed25519-canonical-json",
+          "description": "RFC 0177 §C.3 — one scheme: a detached 64-byte Ed25519 signature over the canonical-JSON pack.json inside a deterministic tarball. method and publicKeyRef are gone."
         }
-      }
+      },
+      "description": "RFC 0177 §C.3/§C.4 — OPTIONAL on a bare manifest (an authoring-time pack.json exists before it is signed); when present it is the same closed { keyId, scheme } block a version manifest carries (registry-version-manifest.schema.json). The v1 { publicKeyRef, signatureRef, method } block does not exist in v2 (migration row openwop.migration.C10.1)."
     }
   },
   "patternProperties": {
     "^(openwop-|x-|vendor\\.)": {
       "description": "Vendor / host extension escape hatch (RFC 0138). A property matching `^(x-|vendor\\.)` is a HOST EXTENSION: its semantics are unspecified by this protocol, and a consumer that does not recognize one MUST ignore it rather than reject the pack. Resolves the contradiction in `host-extensions.md` \u00a7\"Vendor-prefixed namespaces\", which requires a client receiving an unknown vendor-prefixed field to treat it as opaque \u2014 a field that `additionalProperties: false` previously made impossible to carry. SECURITY: an extension value is PACK-AUTHORED, therefore untrusted; \"ignore\" means ignore. See `node-packs.md` \u00a7\"Vendor extensions on pack manifests\" and the `pack-manifest-extension-opaque` invariant."
     }
-  },
-  "x-openwop-seeded-from": "v1"
+  }
 }

@@ -288,6 +288,45 @@ class RegisterWebhookResponse:
     createdAt: str
 
 
+# RFC 0201 §E.18 — POST /webhooks/{webhookId}/rotate-secret.
+@dataclass
+class RotateWebhookSecretRequest:
+    """The new secret, ``whsec_<base64>`` decoding to 24–64 bytes. Never echoed."""
+
+    secret: str
+
+
+@dataclass(frozen=True)
+class RotateWebhookSecretResponse:
+    """No secret is returned. ``previousSecretExpiresAt`` = ``rotatedAt + overlapSeconds``."""
+
+    rotatedAt: str
+    previousSecretExpiresAt: str
+
+
+# RFC 0188 §A.1 — GET /webhooks/{webhookId}/dead-letters.
+@dataclass(frozen=True)
+class DeadLetteredDelivery:
+    """One dead-lettered delivery — content-free by construction (RFC 0188 §B.1)."""
+
+    deliveryId: str
+    webhookId: str
+    runId: str
+    eventId: str
+    eventType: str
+    attempts: int
+    deadLetteredAt: str
+    expiresAt: str
+    reason: Literal["retries_exhausted", "payload_unprojectable"]
+    lastStatus: int | None = None
+
+
+@dataclass(frozen=True)
+class WebhookDeadLetterPage:
+    deliveries: list[DeadLetteredDelivery]
+    nextCursor: str | None = None
+
+
 # rest-endpoints.md §"POST /runs:bulk-cancel" (closes R1).
 @dataclass
 class BulkCancelRunsRequest:
@@ -436,6 +475,7 @@ class InterruptByTokenInspection:
         "conversation.close",
         # Phase 1 — confidence-escalation contract.
         "low-confidence",
+        "credential",
     ]
     key: str
     data: Any
