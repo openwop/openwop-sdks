@@ -268,6 +268,54 @@ func (c *OpenwopClient) UnregisterWebhook(
 	)
 }
 
+// RotateWebhookSecret calls POST /webhooks/{subscriptionID}/rotate-secret
+// (RFC 0201 §E.18; gated on webhooks.secretRotation, 404 when unadvertised).
+// Only for a subscription that opted into standard-webhooks-1; any other gets
+// 400. The response carries no secret.
+func (c *OpenwopClient) RotateWebhookSecret(
+	ctx context.Context,
+	subscriptionID string,
+	body RotateWebhookSecretRequest,
+	opts MutationOptions,
+) (*RotateWebhookSecretResponse, error) {
+	var out RotateWebhookSecretResponse
+	if err := c.requestJSON(
+		ctx, http.MethodPost,
+		"/webhooks/"+url.PathEscape(subscriptionID)+"/rotate-secret",
+		body, opts.headers(), true, &out,
+	); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ListWebhookDeadLetters calls GET /webhooks/{subscriptionID}/dead-letters
+// (RFC 0188 §A.1): one page of dead-lettered deliveries, newest first. limit
+// <= 0 and an empty cursor are omitted.
+func (c *OpenwopClient) ListWebhookDeadLetters(
+	ctx context.Context,
+	subscriptionID string,
+	limit int,
+	cursor string,
+) (*WebhookDeadLetterPage, error) {
+	q := url.Values{}
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+	if cursor != "" {
+		q.Set("cursor", cursor)
+	}
+	path := "/webhooks/" + url.PathEscape(subscriptionID) + "/dead-letters"
+	if enc := q.Encode(); enc != "" {
+		path += "?" + enc
+	}
+	var out WebhookDeadLetterPage
+	if err := c.requestJSON(ctx, http.MethodGet, path, nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // VerifyAuditLog calls GET /audit/verify?fromSeq=&toSeq= per
 // auth-profiles.md §"openwop-audit-log-integrity" §4. Requires the
 // audit:read scope on the API key. Hosts that do NOT advertise the

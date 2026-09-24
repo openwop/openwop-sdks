@@ -4,6 +4,20 @@ The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CH
 
 ## [Unreleased]
 
+### Added
+
+- **`webhooks.rotateSecret(webhookId, { secret })`** — `POST /webhooks/{webhookId}/rotate-secret` (RFC 0201 §E.18; gated on `webhooks.secretRotation`). Types `RotateWebhookSecretRequest` / `RotateWebhookSecretResponse`; the response carries no secret.
+- **`webhooks.deadLetters(webhookId, { limit?, cursor? })`** — `GET /webhooks/{webhookId}/dead-letters` (RFC 0188 §A.1). Types `WebhookDeadLetterPage` / `DeadLetteredDelivery`; records name a delivery and never carry its bytes.
+
+### Changed
+
+- **Corpus pin `v2.4.1` → `v2.37.0`** (`CORPUS_TAG`; 51 vendored artifacts refreshed, plus `schemas/v2/part.schema.json` and `schemas/v2/webhook-dead-letter-page.schema.json` newly vendored).
+- **`InterruptByTokenInspection.kind` gains `'credential'`** (RFC 0199 §C) — the union now equals the schema enum; a strict consumer refused it before.
+
+### Fixed
+
+- **`InterruptRequestedPayload` (and `ApprovalRequestedPayload`) typed as `unknown`.** Corpus 2.36.0 bound `data` to `kind` with one `if`/`then` per kind in `suspend-request.schema.json`; `scripts/generate-payloads.mjs` intersected each conditional as `unknown` and dropped the object's own properties. A block of single-const conditionals is now generated as a discriminated union — one branch per kind with `data` typed — and the same fix types `SubjectSchema` and `ConversationTurn`, which had also read `unknown`.
+
 ## [2.3.0] — 2026-09-17 — corpus `v2.3.3`: typed event payloads, opt-in
 
 ### Added

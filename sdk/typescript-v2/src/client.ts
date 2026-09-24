@@ -46,6 +46,10 @@ import {
   type PromptTemplate,
   type RegisterWebhookRequest,
   type RegisterWebhookResponse,
+  type RotateWebhookSecretRequest,
+  type RotateWebhookSecretResponse,
+  type ListWebhookDeadLettersRequest,
+  type WebhookDeadLetterPage,
   type PauseRunRequest,
   type PauseRunResponse,
   type PollEventsResponse,
@@ -679,6 +683,40 @@ export class OpenwopClient {
       await this.#request<unknown>({
         method: 'DELETE',
         path: `/webhooks/${encodeURIComponent(webhookId)}`,
+      });
+    },
+
+    /**
+     * `POST /webhooks/{webhookId}/rotate-secret` (RFC 0201 §E.18; gated on
+     * `webhooks.secretRotation`, `404` when unadvertised). Only for a
+     * subscription that opted into `standard-webhooks-1`; any other gets
+     * `400`. The response carries no secret.
+     */
+    rotateSecret: (
+      webhookId: string,
+      body: RotateWebhookSecretRequest,
+      opts: MutationOptions = {},
+    ): Promise<RotateWebhookSecretResponse> =>
+      this.#request<RotateWebhookSecretResponse>({
+        method: 'POST',
+        path: `/webhooks/${encodeURIComponent(webhookId)}/rotate-secret`,
+        body,
+        headers: this.#mutationHeaders(opts),
+      }),
+
+    /**
+     * `GET /webhooks/{webhookId}/dead-letters` (RFC 0188 §A.1) — one page of
+     * dead-lettered deliveries, newest first. Records name a delivery and
+     * never carry its bytes.
+     */
+    deadLetters: (webhookId: string, req: ListWebhookDeadLettersRequest = {}): Promise<WebhookDeadLetterPage> => {
+      const search = new URLSearchParams();
+      if (req.limit !== undefined) search.set('limit', String(req.limit));
+      if (req.cursor !== undefined) search.set('cursor', req.cursor);
+      const qs = search.toString();
+      return this.#request<WebhookDeadLetterPage>({
+        method: 'GET',
+        path: `/webhooks/${encodeURIComponent(webhookId)}/dead-letters${qs ? `?${qs}` : ''}`,
       });
     },
   };

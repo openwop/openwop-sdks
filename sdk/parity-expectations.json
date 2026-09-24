@@ -434,6 +434,19 @@
       }
     },
     {
+      "operationId": "rotateWebhookSecret",
+      "method": "POST",
+      "path": "/v1/webhooks/{webhookId}/rotate-secret",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "webhooks.rotateSecret",
+        "py": "webhooks_rotate_secret",
+        "go": "RotateWebhookSecret"
+      }
+    },
+    {
       "operationId": "getWorkflow",
       "method": "GET",
       "path": "/v1/workflows/{workflowId}",

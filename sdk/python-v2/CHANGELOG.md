@@ -2,6 +2,16 @@
 
 The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
+## [Unreleased]
+
+### Added
+
+- **`webhooks_rotate_secret(subscription_id, body)`** and **`webhooks_dead_letters(subscription_id, *, limit=None, cursor=None)`** — RFC 0201 §E.18 and RFC 0188 §A.1, with `RotateWebhookSecretRequest` / `RotateWebhookSecretResponse` / `WebhookDeadLetterPage` / `DeadLetteredDelivery`.
+
+### Changed
+
+- **Corpus pin `v2.4.1` → `v2.37.0`**; the interrupt `kind` literal gains `"credential"` (RFC 0199 §C).
+
 ## [2.3.0] — 2026-09-17 — corpus `v2.3.3`
 
 ### Changed

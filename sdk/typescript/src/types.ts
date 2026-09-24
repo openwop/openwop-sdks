@@ -386,6 +386,25 @@ export interface RegisterWebhookResponse {
   createdAt: string;
 }
 
+export interface RotateWebhookSecretRequest {
+  /**
+   * The new secret in the Standard Webhooks form `whsec_<base64>` decoding to
+   * 24–64 bytes (RFC 0201 §B.6). Never echoed in the response.
+   */
+  secret: string;
+}
+
+export interface RotateWebhookSecretResponse {
+  /** RFC 3339 instant the rotation took effect. */
+  rotatedAt: string;
+  /**
+   * `rotatedAt + overlapSeconds` — until this instant every delivery carries
+   * one `webhook-signature` entry under each secret and `X-openwop-Signature`
+   * stays on the previous secret (RFC 0201 §E.18).
+   */
+  previousSecretExpiresAt: string;
+}
+
 export interface PauseRunRequest {
   reason?: string;
   drainPolicy?: 'immediate' | 'drain-current-node';

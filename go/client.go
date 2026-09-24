@@ -273,6 +273,32 @@ func (c *OpenwopClient) UnregisterWebhook(
 	)
 }
 
+// RotateWebhookSecret calls POST /v1/webhooks/{subscriptionID}/rotate-secret
+// per spec/v1/webhooks.md §"Standard Webhooks companion scheme" →
+// Rotation (RFC 0201 §E.18). Gated on capabilities.webhooks.secretRotation:
+// a host that does not advertise the facet answers 404, and a subscription
+// that did not opt into standard-webhooks-1 gets 400 validation_error.
+// The response carries no secret. tenantID is a required query parameter:
+// the route is not path-nested under workspaces (spec/v1/webhooks.md).
+func (c *OpenwopClient) RotateWebhookSecret(
+	ctx context.Context,
+	subscriptionID string,
+	tenantID string,
+	body RotateWebhookSecretRequest,
+	opts MutationOptions,
+) (*RotateWebhookSecretResponse, error) {
+	var out RotateWebhookSecretResponse
+	if err := c.requestJSON(
+		ctx, http.MethodPost,
+		"/v1/webhooks/"+url.PathEscape(subscriptionID)+
+			"/rotate-secret?tenantId="+url.QueryEscape(tenantID),
+		body, opts.headers(), true, &out,
+	); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // VerifyAuditLog calls GET /v1/audit/verify?fromSeq=&toSeq= per
 // auth-profiles.md §"openwop-audit-log-integrity" §4. Requires the
 // audit:read scope on the API key. Hosts that do NOT advertise the

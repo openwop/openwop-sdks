@@ -34,7 +34,7 @@
   },
   "examples": [
     {
-      "runId": "run_x",
+      "runId": "acme/run_x-xxxxxxxxxx",
       "stepId": "step_3",
       "seq": 12,
       "output": {

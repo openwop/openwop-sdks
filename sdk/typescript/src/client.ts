@@ -42,6 +42,8 @@ import {
   type PromptTemplate,
   type RegisterWebhookRequest,
   type RegisterWebhookResponse,
+  type RotateWebhookSecretRequest,
+  type RotateWebhookSecretResponse,
   type PauseRunRequest,
   type PauseRunResponse,
   type PollEventsResponse,
@@ -715,6 +717,31 @@ export class OpenwopClient {
         path: `/v1/webhooks/${encodeURIComponent(subscriptionId)}`,
       });
     },
+
+    /**
+     * Rotate a subscription's signing secret with an overlap
+     * (`spec/v1/webhooks.md` §"Standard Webhooks companion scheme" →
+     * **Rotation**; RFC 0201 §E.18). Gated on
+     * `capabilities.webhooks.secretRotation`: a host that does not advertise
+     * the facet answers `404`, and a subscription that did not opt into
+     * `standard-webhooks-1` gets `400 validation_error`. The response carries
+     * NO secret — the caller already holds the new one.
+     *
+     * `tenantId` is a required query parameter: the route is not path-nested
+     * under workspaces (`spec/v1/webhooks.md`).
+     */
+    rotateSecret: (
+      subscriptionId: string,
+      tenantId: string,
+      body: RotateWebhookSecretRequest,
+      opts: MutationOptions = {},
+    ): Promise<RotateWebhookSecretResponse> =>
+      this.#request<RotateWebhookSecretResponse>({
+        method: 'POST',
+        path: `/v1/webhooks/${encodeURIComponent(subscriptionId)}/rotate-secret?tenantId=${encodeURIComponent(tenantId)}`,
+        body,
+        headers: this.#mutationHeaders(opts),
+      }),
   };
 
   // ── Prompt library (RFC 0028; gated on capabilities.prompts.*) ──

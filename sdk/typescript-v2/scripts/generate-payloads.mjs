@@ -94,7 +94,41 @@ function toTs(node, file, depth) {
   if (node.const !== undefined) return JSON.stringify(node.const);
   const alts = node.oneOf ?? node.anyOf;
   if (Array.isArray(alts)) return `(${alts.map((n) => toTs(n, file, depth)).join(' | ')})`;
-  if (Array.isArray(node.allOf)) return `(${node.allOf.map((n) => toTs(n, file, depth)).join(' & ')})`;
+  if (Array.isArray(node.allOf)) {
+    // A JSON-Schema conditional (`if`/`then`) carries no type of its own, so a
+    // member-wise intersection typed each one `unknown` — and dropped the
+    // node's OWN `properties` entirely. That is what collapsed
+    // `InterruptRequestedPayload` to `unknown` once suspend-request.schema.json
+    // bound `data` to `kind` with one `if: { kind: const } then: { data: $ref }`
+    // per kind (corpus 2.36.0, MCP/A2A review P3-H7). A block of such
+    // conditionals over ONE const discriminant is a discriminated union: one
+    // branch per `if`, the base object with the discriminant narrowed to that
+    // const and the `then` properties overlaid.
+    const conds = node.allOf.filter((m) => m && typeof m === 'object' && m.if && m.then);
+    const rest = node.allOf.filter((m) => !conds.includes(m));
+    const { allOf: _drop, ...base } = node;
+    const hasOwn = base.properties || base.type;
+    const disc = (m) => {
+      const ps = Object.entries(m.if.properties ?? {}).filter(([, v]) => v && v.const !== undefined);
+      return ps.length === 1 ? ps[0] : null;
+    };
+    const parts = [];
+    if (hasOwn && conds.length > 0 && conds.every((m) => disc(m) !== null && !m.else)) {
+      const branches = conds.map((m) => {
+        const [key, cv] = disc(m);
+        return toTs({
+          ...base,
+          properties: { ...(base.properties ?? {}), [key]: { const: cv.const }, ...(m.then.properties ?? {}) },
+          required: [...new Set([...(base.required ?? []), key, ...(m.then.required ?? [])])],
+        }, file, depth);
+      });
+      parts.push(`(${branches.join(' | ')})`);
+    } else if (hasOwn) {
+      parts.push(toTs(base, file, depth));
+    }
+    for (const m of (hasOwn && parts.length > 0 && conds.length > 0 && conds.every((c) => disc(c) !== null && !c.else) ? rest : node.allOf.filter((x) => !(hasOwn && conds.includes(x))))) parts.push(toTs(m, file, depth));
+    return parts.length === 1 ? parts[0] : `(${parts.join(' & ')})`;
+  }
   const types = Array.isArray(node.type) ? node.type : node.type ? [node.type] : (node.properties || node.patternProperties ? ['object'] : null);
   if (!types) return 'unknown';
   const pad = '  '.repeat(depth);
