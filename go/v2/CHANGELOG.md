@@ -10,7 +10,7 @@ The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a
 
 ### Changed
 
-- **Corpus pin `v2.4.1` → `v2.37.0`**; `InterruptByTokenInspection.Kind` documents `"credential"` (RFC 0199 §C).
+- **Corpus pin `v2.4.1` → `v2.38.0`** (via `v2.37.0`, the first tag carrying the v1 `rotateWebhookSecret` operation; `v2.38.0` refreshes 15 more artifacts — v1 `unregisterWebhook` now declares its required `tenantId` query parameter, RFC 0212 I-JSON wording on the JCS hash inputs); `InterruptByTokenInspection.Kind` documents `"credential"` (RFC 0199 §C).
 
 ## [2.3.0] — 2026-09-17 — corpus `v2.3.3`
 

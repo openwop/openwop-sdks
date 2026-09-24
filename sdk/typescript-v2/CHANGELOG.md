@@ -11,7 +11,7 @@ The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CH
 
 ### Changed
 
-- **Corpus pin `v2.4.1` → `v2.37.0`** (`CORPUS_TAG`; 51 vendored artifacts refreshed, plus `schemas/v2/part.schema.json` and `schemas/v2/webhook-dead-letter-page.schema.json` newly vendored).
+- **Corpus pin `v2.4.1` → `v2.38.0`** (via `v2.37.0`, the first tag carrying the v1 `rotateWebhookSecret` operation; `v2.38.0` refreshes 15 more artifacts — v1 `unregisterWebhook` now declares its required `tenantId` query parameter, RFC 0212 I-JSON wording on the JCS hash inputs) (`CORPUS_TAG`; 51 vendored artifacts refreshed, plus `schemas/v2/part.schema.json` and `schemas/v2/webhook-dead-letter-page.schema.json` newly vendored).
 - **`InterruptByTokenInspection.kind` gains `'credential'`** (RFC 0199 §C) — the union now equals the schema enum; a strict consumer refused it before.
 
 ### Fixed
