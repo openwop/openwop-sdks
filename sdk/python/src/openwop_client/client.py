@@ -9,6 +9,7 @@ third-party deps — pure `urllib.request`.
 from __future__ import annotations
 
 import json
+import warnings
 from dataclasses import asdict, is_dataclass
 from typing import Any, Iterator, Literal, Sequence, cast
 from urllib.error import HTTPError, URLError
@@ -879,14 +880,38 @@ class OpenwopClient:
             createdAt=str(d["createdAt"]),
         )
 
-    def webhooks_unregister(self, subscription_id: str) -> None:
+    def webhooks_unregister(
+        self,
+        subscription_id: str,
+        tenant_id: str | None = None,
+    ) -> None:
         """Unregister a webhook subscription.
 
         Raises :class:`WopError` with code ``subscription_not_found``
         when the subscription_id is unknown.
+
+        ``tenant_id`` is sent as the ``tenantId`` query parameter, which
+        the v1 contract requires (``spec/v1/webhooks.md`` section
+        "Unregister"; declared in ``api/openapi.yaml`` since corpus
+        2.37.1): the route is not path-nested under workspaces. It
+        defaults to ``None`` only so existing 1.x callers keep working —
+        omitting it is **deprecated** (a :class:`DeprecationWarning` is
+        emitted), and a host that enforces the contract rejects the call
+        with ``400 validation_error``. Pass it.
         """
 
-        self._request_json("DELETE", f"/v1/webhooks/{subscription_id}")
+        path = f"/v1/webhooks/{quote(subscription_id, safe='')}"
+        if tenant_id is None:
+            warnings.warn(
+                "webhooks_unregister() without tenant_id is deprecated: the v1 "
+                "contract requires the tenantId query parameter and hosts that "
+                "enforce it reject the call. Pass tenant_id.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+        else:
+            path += f"?tenantId={quote(tenant_id, safe='')}"
+        self._request_json("DELETE", path)
 
     def webhooks_rotate_secret(
         self,

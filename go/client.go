@@ -259,9 +259,15 @@ func (c *OpenwopClient) RegisterWebhook(
 	return &out, nil
 }
 
-// UnregisterWebhook calls DELETE /v1/webhooks/{subscriptionID}.
-// Returns nil on success; an unknown subscription surfaces as a
-// WopError with code "subscription_not_found".
+// UnregisterWebhook calls DELETE /v1/webhooks/{subscriptionID} WITHOUT the
+// tenantId query parameter. Returns nil on success; an unknown subscription
+// surfaces as a WopError with code "subscription_not_found".
+//
+// Deprecated: the v1 contract requires the tenantId query parameter
+// (spec/v1/webhooks.md §Unregister; declared in api/openapi.yaml since
+// corpus 2.37.1), so a host that enforces it rejects this call with
+// 400 validation_error. Use UnregisterWebhookForTenant. Kept, unchanged,
+// so the Go 1.x module's exported signatures do not break.
 func (c *OpenwopClient) UnregisterWebhook(
 	ctx context.Context,
 	subscriptionID string,
@@ -269,6 +275,25 @@ func (c *OpenwopClient) UnregisterWebhook(
 	return c.requestJSON(
 		ctx, http.MethodDelete,
 		"/v1/webhooks/"+url.PathEscape(subscriptionID),
+		nil, nil, true, nil,
+	)
+}
+
+// UnregisterWebhookForTenant calls
+// DELETE /v1/webhooks/{subscriptionID}?tenantId={tenantID} per
+// spec/v1/webhooks.md §Unregister. tenantID is a required query parameter:
+// the route is not path-nested under workspaces (the same shape as
+// RotateWebhookSecret). Returns nil on success; an unknown subscription
+// surfaces as a WopError with code "subscription_not_found".
+func (c *OpenwopClient) UnregisterWebhookForTenant(
+	ctx context.Context,
+	subscriptionID string,
+	tenantID string,
+) error {
+	return c.requestJSON(
+		ctx, http.MethodDelete,
+		"/v1/webhooks/"+url.PathEscape(subscriptionID)+
+			"?tenantId="+url.QueryEscape(tenantID),
 		nil, nil, true, nil,
 	)
 }

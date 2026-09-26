@@ -1,5 +1,11 @@
 # `openwopclient` Changelog
 
+## [Unreleased] — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50)
+
+- **`(*OpenwopClient).UnregisterWebhookForTenant(ctx, subscriptionID, tenantID)`** — sends `?tenantId=`, the same shape as `RotateWebhookSecret`. `spec/v1/webhooks.md` §Unregister has always required the `tenantId` query parameter and corpus 2.37.1+ (`api/openapi.yaml` `unregisterWebhook`, openwop#1530) declares it, but the 1.x helper never sent it, so a host that enforces the contract rejected the call (openwop-sdks#50). Additive — no existing call changes shape. A new function rather than a new parameter so the v1 module's exported signatures do not break.
+- **`UnregisterWebhook` is `Deprecated:`** — kept unchanged (no `tenantId`); enforcing hosts answer `400 validation_error`.
+- Pinned by `webhook_unregister_test.go`.
+
 ## [v1.6.0] — 2026-09-02 — webhook helpers read the spec's headers (RFC 0165 §C.3)
 
 _Go half of the three-SDK change (TypeScript 1.9.0, Python 1.7.0, Go v1.6.0). Additive — existing calls keep working; only the default emitted value changes shape._

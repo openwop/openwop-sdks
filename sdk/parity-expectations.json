@@ -430,7 +430,7 @@
       "go": "typed",
       "symbols": {
         "py": "webhooks_unregister",
-        "go": "UnregisterWebhook"
+        "go": "UnregisterWebhookForTenant"
       }
     },
     {
