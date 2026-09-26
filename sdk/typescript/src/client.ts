@@ -710,11 +710,19 @@ export class OpenwopClient {
      * Unregister a webhook subscription. Returns void on success;
      * throws `WopError` with `subscription_not_found` on unknown
      * subscriptionId.
+     *
+     * `tenantId` is sent as the `tenantId` query parameter, which the v1
+     * contract requires (`spec/v1/webhooks.md` §Unregister; declared in
+     * `api/openapi.yaml` since corpus 2.37.1): the route is not path-nested
+     * under workspaces. It is optional here only so 1.x callers keep
+     * compiling — omitting it is **deprecated**, and a host that enforces the
+     * contract rejects the call (`400 validation_error`). Pass it.
      */
-    unregister: async (subscriptionId: string): Promise<void> => {
+    unregister: async (subscriptionId: string, tenantId?: string): Promise<void> => {
+      const query = tenantId !== undefined ? `?tenantId=${encodeURIComponent(tenantId)}` : '';
       await this.#request<unknown>({
         method: 'DELETE',
-        path: `/v1/webhooks/${encodeURIComponent(subscriptionId)}`,
+        path: `/v1/webhooks/${encodeURIComponent(subscriptionId)}${query}`,
       });
     },
 
