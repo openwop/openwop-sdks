@@ -6,9 +6,9 @@
 
 ## Prerequisites
 
-- Python 3.11+
+- Python 3.10+
 - Node 20+ (only to run the in-memory reference host below; the SDK itself has zero runtime deps)
-- A clone of `github.com/openwop/openwop`
+- A clone of [`github.com/openwop/openwop-examples`](https://github.com/openwop/openwop-examples) (the in-memory host lives at `examples/hosts/in-memory`)
 
 ## Install
 
@@ -36,39 +36,33 @@ The host loads 46 [conformance fixtures](https://github.com/openwop/openwop/blob
 Create `quickstart.py`:
 
 ```python
-from openwop_client import OpenwopClient, CreateRunRequest
+import time
 
-client = OpenwopClient(
-    base_url="http://127.0.0.1:3737",
-    api_key="openwop-inmem-dev-key",
-)
+from openwop_client import CreateRunRequest, OpenwopClient
+from openwop_client.types import is_terminal_run_status
 
-# 1. Discovery — confirm protocol version + advertised capabilities.
-discovery = client.discovery()
-print(f"protocol: {discovery.protocol_version}")
-print(f"transports: {discovery.supported_transports}")
+client = OpenwopClient("http://127.0.0.1:3737", "openwop-inmem-dev-key")
+
+# 1. Discovery — confirm protocol version + advertised transports.
+caps = client.discovery_capabilities()
+print(f"protocol: {caps.protocolVersion}")
+print(f"transports: {caps.supportedTransports}")
 
 # 2. Create a run against a conformance fixture.
-run = client.create_run(
-    CreateRunRequest(
-        workflow_id="conformance-noop",
-        inputs={},
-    )
-)
-print(f"created run: {run.run_id} (status={run.status})")
+run = client.runs_create(CreateRunRequest(workflowId="conformance-noop", inputs={}))
+print(f"created run: {run.runId} (status={run.status})")
 
 # 3. Poll the snapshot until terminal.
-import time
 while True:
-    snap = client.get_run(run.run_id)
-    if snap.status in ("completed", "failed", "cancelled"):
+    snap = client.runs_get(run.runId)
+    if is_terminal_run_status(snap.status):
         print(f"terminal: {snap.status}")
         break
     time.sleep(0.1)
 
-# 4. Read the event log (poll mode — JSON).
-events = client.get_run_events_poll(run.run_id)
-for e in events.events:
+# 4. Read the event log (long-poll, JSON).
+page = client.runs_poll_events(run.runId)
+for e in page.events:
     print(f"  {e.sequence:>3}  {e.type}")
 ```
 
@@ -95,23 +89,23 @@ terminal: completed
 
 | Step | SDK method | Spec |
 |---|---|---|
-| Discovery | `client.discovery()` | [`capabilities.md`](https://github.com/openwop/openwop/blob/main/spec/v1/capabilities.md) |
-| Create run | `client.create_run(CreateRunRequest)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `POST /v1/runs` |
-| Poll snapshot | `client.get_run(run_id)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}` |
-| Read events | `client.get_run_events_poll(run_id)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}/events` (JSON mode) |
+| Discovery | `client.discovery_capabilities()` | [`capabilities.md`](https://github.com/openwop/openwop/blob/main/spec/v1/capabilities.md) `GET /.well-known/openwop` |
+| Create run | `client.runs_create(CreateRunRequest)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `POST /v1/runs` |
+| Poll snapshot | `client.runs_get(run_id)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}` |
+| Read events | `client.runs_poll_events(run_id, last_sequence=...)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}/events/poll` |
 
-Every method on `OpenwopClient` maps 1:1 to an OpenAPI operation in [`api/openapi.yaml`](https://github.com/openwop/openwop/blob/main/api/openapi.yaml).
+Every method on `OpenwopClient` maps 1:1 to an OpenAPI operation in [`api/openapi.yaml`](https://github.com/openwop/openwop/blob/main/api/openapi.yaml); `sdk/parity-expectations.json` names each one.
 
 ## Streaming events (live SSE)
 
 ```python
-for event in client.stream_run_events(run.run_id):
-    print(f"{event.type}: {event.payload}")
+for event in client.runs_events(run.runId):
+    print(event.sequence, event.type)
     if event.type in ("run.completed", "run.failed", "run.cancelled"):
         break
 ```
 
-`stream_run_events` is a generator-style iterator over the SSE stream — pure stdlib (`urllib.request` + manual frame parsing).
+`runs_events` is a generator over the SSE stream, pure stdlib (`urllib.request` + manual frame parsing). It yields only frames that are full `RunEventDoc`s and skips anything else. The in-memory host's SSE frames are abbreviated (`seq`, no `eventId` / `payload`), so against it this loop yields nothing — use the long-poll above there, and SSE against a full host such as `examples/hosts/sqlite`.
 
 ## Next steps
 
@@ -127,4 +121,4 @@ for event in client.stream_run_events(run.run_id):
 |---|---|---|
 | `urllib.error.URLError: <urlopen error [Errno 61] Connection refused>` | The in-memory host isn't running | Boot `npm start` in `examples/hosts/in-memory/` first |
 | `401 Unauthorized` from the API | API key mismatch | Set `OPENWOP_API_KEY=openwop-inmem-dev-key` (or pass `api_key=...` explicitly to `OpenwopClient`) |
-| Run never reaches terminal | Workflow uses a fixture the host doesn't advertise | Check `client.discovery().fixtures` — only listed fixtures will start |
+| Run never reaches terminal, or `runs_create` returns `404` | The workflow id is not one of the host's fixtures | The host prints how many fixtures it loaded at startup; use a `conformance-*` id from [`fixtures.md`](https://github.com/openwop/openwop/blob/main/conformance/fixtures.md) |
