@@ -138,6 +138,7 @@ func streamSSE[T any](
 	req.Header.Set("Authorization", "Bearer "+c.APIKey)
 	// RFC 0172 §A.3 — on every request, the subscribe included.
 	req.Header.Set("OpenWOP-Version", c.ProtocolVersion())
+	req.Header.Set("OpenWOP-Client-Version", c.ClientVersion())
 	if lastEventID != "" {
 		req.Header.Set("Last-Event-ID", lastEventID)
 	}

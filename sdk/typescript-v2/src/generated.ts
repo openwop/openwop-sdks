@@ -344,3 +344,9 @@ export const CAPABILITY_FAMILY_KEYS = [
 
 export type CapabilityMetadataKey = (typeof CAPABILITY_METADATA_KEYS)[number];
 export type CapabilityFamilyKey = (typeof CAPABILITY_FAMILY_KEYS)[number];
+
+/**
+ * The corpus release this SDK is built against (`CORPUS_TAG` v2.43.0), sent as
+ * `OpenWOP-Client-Version` on every request (RFC 0219). Not the package version.
+ */
+export const CORPUS_VERSION = '2.43.0';

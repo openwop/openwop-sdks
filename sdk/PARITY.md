@@ -32,6 +32,7 @@ The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against t
 |---|---|---|---|
 | `GET /.well-known/openwop` (closed v2 root) | `client.discovery.capabilities()` → `Capabilities` (families as `CapabilityRecord`) | `client.discovery_capabilities()` → `Capabilities.families` | `client.GetCapabilities(ctx)` → `Capabilities.Family(key)` |
 | `OpenWOP-Version: <major>.0` on every request | ctor `major` (default 2), `client.protocolVersion` | ctor `major=2`, `client.protocol_version` | `OpenwopClient.Major` (0 ⇒ 2), `ProtocolVersion()` |
+| `OpenWOP-Client-Version: <corpus version>` on every request, SSE subscribe included (RFC 0219; unreleased, 2.5.0) | generated `CORPUS_VERSION`, `client.clientVersion` | generated `CORPUS_VERSION`, `client.client_version` | generated `CorpusVersion`, `ClientVersion()` |
 | `OpenWOP-Dedup: enforce` | `MutationOptions.dedup` | `dedup=True` | `MutationOptions{Dedup: true}` |
 | `GET /runs/{id}/events/poll?afterSequence` | `runs.pollEvents(id, { afterSequence })` → `{ runId, events, lastSequence, status, isTerminal }` | `runs_poll_events(id, after_sequence=)` | `PollRunEvents(ctx, id, PollRunEventsOptions{AfterSequence})` |
 | `GET /runs/{id}/compensation` (RFC 0173 §C.1) | `runs.compensation(id)` (`null` on 404) | `runs_compensation(id)` (`None` on 404) | `GetRunCompensation(ctx, id)` (`nil, nil` on 404) |

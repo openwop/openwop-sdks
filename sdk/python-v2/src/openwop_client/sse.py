@@ -17,6 +17,7 @@ from typing import Any, Callable, Iterator, Sequence
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from ._generated import CORPUS_VERSION
 from .wire_id import project_id
 from .types import HostEventDoc, RunEventDoc, StreamMode
 
@@ -121,6 +122,7 @@ def _stream_sse(
         "Authorization": f"Bearer {api_key}",
         "Cache-Control": "no-cache",
         "OpenWOP-Version": protocol_version,
+        "OpenWOP-Client-Version": CORPUS_VERSION,
     }
     if last_event_id:
         headers["Last-Event-ID"] = last_event_id

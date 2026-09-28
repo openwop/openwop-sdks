@@ -133,7 +133,7 @@ export type {
 export { streamEvents, streamHostEvents } from './sse.js';
 export type { EventsStreamContext, EventsStreamOptions, HostEventsStreamOptions } from './sse.js';
 
-// Generated from spec/v2/errors.json + schemas/v2/capabilities.schema.json.
+// Generated from spec/v2/errors.json + schemas/v2/capabilities.schema.json + CORPUS_TAG.
 export {
   ERROR_CODES,
   ERROR_CODE_HTTP_STATUS,
@@ -141,6 +141,7 @@ export {
   VENDOR_ERROR_CODE_PATTERN,
   CAPABILITY_FAMILY_KEYS,
   CAPABILITY_METADATA_KEYS,
+  CORPUS_VERSION,
 } from './generated.js';
 export type { ErrorCode, CapabilityFamilyKey, CapabilityMetadataKey } from './generated.js';
 export { KNOWN_RUN_EVENT_TYPES, isKnownRunEventType, narrowRunEvent } from './generated-payloads.js';

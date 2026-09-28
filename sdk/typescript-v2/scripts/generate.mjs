@@ -4,6 +4,7 @@
 // Sources (vendored at CORPUS_TAG by scripts/check-vendored-sync.mjs):
 //   spec/v2/errors.json                 → ERROR_CODES / ErrorCode / ERROR_CODE_HTTP_STATUS / RETRIABLE_ERROR_CODES
 //   schemas/v2/capabilities.schema.json → CAPABILITY_METADATA_KEYS / CAPABILITY_FAMILY_KEYS
+//   CORPUS_TAG                          → CORPUS_VERSION (RFC 0219 `OpenWOP-Client-Version`)
 //
 // `node scripts/generate.mjs` rewrites src/generated.ts; `--check` exits 1
 // when the committed file differs from what the registries produce (the
@@ -22,6 +23,14 @@ const OUT = join(PKG, 'src', 'generated.ts');
 
 const errors = JSON.parse(readFileSync(join(REPO, 'spec/v2/errors.json'), 'utf8'));
 const caps = JSON.parse(readFileSync(join(REPO, 'schemas/v2/capabilities.schema.json'), 'utf8'));
+
+// RFC 0219: the client names the corpus release it is built against, never
+// the package version. `vX.Y.Z` / `openwop-conformance/vX.Y.Z` / `X.Y.Z` → `X.Y.Z`;
+// a pre-release `vX.Y.Z-rc.N` → `X.Y` (the header grammar has no pre-release).
+const corpusTag = readFileSync(join(REPO, 'CORPUS_TAG'), 'utf8').trim();
+const tagMatch = /^(?:openwop-conformance\/)?v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$/.exec(corpusTag);
+if (!tagMatch) throw new Error(`CORPUS_TAG: cannot derive a corpus version from ${JSON.stringify(corpusTag)}`);
+const corpusVersion = tagMatch[4] ? `${tagMatch[1]}.${tagMatch[2]}` : `${tagMatch[1]}.${tagMatch[2]}.${tagMatch[3]}`;
 
 const rows = [...errors.rows].sort((a, b) => a.code.localeCompare(b.code));
 const codes = rows.map((r) => r.code);
@@ -83,6 +92,12 @@ ${list(familyKeys)}
 
 export type CapabilityMetadataKey = (typeof CAPABILITY_METADATA_KEYS)[number];
 export type CapabilityFamilyKey = (typeof CAPABILITY_FAMILY_KEYS)[number];
+
+/**
+ * The corpus release this SDK is built against (\`CORPUS_TAG\` ${corpusTag}), sent as
+ * \`OpenWOP-Client-Version\` on every request (RFC 0219). Not the package version.
+ */
+export const CORPUS_VERSION = '${corpusVersion}';
 `;
 
 if (process.argv.includes('--check')) {

@@ -4,6 +4,12 @@ The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CH
 
 ## [Unreleased]
 
+_Targets 2.5.0._
+
+### Added
+
+- **`OpenWOP-Client-Version` on every request** (RFC 0219) — the JSON request path and the SSE subscribe (`runs.events`, `host.events`, `streamEvents`, `streamHostEvents`) send it next to `OpenWOP-Version`. The value is the **corpus release** the SDK is built against, derived from `CORPUS_TAG` by `scripts/generate.mjs` into the exported `CORPUS_VERSION` (`2.43.0`), never the package version; a pre-release tag yields `<major>.<minor>`. Read it as `client.clientVersion`; it is not configurable. A host with a `minClientVersion` floor compares it; `generate:check` fails when it drifts from `CORPUS_TAG`.
+
 ## [2.4.0] — 2026-09-28 — corpus `v2.43.0`: `DELETE /content/pages/{pageId}`, projected tenant-bound ids
 
 ### Added

@@ -458,3 +458,7 @@ CAPABILITY_FAMILY_KEYS: tuple[str, ...] = (
     "workspace",
 )
 """Root capability-record keys of the closed v2 discovery document (capabilities.md §5–§6)."""
+
+CORPUS_VERSION = "2.43.0"
+"""The corpus release this SDK is built against (``CORPUS_TAG`` v2.43.0), sent as
+``OpenWOP-Client-Version`` on every request (RFC 0219). Not the package version."""
