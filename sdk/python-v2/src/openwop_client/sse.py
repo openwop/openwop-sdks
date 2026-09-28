@@ -14,9 +14,10 @@ from __future__ import annotations
 
 import json
 from typing import Any, Callable, Iterator, Sequence
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
+from .wire_id import project_id
 from .types import HostEventDoc, RunEventDoc, StreamMode
 
 DEFAULT_HOST_EVENTS_PATH = "/host/events"
@@ -67,7 +68,7 @@ def stream_events(
     if buffer_ms is not None:
         params["bufferMs"] = str(buffer_ms)
     qs = "?" + urlencode(params) if params else ""
-    path = f"/runs/{quote(run_id, safe='')}/events{qs}"
+    path = f"/runs/{project_id(run_id)}/events{qs}"
     return _stream_sse(
         base_url,
         api_key,

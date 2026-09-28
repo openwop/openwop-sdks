@@ -358,9 +358,15 @@ class AuditVerifyCheckpoint:
 
 @dataclass(frozen=True)
 class AuditVerifyAnomaly:
+    """One detected anomaly (RFC 0218 §C). ``kind`` absent means
+    ``chain-break``; treat an unrecognised ``kind`` as an anomaly too."""
+
     atSeq: int
-    expectedPrevHash: str
-    actualPrevHash: str
+    expectedPrevHash: str | None = None  # chain-break only; None at genesis
+    actualPrevHash: str | None = None  # chain-break only
+    kind: str | None = None
+    checkpoint: str | None = None  # merkle-mismatch / signature-invalid only
+    detail: str | None = None  # operator-facing; never branch on it
 
 
 @dataclass(frozen=True)

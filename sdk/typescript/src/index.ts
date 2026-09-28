@@ -15,6 +15,7 @@ export type { OpenwopClientOptions, MutationOptions } from './client.js';
 export { WopError } from './types.js';
 export type {
   AuditVerifyAnomaly,
+  AuditVerifyAnomalyKind,
   AuditVerifyCheckpoint,
   AuditVerifyResult,
   BulkCancelRunResult,

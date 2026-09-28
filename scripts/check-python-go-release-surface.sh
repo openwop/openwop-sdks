@@ -3,12 +3,11 @@
 # (+ the npm version field), for BOTH generations of packages:
 #
 #   1.x  sdk/python (openwop-client 1.7.0)   go/    (github.com/openwop/openwop-sdks/go)
-#   2.x  sdk/python-v2 (openwop-client 2.0.0rc1) go/v2 (github.com/openwop/openwop-sdks/go/v2, tag go/v2.0.0-rc.1)
-#        sdk/typescript-v2 (@openwop/openwop 2.0.0-rc.1)
+#   2.x  sdk/python-v2 (openwop-client, EXPECTED_V2_PYPI_VERSION) go/v2 (github.com/openwop/openwop-sdks/go/v2, tag go/v2.Y.Z)
+#        sdk/typescript-v2 (@openwop/openwop, EXPECTED_V2_NPM_VERSION)
 #
-# The 2.x packages publish from the corpus release-candidate line: the npm
-# version is the SemVer pre-release form, PyPI the PEP 440 form of the SAME
-# tag (2.0.0-rc.1 ⇔ 2.0.0rc1); Go takes the version from the tag alone.
+# A pre-release takes the SemVer form on npm and the PEP 440 form of the SAME
+# tag on PyPI (2.0.0-rc.1 ⇔ 2.0.0rc1); Go takes the version from the tag alone.
 #
 # The v2 packages are v2-ONLY siblings (v2 charter Phase 3 SDK leg, S5); the
 # 1.x assertions are unchanged.
@@ -18,8 +17,8 @@ set -euo pipefail
 SPEC_ROOT="."
 EXPECTED_GO_MODULE="github.com/openwop/openwop-sdks/go"
 EXPECTED_GO_V2_MODULE="github.com/openwop/openwop-sdks/go/v2"
-EXPECTED_V2_NPM_VERSION="2.3.0"
-EXPECTED_V2_PYPI_VERSION="2.3.0"
+EXPECTED_V2_NPM_VERSION="2.4.0"
+EXPECTED_V2_PYPI_VERSION="2.4.0"
 
 echo "=== check-python-go-release-surface — auditing Python and Go release surfaces ==="
 echo

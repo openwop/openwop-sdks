@@ -518,7 +518,7 @@ export type SuspendRequestSchema_ApprovalData = {
   "artifactId": string;
   "artifactType": string;
   "title": string;
-  /** RFC 0186 §A.3 — the disposition applied when `timeoutMs` elapses with no resolution. Every gate with a timer needs one; two production hosts recorded it as a bare key on `approval.requested` (280 rows on one) because the seat did not exist. `escalate` pairs with a host-defined escalation target. A `timeoutMs` of `0` means no timer, and `onTimeout` is then meaningless. */ "onTimeout"?: "reject" | "approve" | "escalate";
+  /** RFC 0186 §A.3 — the disposition applied when `timeoutMs` elapses with no resolution. Every gate with a timer needs one; two production hosts recorded it as a bare key on `approval.requested` (280 rows on one) because the seat did not exist. `escalate` pairs with a host-defined escalation target. A `timeoutMs` of `0` means no timer, and `onTimeout` is then meaningless. Absent means `reject` (RFC 0223; interrupt.md §Rejection): the gate fails closed, the node and run fail with `approval_rejected` unless an edge routes the failure. No JSON-Schema `default` is declared, because a validator that fills defaults would write a value the host never recorded. */ "onTimeout"?: "reject" | "approve" | "escalate";
   "description"?: string;
   "artifactData"?: unknown;
   /** Allowed actions. Server MUST enforce on resolve. The 'ask' action does NOT exit the suspend — Q&A exchanges accumulate via askService until accept/reject/refine/edit-accept fires. See `interrupt.md` §`ApprovalResume` for the action vocabulary + per-action required fields. */ "actions": Array<"accept" | "reject" | "refine" | "edit-accept" | "ask">;

@@ -13,6 +13,7 @@ See README.md for usage.
 
 from .client import SDK_PROTOCOL_MAJOR, OpenwopClient, protocol_version_header
 from .errors import WopError
+from .wire_id import project_id, unproject_id
 from .events import (
     AgentDecidedPayload,
     AgentHandoffPayload,
@@ -210,12 +211,14 @@ from .webhook_helpers import (
     webhook_delivery_headers,
 )
 
-__version__ = "2.3.0"
+__version__ = "2.4.0"
 
 __all__ = [
     "OpenwopClient",
     "SDK_PROTOCOL_MAJOR",
     "protocol_version_header",
+    "project_id",
+    "unproject_id",
     "WopError",
     "stream_events",
     "stream_host_events",

@@ -1,5 +1,5 @@
 {
-  "$comment": "SDK parity expectations for the 2.x SDKs (2.0.0 / 2.0.0 / go/v2.0.0) (v2 charter Phase 3, S4). One entry per operation in spec/v2/path-manifest.json (RFC 0172 §C.2 — the canonical unversioned operation set, vendored at CORPUS_TAG). Every entry is typed in every SDK with a mandatory symbols map: a v2 SDK has exactly one method per manifest operation (RFC 0168 §D). Checked by `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`. TypeScript symbols are `namespace.method` on OpenwopClient; Python symbols are OpenwopClient methods; Go symbols are OpenwopClient methods. Note the two SSE channels are methods too (runs.events / host.events; runs_events / host_events; StreamEvents / StreamHostEvents).",
+  "$comment": "SDK parity expectations for the 2.x SDKs (@openwop/openwop 2.x / openwop-client 2.x / go/v2) (v2 charter Phase 3, S4). One entry per operation in spec/v2/path-manifest.json (RFC 0172 §C.2 — the canonical unversioned operation set, vendored at CORPUS_TAG). Every entry is typed in every SDK with a mandatory symbols map: a v2 SDK has exactly one method per manifest operation (RFC 0168 §D). Checked by `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`. TypeScript symbols are `namespace.method` on OpenwopClient; Python symbols are OpenwopClient methods; Go symbols are OpenwopClient methods. Note the two SSE channels are methods too (runs.events / host.events; runs_events / host_events; StreamEvents / StreamHostEvents).",
   "sdks": {
     "ts": {
       "label": "TypeScript 2.x",
@@ -194,6 +194,19 @@
         "ts": "content.putSection",
         "py": "content_put_section",
         "go": "PutContentSection"
+      }
+    },
+    {
+      "operationId": "deleteContentPage",
+      "method": "DELETE",
+      "path": "/content/pages/{slug}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "content.deletePage",
+        "py": "content_delete_page",
+        "go": "DeleteContentPage"
       }
     },
     {

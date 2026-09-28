@@ -348,10 +348,26 @@ export interface AuditVerifyCheckpoint {
   signature: string;
 }
 
+/** What an audit-verify anomaly reports (RFC 0218 §C). Absent `kind` means `chain-break`. */
+export type AuditVerifyAnomalyKind =
+  | 'chain-break'
+  | 'hash-mismatch'
+  | 'missing-entry'
+  | 'merkle-mismatch'
+  | 'signature-invalid';
+
 export interface AuditVerifyAnomaly {
   atSeq: number;
-  expectedPrevHash: string;
-  actualPrevHash: string;
+  /** Absent means `chain-break`. Treat an unrecognised value as an anomaly too. */
+  kind?: AuditVerifyAnomalyKind | (string & {});
+  /** `chain-break` only; `null` at the genesis entry. */
+  expectedPrevHash?: string | null;
+  /** `chain-break` only; the entry's `prevHash`, `null` included. */
+  actualPrevHash?: string | null;
+  /** `merkle-mismatch` / `signature-invalid` only: the failing checkpoint's id. */
+  checkpoint?: string;
+  /** Operator-facing text; never branch on it. */
+  detail?: string;
 }
 
 /**

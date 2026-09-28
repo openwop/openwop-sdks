@@ -1,9 +1,12 @@
 # `openwop-client` Changelog
 
-## [Unreleased] — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50)
+## [Unreleased] — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50); `deleteContentPage`; RFC 0218 audit anomalies
 
 - **`client.webhooks_unregister(subscription_id, tenant_id=None)`** — `tenant_id` is sent as `?tenantId=`. `spec/v1/webhooks.md` §Unregister has always required the `tenantId` query parameter and corpus 2.37.1+ (`api/openapi.yaml` `unregisterWebhook`, openwop#1530) declares it, but the 1.x helper never sent it, so a host that enforces the contract rejected the call (openwop-sdks#50). Additive — no existing call changes shape. Omitting it still sends the old request but emits a `DeprecationWarning`: enforcing hosts answer `400 validation_error`. `subscription_id` is now percent-encoded in the path, matching TypeScript and Go.
 - Pinned by `tests/test_webhooks_unregister.py`.
+
+- **`client.content_delete_page(page_id)`** — `DELETE /v1/content/pages/{pageId}` (`localized-content.md` §D; `api/openapi.yaml` `deleteContentPage`, corpus 2.42.2+). Admin, `content.write`; returns `None` on `204`, raises `WopError` otherwise (`404` for an id absent in the caller's tenant). Pinned by `tests/test_content_delete_page.py`.
+- **`audit_verify` raised `KeyError` on an RFC 0218 §C anomaly** (corpus 2.43.0) that carries no `expectedPrevHash`. `AuditVerifyAnomaly` gains `kind`, `checkpoint` and `detail`; the prev-hash fields are `str | None`. Pinned by `tests/test_audit_anomalies.py`.
 
 ## [1.7.0] — 2026-09-02 — webhook helpers read the spec's headers (RFC 0165 §C.3)
 

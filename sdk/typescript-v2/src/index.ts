@@ -16,6 +16,7 @@ export type { OpenwopClientOptions, MutationOptions } from './client.js';
 export { WopError } from './types.js';
 export type {
   AuditVerifyAnomaly,
+  AuditVerifyAnomalyKind,
   AuditVerifyCheckpoint,
   AuditVerifyResult,
   BulkCancelRunResult,
@@ -195,6 +196,9 @@ export type {
   RunErrorCode,
   RunError,
 } from './run-helpers.js';
+
+// Tenant-bound id wire form (identity.md §5): `acme/r-1` ↔ `acme~2Fr-1`.
+export { projectId, unprojectId } from './wire-id.js';
 
 // Cost-attribution allowlist + sanitizer helpers.
 export {

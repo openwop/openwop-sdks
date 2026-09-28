@@ -462,6 +462,17 @@ func (c *OpenwopClient) CreateContentPage(
 	return &out, nil
 }
 
+// DeleteContentPage calls DELETE /v1/content/pages/{pageID} — delete a page
+// with its sections and every locale overlay (admin; 204). The segment is the
+// page's pageId, not its slug (it shares the path item with GetContentPage).
+// Returns a *WopError on non-2xx, including 404 for an id absent in the
+// caller's tenant.
+func (c *OpenwopClient) DeleteContentPage(ctx context.Context, pageID string) error {
+	return c.requestJSON(
+		ctx, http.MethodDelete, "/v1/content/pages/"+url.PathEscape(pageID), nil, nil, true, nil,
+	)
+}
+
 // PutContentSection calls PUT /v1/content/pages/{pageID}/sections/{sectionID} —
 // upsert a section's field overlay for a locale (admin).
 func (c *OpenwopClient) PutContentSection(

@@ -162,7 +162,7 @@ class HeaderRenameAndPathTests(unittest.TestCase):
         self.assertEqual(seams.seams[0].seam, "http.fetch")
         self.assertEqual(
             [req.full_url.replace("https://h.example", "") for req in seen],
-            ["/runs/t%2Fr1/compensation", "/runs/t%2Fr1/effects", "/host/effect-seams"],
+            ["/runs/t~2Fr1/compensation", "/runs/t~2Fr1/effects", "/host/effect-seams"],
         )
 
 
@@ -173,7 +173,7 @@ class PollCursorTests(unittest.TestCase):
         with mock.patch.object(client_module, "urlopen", urlopen):
             res = OpenwopClient("https://h.example", "k").runs_poll_events("t/r1", after_sequence=7, timeout_seconds=5)
         url = seen[0].full_url
-        self.assertIn("/runs/t%2Fr1/events/poll?", url)
+        self.assertIn("/runs/t~2Fr1/events/poll?", url)
         self.assertIn("afterSequence=7", url)
         self.assertIn("timeout=5", url)
         self.assertNotIn("lastSequence", url)

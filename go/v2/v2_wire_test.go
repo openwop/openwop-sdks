@@ -116,12 +116,12 @@ func TestProtocolVersionUnsupportedSurfacesTypedCode(t *testing.T) {
 }
 
 func TestUnversionedPathsAcrossNamespaces(t *testing.T) {
-	// r.URL.Path is the decoded path, so the routes use "/" not "%2F".
+	// Tenant-bound ids travel projected (identity.md §5): "t/r1" → "t~2Fr1".
 	srv, captured := newWireServer(t, 200, `{}`, map[string]string{
-		"/runs/t/r1/compensation": `{"runId":"t/r1","status":"none","plan":[],"attempts":[]}`,
-		"/runs/t/r1/effects":      `404:{"error":"not_found","message":"no"}`,
-		"/host/effect-seams":      `{"manifestVersion":"1","host":{"name":"h","build":{"kind":"commit","id":"abc"}},"seams":[{"seam":"http.fetch","kind":"http","guarded":true,"guardedBy":"interceptor"}]}`,
-		"/runs/t/r1/events/poll":  `{"runId":"t/r1","events":[],"lastSequence":-1,"status":"running","isTerminal":false}`,
+		"/runs/t~2Fr1/compensation": `{"runId":"t/r1","status":"none","plan":[],"attempts":[]}`,
+		"/runs/t~2Fr1/effects":      `404:{"error":"not_found","message":"no"}`,
+		"/host/effect-seams":        `{"manifestVersion":"1","host":{"name":"h","build":{"kind":"commit","id":"abc"}},"seams":[{"seam":"http.fetch","kind":"http","guarded":true,"guardedBy":"interceptor"}]}`,
+		"/runs/t~2Fr1/events/poll":  `{"runId":"t/r1","events":[],"lastSequence":-1,"status":"running","isTerminal":false}`,
 	})
 	client, _ := NewClient(srv.URL, "k")
 	ctx := context.Background()
@@ -154,7 +154,7 @@ func TestUnversionedPathsAcrossNamespaces(t *testing.T) {
 	}
 
 	reqs := *captured
-	want := []string{"/runs/t/r1/compensation", "/runs/t/r1/effects", "/host/effect-seams", "/runs/t/r1/events/poll", "/agents/org-chart", "/prompts/p1", "/webhooks/wh1"}
+	want := []string{"/runs/t~2Fr1/compensation", "/runs/t~2Fr1/effects", "/host/effect-seams", "/runs/t~2Fr1/events/poll", "/agents/org-chart", "/prompts/p1", "/webhooks/wh1"}
 	if len(reqs) != len(want) {
 		t.Fatalf("expected %d requests, got %d", len(want), len(reqs))
 	}
@@ -211,7 +211,7 @@ func TestSSEChannelsCarryTheVersionHeader(t *testing.T) {
 		t.Fatalf("host events: %v", hostTypes)
 	}
 
-	if len(seen) != 2 || seen[0].Path != "/runs/t/r1/events" || seen[1].Path != "/host/events" {
+	if len(seen) != 2 || seen[0].Path != "/runs/t~2Fr1/events" || seen[1].Path != "/host/events" {
 		t.Fatalf("unexpected subscribe paths: %+v", seen)
 	}
 	for _, req := range seen {

@@ -11,6 +11,7 @@
  */
 
 import { streamEvents, streamHostEvents, type EventsStreamOptions, type HostEventsStreamOptions } from './sse.js';
+import { projectId } from './wire-id.js';
 import {
   WopError,
   type AuditVerifyResult,
@@ -183,7 +184,7 @@ export class OpenwopClient {
     get: (runId: string): Promise<RunSnapshot> =>
       this.#request<RunSnapshot>({
         method: 'GET',
-        path: `/runs/${encodeURIComponent(runId)}`,
+        path: `/runs/${projectId(runId)}`,
       }),
 
     /** `POST /runs/{runId}/cancel` — `status` is `cancelling` or `cancelled`. */
@@ -194,7 +195,7 @@ export class OpenwopClient {
     ): Promise<CancelRunResponse> =>
       this.#request<CancelRunResponse>({
         method: 'POST',
-        path: `/runs/${encodeURIComponent(runId)}/cancel`,
+        path: `/runs/${projectId(runId)}/cancel`,
         body,
         headers: this.#mutationHeaders(opts),
       }),
@@ -207,7 +208,7 @@ export class OpenwopClient {
     ): Promise<PauseRunResponse> =>
       this.#request<PauseRunResponse>({
         method: 'POST',
-        path: `/runs/${encodeURIComponent(runId)}:pause`,
+        path: `/runs/${projectId(runId)}:pause`,
         body,
         headers: this.#mutationHeaders(opts),
       }),
@@ -220,7 +221,7 @@ export class OpenwopClient {
     ): Promise<ResumeRunResponse> =>
       this.#request<ResumeRunResponse>({
         method: 'POST',
-        path: `/runs/${encodeURIComponent(runId)}:resume`,
+        path: `/runs/${projectId(runId)}:resume`,
         body,
         headers: this.#mutationHeaders(opts),
       }),
@@ -249,7 +250,7 @@ export class OpenwopClient {
     ): Promise<ForkRunResponse> =>
       this.#request<ForkRunResponse>({
         method: 'POST',
-        path: `/runs/${encodeURIComponent(runId)}:fork`,
+        path: `/runs/${projectId(runId)}:fork`,
         body,
         headers: this.#mutationHeaders(opts),
       }),
@@ -266,7 +267,7 @@ export class OpenwopClient {
     ): Promise<Annotation> =>
       this.#request<Annotation>({
         method: 'POST',
-        path: `/runs/${encodeURIComponent(runId)}/annotations`,
+        path: `/runs/${projectId(runId)}/annotations`,
         body,
         headers: this.#mutationHeaders(opts),
       }),
@@ -280,7 +281,7 @@ export class OpenwopClient {
       try {
         const res = await this.#request<{ annotations: Annotation[] }>({
           method: 'GET',
-          path: `/runs/${encodeURIComponent(runId)}/annotations`,
+          path: `/runs/${projectId(runId)}/annotations`,
         });
         return res.annotations;
       } catch (err) {
@@ -300,7 +301,7 @@ export class OpenwopClient {
       try {
         return await this.#request<RunAncestryResponse>({
           method: 'GET',
-          path: `/runs/${encodeURIComponent(runId)}/ancestry`,
+          path: `/runs/${projectId(runId)}/ancestry`,
         });
       } catch (err) {
         if (err instanceof WopError && err.status === 404) return null;
@@ -317,7 +318,7 @@ export class OpenwopClient {
       try {
         return await this.#request<RunDiffResponse>({
           method: 'GET',
-          path: `/runs/${encodeURIComponent(runId)}:diff?against=${encodeURIComponent(against)}`,
+          path: `/runs/${projectId(runId)}:diff?against=${projectId(against)}`,
         });
       } catch (err) {
         if (err instanceof WopError && err.status === 404) return null;
@@ -334,7 +335,7 @@ export class OpenwopClient {
       try {
         return await this.#request<EvalSummary>({
           method: 'GET',
-          path: `/runs/${encodeURIComponent(runId)}/eval-summary`,
+          path: `/runs/${projectId(runId)}/eval-summary`,
         });
       } catch (err) {
         if (err instanceof WopError && err.status === 404) return null;
@@ -350,7 +351,7 @@ export class OpenwopClient {
       try {
         return await this.#request<Record<string, unknown>>({
           method: 'GET',
-          path: `/runs/${encodeURIComponent(runId)}/artifacts/${encodeURIComponent(artifactId)}`,
+          path: `/runs/${projectId(runId)}/artifacts/${encodeURIComponent(artifactId)}`,
         });
       } catch (err) {
         if (err instanceof WopError && err.status === 404) return null;
@@ -388,7 +389,7 @@ export class OpenwopClient {
       try {
         return await this.#request<CompensationProjection>({
           method: 'GET',
-          path: `/runs/${encodeURIComponent(runId)}/compensation`,
+          path: `/runs/${projectId(runId)}/compensation`,
         });
       } catch (err) {
         if (err instanceof WopError && err.status === 404) return null;
@@ -404,7 +405,7 @@ export class OpenwopClient {
       try {
         return await this.#request<EffectLedgerProjection>({
           method: 'GET',
-          path: `/runs/${encodeURIComponent(runId)}/effects`,
+          path: `/runs/${projectId(runId)}/effects`,
         });
       } catch (err) {
         if (err instanceof WopError && err.status === 404) return null;
@@ -433,7 +434,7 @@ export class OpenwopClient {
       const qs = search.toString();
       return this.#request<PollEventsResponse>({
         method: 'GET',
-        path: `/runs/${encodeURIComponent(runId)}/events/poll${qs ? `?${qs}` : ''}`,
+        path: `/runs/${projectId(runId)}/events/poll${qs ? `?${qs}` : ''}`,
       });
     },
 
@@ -623,7 +624,7 @@ export class OpenwopClient {
     ): Promise<ResolveInterruptResponse> =>
       this.#request<ResolveInterruptResponse>({
         method: 'POST',
-        path: `/runs/${encodeURIComponent(runId)}/interrupts/${encodeURIComponent(nodeId)}`,
+        path: `/runs/${projectId(runId)}/interrupts/${encodeURIComponent(nodeId)}`,
         body,
         headers: this.#mutationHeaders(opts),
       }),
@@ -682,7 +683,7 @@ export class OpenwopClient {
     unregister: async (webhookId: string): Promise<void> => {
       await this.#request<unknown>({
         method: 'DELETE',
-        path: `/webhooks/${encodeURIComponent(webhookId)}`,
+        path: `/webhooks/${projectId(webhookId)}`,
       });
     },
 
@@ -699,7 +700,7 @@ export class OpenwopClient {
     ): Promise<RotateWebhookSecretResponse> =>
       this.#request<RotateWebhookSecretResponse>({
         method: 'POST',
-        path: `/webhooks/${encodeURIComponent(webhookId)}/rotate-secret`,
+        path: `/webhooks/${projectId(webhookId)}/rotate-secret`,
         body,
         headers: this.#mutationHeaders(opts),
       }),
@@ -716,7 +717,7 @@ export class OpenwopClient {
       const qs = search.toString();
       return this.#request<WebhookDeadLetterPage>({
         method: 'GET',
-        path: `/webhooks/${encodeURIComponent(webhookId)}/dead-letters${qs ? `?${qs}` : ''}`,
+        path: `/webhooks/${projectId(webhookId)}/dead-letters${qs ? `?${qs}` : ''}`,
       });
     },
   };
@@ -858,6 +859,19 @@ export class OpenwopClient {
         path: '/content/pages',
         body,
       }),
+
+    /**
+     * `DELETE /content/pages/{pageId}` (admin) — deletes the page with its
+     * sections and every locale overlay; `204`. The segment is the page's
+     * `pageId`, not its slug (it shares the path item with `getPage`).
+     * Throws `404` for an id absent in the caller's tenant.
+     */
+    deletePage: async (pageId: string): Promise<void> => {
+      await this.#request<unknown>({
+        method: 'DELETE',
+        path: `/content/pages/${encodeURIComponent(pageId)}`,
+      });
+    },
 
     /** `PUT /content/pages/{pageId}/sections/{sectionId}` (admin). */
     putSection: (

@@ -471,12 +471,28 @@
       "go": "typed"
     },
     {
+      "operationId": "deleteContentPage",
+      "method": "DELETE",
+      "path": "/v1/content/pages/{slug}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "py": "content_delete_page",
+        "go": "DeleteContentPage"
+      }
+    },
+    {
       "operationId": "getContentPage",
       "method": "GET",
       "path": "/v1/content/pages/{slug}",
       "ts": "typed",
       "py": "typed",
-      "go": "typed"
+      "go": "typed",
+      "symbols": {
+        "py": "content_get_page",
+        "go": "GetContentPage"
+      }
     },
     {
       "operationId": "createContentPage",

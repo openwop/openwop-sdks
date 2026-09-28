@@ -77,7 +77,7 @@ func (c *OpenwopClient) StreamEvents(
 	if encoded := q.Encode(); encoded != "" {
 		qs = "?" + encoded
 	}
-	path := "/runs/" + url.PathEscape(runID) + "/events" + qs
+	path := "/runs/" + ProjectID(runID) + "/events" + qs
 	return streamSSE(c, ctx, path, opts.LastEventID, decodeRunEventDoc)
 }
 

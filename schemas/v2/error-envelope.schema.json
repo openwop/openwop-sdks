@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://openwop.dev/spec/v2/error-envelope.schema.json",
   "title": "ErrorEnvelope (v2)",
-  "description": "GENERATED from spec/v2/errors.json by scripts/generate-error-envelope.mjs (RFC 0171 §B.1). 106 registered codes; vendor codes match ^(?!openwop\\.)[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9_]*$. Consumers MUST accept an unknown registered member and MUST NOT act on it (RFC 0171 §A.5).",
+  "description": "GENERATED from spec/v2/errors.json by scripts/generate-error-envelope.mjs (RFC 0171 §B.1). 108 registered codes; vendor codes match ^(?!openwop\\.)[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9_]*$. Consumers MUST accept an unknown registered member and MUST NOT act on it (RFC 0171 §A.5).",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -82,6 +82,7 @@
             "interrupt_already_resolved",
             "pack_dependency_conflict",
             "pack_integrity_mismatch",
+            "replay_context_summary_unavailable",
             "replay_diverged_at_refusal",
             "replay_memory_snapshot_unavailable",
             "run_already_active",
@@ -94,6 +95,7 @@
             "payload_too_large",
             "workspace_too_large",
             "unsupported_media_type",
+            "approval_rejected",
             "capability_not_provided",
             "capability_required",
             "credential_required",
@@ -134,82 +136,157 @@
       "minLength": 1
     },
     "details": {
-      "oneOf": [
-        {
-          "type": "object",
-          "required": [
-            "supported"
-          ],
-          "properties": {
-            "supported": {
-              "type": "array",
-              "minItems": 1,
-              "items": {
-                "type": "string",
-                "enum": [
-                  "values",
-                  "updates",
-                  "messages",
-                  "debug"
-                ]
-              },
-              "description": "Each individual mode the host serves; combinations are not listed (events.md §The events channel)."
-            }
-          },
-          "additionalProperties": true,
-          "x-openwop-error": "unsupported_stream_mode"
-        },
-        {
-          "type": "object",
-          "required": [
-            "runStatus"
-          ],
-          "properties": {
-            "runStatus": {
-              "type": "string",
-              "description": "The run status that refused the transition (runs.md §Pause and resume)."
-            }
-          },
-          "additionalProperties": true,
-          "x-openwop-error": "run_state_conflict"
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": [
-            "type",
-            "keys"
-          ],
-          "properties": {
-            "type": {
-              "type": "string",
-              "description": "the event type whose payload could not be projected"
-            },
-            "keys": {
-              "type": "array",
-              "items": {
-                "type": "string"
-              },
-              "minItems": 1,
-              "description": "the property names the host could neither carry nor seat"
-            },
-            "eventId": {
-              "$ref": "ids.schema.json#/$defs/eventId"
-            },
-            "sequence": {
-              "type": "integer",
-              "minimum": 0
-            }
-          },
-          "x-openwop-error": "payload_unprojectable"
-        },
-        {
-          "type": "object",
-          "additionalProperties": true
-        }
-      ]
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Error-specific contextual data. A code that registers a details schema in errors.json constrains it through the allOf below, selected by `error`; every other code accepts any object."
     }
   },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "error": {
+            "const": "unsupported_stream_mode"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "then": {
+        "properties": {
+          "details": {
+            "type": "object",
+            "required": [
+              "supported"
+            ],
+            "properties": {
+              "supported": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "enum": [
+                    "values",
+                    "updates",
+                    "messages",
+                    "debug"
+                  ]
+                },
+                "description": "Each individual mode the host serves; combinations are not listed (events.md §The events channel)."
+              }
+            },
+            "additionalProperties": true,
+            "x-openwop-error": "unsupported_stream_mode"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "error": {
+            "const": "run_state_conflict"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "then": {
+        "properties": {
+          "details": {
+            "type": "object",
+            "required": [
+              "runStatus"
+            ],
+            "properties": {
+              "runStatus": {
+                "type": "string",
+                "description": "The run status that refused the transition (runs.md §Pause and resume)."
+              }
+            },
+            "additionalProperties": true,
+            "x-openwop-error": "run_state_conflict"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "error": {
+            "const": "client_version_unsupported"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "then": {
+        "properties": {
+          "details": {
+            "type": "object",
+            "properties": {
+              "minClientVersion": {
+                "type": "string",
+                "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+                "description": "OPTIONAL. The host's advertised minClientVersion, so a client refused at discovery learns the floor (versioning.md §1.5)."
+              }
+            },
+            "additionalProperties": true,
+            "x-openwop-error": "client_version_unsupported"
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "error": {
+            "const": "payload_unprojectable"
+          }
+        },
+        "required": [
+          "error"
+        ]
+      },
+      "then": {
+        "properties": {
+          "details": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "keys"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "description": "the event type whose payload could not be projected"
+              },
+              "keys": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                },
+                "minItems": 1,
+                "description": "the property names the host could neither carry nor seat"
+              },
+              "eventId": {
+                "$ref": "ids.schema.json#/$defs/eventId"
+              },
+              "sequence": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "x-openwop-error": "payload_unprojectable"
+          }
+        }
+      }
+    }
+  ],
   "x-openwop-http-status": {
     "connection_provider_unresolved": 400,
     "connector_action_unresolved": 400,
@@ -278,6 +355,7 @@
     "interrupt_already_resolved": 409,
     "pack_dependency_conflict": 409,
     "pack_integrity_mismatch": 409,
+    "replay_context_summary_unavailable": 409,
     "replay_diverged_at_refusal": 409,
     "replay_memory_snapshot_unavailable": 409,
     "run_already_active": 409,
@@ -290,6 +368,7 @@
     "payload_too_large": 413,
     "workspace_too_large": 413,
     "unsupported_media_type": 415,
+    "approval_rejected": 422,
     "capability_not_provided": 422,
     "capability_required": 422,
     "credential_required": 422,
