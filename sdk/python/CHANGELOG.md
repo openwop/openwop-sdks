@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **`QUICKSTART.md` calls methods the client has.** It used `discovery()`, `create_run`, `get_run`, `get_run_events_poll` and `stream_run_events`, none of which exist; it now uses `discovery_capabilities`, `runs_create`, `runs_get`, `runs_poll_events` and `runs_events`, and the walkthrough was run verbatim against `examples/hosts/in-memory`. Docs only; not in the published package.
+
 ## [1.8.0] — 2026-09-28 — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50); `deleteContentPage`; RFC 0218 audit anomalies
 
 _All three 1.x SDKs (TypeScript 1.10.0, Python 1.8.0, Go v1.7.0), on corpus `v2.43.0`. npm publishes 1.x under dist-tag `latest-1`: `latest` stays on 2.x. Install with `@openwop/openwop@1`._
