@@ -18,6 +18,7 @@ The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a
 
 ### Fixed
 
+- **`GetRun` / `ListRuns` failed to decode every conformant snapshot.** `RunOwner.Subject` was typed `string`, but `schemas/v2/run-snapshot.schema.json` makes `owner.subject` the RFC 0170 Subject object, so `json.Unmarshal` returned an error and the client surfaced it as `invalid_json`. Found by a live smoke against `examples/hosts/v2-reference`. `Subject` is now a struct (`Issuer`, `SubjectID`, `Tenant`, `Lane`, `Kind`, `KeyClass`, `Actor *Subject`). This changes the field's type; code that read it as a string never received a decodable value.
 - **`AuditVerifyAnomaly` gains `Kind`, `Checkpoint` and `Detail`** (RFC 0218 §C, corpus 2.43.0). `Kind` is `""` when the host omits it, which means `chain-break`; `ExpectedPrevHash` / `ActualPrevHash` stay `string` (a JSON `null` at the genesis entry reads as `""`), so no existing field changes type.
 - **Tenant-bound path segments are sent in the projected form.** Every `runID` / `subscriptionID` path segment (runs, interrupts-by-run, webhooks, `StreamEvents`) and `DiffRun`'s `against` query value travel as `acme~2Fr-9f3c` (identity.md §5 "Wire form"), where 2.3.0 sent `acme%2Fr-9f3c` via `url.PathEscape`. Hosts must accept both; an id that is already a wire form is decoded first and never double-escaped.
 

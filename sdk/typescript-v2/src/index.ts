@@ -57,6 +57,7 @@ export type {
   RunDiffResponse,
   RunEventDoc,
   RunOwner,
+  Subject,
   RunSnapshot,
   RunStatus,
   CompensationStatus,

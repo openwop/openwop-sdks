@@ -213,11 +213,23 @@ func (c Capabilities) MarshalJSON() ([]byte, error) {
 	return json.Marshal(merged)
 }
 
+// Subject is schemas/v2/subject.schema.json — the RFC 0170 Subject. Actor
+// names who acts on this subject's behalf (depth bounded at four).
+type Subject struct {
+	Issuer    string   `json:"issuer"`
+	SubjectID string   `json:"subjectId"`
+	Tenant    string   `json:"tenant"`
+	Lane      string   `json:"lane"`
+	Kind      string   `json:"kind"`
+	KeyClass  string   `json:"keyClass,omitempty"`
+	Actor     *Subject `json:"actor,omitempty"`
+}
+
 // RunOwner is RunSnapshot.Owner — closed; Subject is REQUIRED (identity.md).
 type RunOwner struct {
-	Tenant    string `json:"tenant"`
-	Workspace string `json:"workspace,omitempty"`
-	Subject   string `json:"subject"`
+	Tenant    string  `json:"tenant"`
+	Workspace string  `json:"workspace,omitempty"`
+	Subject   Subject `json:"subject"`
 }
 
 // RunSnapshotError mirrors `RunSnapshot.error`.

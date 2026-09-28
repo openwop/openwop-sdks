@@ -96,6 +96,7 @@ from .types import (
     RunDiffResponse,
     RunEventDoc,
     RunOwner,
+    Subject,
     RunSnapshot,
     RunSnapshotError,
     RunStatus,
@@ -297,6 +298,19 @@ def _agent_inventory_entry_from_dict(d: dict[str, Any]) -> AgentInventoryEntry:
     )
 
 
+def _subject_from_dict(d: dict[str, Any]) -> Subject:
+    actor = d.get("actor")
+    return Subject(
+        issuer=str(d["issuer"]),
+        subjectId=str(d["subjectId"]),
+        tenant=str(d["tenant"]),
+        lane=str(d["lane"]),
+        kind=str(d["kind"]),
+        keyClass=d.get("keyClass"),
+        actor=_subject_from_dict(actor) if isinstance(actor, dict) else None,
+    )
+
+
 def _run_snapshot_from_dict(d: dict[str, Any]) -> RunSnapshot:
     err_dict = d.get("error")
     err = (
@@ -315,7 +329,7 @@ def _run_snapshot_from_dict(d: dict[str, Any]) -> RunSnapshot:
         status=cast(RunStatus, d["status"]),
         owner=RunOwner(
             tenant=str(owner_dict["tenant"]),
-            subject=str(owner_dict["subject"]),
+            subject=_subject_from_dict(owner_dict["subject"]),
             workspace=owner_dict.get("workspace"),
         ),
         eventLogSchemaVersion=int(d["eventLogSchemaVersion"]),

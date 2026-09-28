@@ -132,11 +132,25 @@ defined in ``spec/v2/core/compensation.md`` §"Run rollup: compensationStatus".
 
 
 @dataclass(frozen=True)
+class Subject:
+    """``schemas/v2/subject.schema.json`` — the RFC 0170 Subject. ``actor``
+    names who acts on this subject's behalf (depth bounded at four)."""
+
+    issuer: str
+    subjectId: str
+    tenant: str
+    lane: str
+    kind: str
+    keyClass: str | None = None
+    actor: Subject | None = None
+
+
+@dataclass(frozen=True)
 class RunOwner:
     """``RunSnapshot.owner`` — closed; ``subject`` REQUIRED (identity.md)."""
 
     tenant: str
-    subject: str
+    subject: Subject
     workspace: str | None = None
 
 

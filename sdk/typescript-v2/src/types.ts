@@ -12,6 +12,7 @@
  */
 
 import type { CapabilityFamilyKey, ErrorCode } from './generated.js';
+import type { SubjectSchema } from './generated-payloads.js';
 
 /** Run statuses per `RunSnapshot.status` in OpenAPI. */
 export type RunStatus =
@@ -64,11 +65,14 @@ export type CompensationStatus =
   | 'failed'
   | 'manual';
 
+/** `schemas/v2/subject.schema.json` — the RFC 0170 Subject (`issuer`, `subjectId`, `tenant`, `lane`, `kind`, optional `keyClass` / `actor`). */
+export type Subject = SubjectSchema;
+
 /** `RunSnapshot.owner` — closed; `subject` REQUIRED (identity.md). */
 export interface RunOwner {
   tenant: string;
   workspace?: string;
-  subject: string;
+  subject: Subject;
 }
 
 /** `schemas/v2/run-snapshot.schema.json` — the fold of the event log through the run projection (runs.md §Snapshot). */
