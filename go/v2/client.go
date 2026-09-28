@@ -150,7 +150,7 @@ func (c *OpenwopClient) GetRun(ctx context.Context, runID string) (*RunSnapshot,
 	var out RunSnapshot
 	if err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID),
+		"/runs/"+ProjectID(runID),
 		nil, nil, true, &out,
 	); err != nil {
 		return nil, err
@@ -168,7 +168,7 @@ func (c *OpenwopClient) CancelRun(
 	var out CancelRunResponse
 	if err := c.requestJSON(
 		ctx, http.MethodPost,
-		"/runs/"+url.PathEscape(runID)+"/cancel",
+		"/runs/"+ProjectID(runID)+"/cancel",
 		body, opts.headers(), true, &out,
 	); err != nil {
 		return nil, err
@@ -186,7 +186,7 @@ func (c *OpenwopClient) PauseRun(
 	var out PauseRunResponse
 	if err := c.requestJSON(
 		ctx, http.MethodPost,
-		"/runs/"+url.PathEscape(runID)+":pause",
+		"/runs/"+ProjectID(runID)+":pause",
 		body, opts.headers(), true, &out,
 	); err != nil {
 		return nil, err
@@ -204,7 +204,7 @@ func (c *OpenwopClient) ResumeRun(
 	var out ResumeRunResponse
 	if err := c.requestJSON(
 		ctx, http.MethodPost,
-		"/runs/"+url.PathEscape(runID)+":resume",
+		"/runs/"+ProjectID(runID)+":resume",
 		body, opts.headers(), true, &out,
 	); err != nil {
 		return nil, err
@@ -263,7 +263,7 @@ func (c *OpenwopClient) UnregisterWebhook(
 ) error {
 	return c.requestJSON(
 		ctx, http.MethodDelete,
-		"/webhooks/"+url.PathEscape(subscriptionID),
+		"/webhooks/"+ProjectID(subscriptionID),
 		nil, nil, true, nil,
 	)
 }
@@ -281,7 +281,7 @@ func (c *OpenwopClient) RotateWebhookSecret(
 	var out RotateWebhookSecretResponse
 	if err := c.requestJSON(
 		ctx, http.MethodPost,
-		"/webhooks/"+url.PathEscape(subscriptionID)+"/rotate-secret",
+		"/webhooks/"+ProjectID(subscriptionID)+"/rotate-secret",
 		body, opts.headers(), true, &out,
 	); err != nil {
 		return nil, err
@@ -305,7 +305,7 @@ func (c *OpenwopClient) ListWebhookDeadLetters(
 	if cursor != "" {
 		q.Set("cursor", cursor)
 	}
-	path := "/webhooks/" + url.PathEscape(subscriptionID) + "/dead-letters"
+	path := "/webhooks/" + ProjectID(subscriptionID) + "/dead-letters"
 	if enc := q.Encode(); enc != "" {
 		path += "?" + enc
 	}
@@ -349,7 +349,7 @@ func (c *OpenwopClient) ForkRun(
 	var out ForkRunResponse
 	if err := c.requestJSON(
 		ctx, http.MethodPost,
-		"/runs/"+url.PathEscape(runID)+":fork",
+		"/runs/"+ProjectID(runID)+":fork",
 		body, opts.headers(), true, &out,
 	); err != nil {
 		return nil, err
@@ -370,7 +370,7 @@ func (c *OpenwopClient) CreateAnnotation(
 	var out Annotation
 	if err := c.requestJSON(
 		ctx, http.MethodPost,
-		"/runs/"+url.PathEscape(runID)+"/annotations",
+		"/runs/"+ProjectID(runID)+"/annotations",
 		body, opts.headers(), true, &out,
 	); err != nil {
 		return nil, err
@@ -389,7 +389,7 @@ func (c *OpenwopClient) ListAnnotations(
 	var out ListAnnotationsResponse
 	err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID)+"/annotations",
+		"/runs/"+ProjectID(runID)+"/annotations",
 		nil, nil, true, &out,
 	)
 	if err != nil {
@@ -452,6 +452,17 @@ func (c *OpenwopClient) CreateContentPage(
 		return nil, err
 	}
 	return &out, nil
+}
+
+// DeleteContentPage calls DELETE /content/pages/{pageID} — delete a page with
+// its sections and every locale overlay (admin; 204). The segment is the
+// page's pageId, not its slug (it shares the path item with GetContentPage).
+// Returns a *WopError on non-2xx, including 404 for an id absent in the
+// caller's tenant.
+func (c *OpenwopClient) DeleteContentPage(ctx context.Context, pageID string) error {
+	return c.requestJSON(
+		ctx, http.MethodDelete, "/content/pages/"+url.PathEscape(pageID), nil, nil, true, nil,
+	)
 }
 
 // PutContentSection calls PUT /content/pages/{pageID}/sections/{sectionID} —
@@ -526,7 +537,7 @@ func (c *OpenwopClient) RunAncestry(
 	var out RunAncestryResponse
 	err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID)+"/ancestry",
+		"/runs/"+ProjectID(runID)+"/ancestry",
 		nil, nil, true, &out,
 	)
 	if err != nil {
@@ -568,7 +579,7 @@ func (c *OpenwopClient) PollRunEvents(
 	var out PollEventsResponse
 	if err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID)+"/events/poll"+qs,
+		"/runs/"+ProjectID(runID)+"/events/poll"+qs,
 		nil, nil, true, &out,
 	); err != nil {
 		return nil, err
@@ -624,7 +635,7 @@ func (c *OpenwopClient) GetRunCompensation(
 	var out CompensationProjection
 	err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID)+"/compensation",
+		"/runs/"+ProjectID(runID)+"/compensation",
 		nil, nil, true, &out,
 	)
 	if err != nil {
@@ -647,7 +658,7 @@ func (c *OpenwopClient) GetRunEffects(
 	var out EffectLedgerProjection
 	err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID)+"/effects",
+		"/runs/"+ProjectID(runID)+"/effects",
 		nil, nil, true, &out,
 	)
 	if err != nil {
@@ -684,7 +695,7 @@ func (c *OpenwopClient) ResolveInterruptByRun(
 	var out ResolveInterruptResponse
 	if err := c.requestJSON(
 		ctx, http.MethodPost,
-		"/runs/"+url.PathEscape(runID)+"/interrupts/"+url.PathEscape(nodeID),
+		"/runs/"+ProjectID(runID)+"/interrupts/"+url.PathEscape(nodeID),
 		body, opts.headers(), true, &out,
 	); err != nil {
 		return nil, err
@@ -911,7 +922,7 @@ func (c *OpenwopClient) GetArtifact(
 	var out map[string]any
 	err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID)+"/artifacts/"+url.PathEscape(artifactID),
+		"/runs/"+ProjectID(runID)+"/artifacts/"+url.PathEscape(artifactID),
 		nil, nil, true, &out,
 	)
 	if err != nil {
@@ -1082,7 +1093,7 @@ func (c *OpenwopClient) GetEvalSummary(
 	var out EvalSummary
 	err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID)+"/eval-summary",
+		"/runs/"+ProjectID(runID)+"/eval-summary",
 		nil, nil, true, &out,
 	)
 	if err != nil {
@@ -1107,11 +1118,11 @@ func (c *OpenwopClient) DiffRun(
 	runID, against string,
 ) (*RunDiffResponse, error) {
 	q := url.Values{}
-	q.Set("against", against)
+	q.Set("against", ProjectID(against))
 	var out RunDiffResponse
 	err := c.requestJSON(
 		ctx, http.MethodGet,
-		"/runs/"+url.PathEscape(runID)+":diff?"+q.Encode(),
+		"/runs/"+ProjectID(runID)+":diff?"+q.Encode(),
 		nil, nil, true, &out,
 	)
 	if err != nil {

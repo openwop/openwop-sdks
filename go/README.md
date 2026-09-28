@@ -3,10 +3,12 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration** — a single contract for runs in which LLM agents, deterministic tools, sub-workflows, and human reviewers collaborate, with durable suspend / resume, replay, version negotiation, and observability owned by the protocol itself. This package is the reference Go client: synchronous, zero runtime deps, strongly-typed structs for every spec'd REST endpoint plus a channel-based SSE consumer.
 
 ```bash
-go get github.com/openwop/openwop-sdks/go
+go get github.com/openwop/openwop-sdks/go@v1.7.0   # the v1 line; v2 is the separate module …/go/v2
 ```
 
-> **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Status:** FINAL v1 (2026-04-27) · **Mirrors:** the TypeScript and Python SDKs (same endpoint coverage, idiomatic Go shape)
+> **v1 line.** This is the v1 module for v1 hosts (`/v1/…`), the maintained parallel line until v1 end-of-support (earliest 2026-12-04). New integrations target v2 with [`go/v2/`](./v2/) (`go get github.com/openwop/openwop-sdks/go/v2`). Go keeps the two majors in separate module paths, so this path never resolves to v2.
+>
+> **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Status:** v1, finalized 2026-04-27; superseded by v2 · **Mirrors:** the TypeScript and Python SDKs (same endpoint coverage, idiomatic Go shape)
 
 This SDK is hand-authored rather than codegen'd from OpenAPI. Same rationale as the TypeScript SDK — see [`sdk/typescript/README.md`](https://github.com/openwop/openwop/blob/main/sdk/typescript/README.md) §rationale.
 

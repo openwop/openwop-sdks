@@ -76,6 +76,19 @@ describe('content + trigger REST helpers', () => {
     expect(JSON.parse(captured[0]!.body!)).toEqual({ locale: 'fr-FR', data: { title: 'Bonjour' } });
   });
 
+  it('deletePage maps to DELETE /content/pages/{pageId} and resolves on 204', async () => {
+    const { client, captured } = mockClient(() => ({ status: 204 }));
+    await expect(client.content.deletePage('page 1')).resolves.toBeUndefined();
+    expect(captured[0]?.method).toBe('DELETE');
+    expect(new URL(captured[0]!.url).pathname).toBe('/content/pages/page%201');
+    expect(captured[0]?.headers.get('Authorization')).toBe('Bearer k');
+  });
+
+  it('deletePage throws on 404 (absent in the caller\'s tenant)', async () => {
+    const { client } = mockClient(() => ({ status: 404, body: { error: 'not_found', message: 'no page' } }));
+    await expect(client.content.deletePage('gone')).rejects.toMatchObject({ status: 404 });
+  });
+
   it('triggerSubscriptions.create maps to POST /trigger-subscriptions', async () => {
     const { client, captured } = mockClient(() => ({
       status: 201,

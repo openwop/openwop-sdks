@@ -90,7 +90,7 @@ describe('OpenWOP-Version negotiation (RFC 0172 §A.3)', () => {
 
 describe('header renames (headers.md)', () => {
   it('OpenWOP-Dedup replaces X-Dedup; Idempotency-Key keeps its standard name', async () => {
-    const { client, captured } = mockClient(() => ({ status: 201, body: { runId: 't/r', status: 'pending', eventsUrl: '/runs/t%2Fr/events' } }));
+    const { client, captured } = mockClient(() => ({ status: 201, body: { runId: 't/r', status: 'pending', eventsUrl: '/runs/t~2Fr/events' } }));
     await client.runs.create({ workflowId: 'wf' }, { idempotencyKey: 'idem-1', dedup: 'enforce' });
     const h = captured[0]!.headers;
     expect(h.get('OpenWOP-Dedup')).toBe('enforce');
@@ -118,9 +118,9 @@ describe('paths are unversioned keys on the bare origin (versioning.md §1.2)', 
     expect(captured.map((c) => new URL(c.url).pathname)).toEqual([
       '/openapi.json',
       '/workflows/wf',
-      '/runs/t%2Fr1',
-      '/runs/t%2Fr1/compensation',
-      '/runs/t%2Fr1/effects',
+      '/runs/t~2Fr1',
+      '/runs/t~2Fr1/compensation',
+      '/runs/t~2Fr1/effects',
       '/agents/org-chart',
       '/tools',
       '/prompts:render',
@@ -138,7 +138,7 @@ describe('poll cursor (events.md §Poll)', () => {
     const { client, captured } = mockClient(() => ({ status: 200, body: page }));
     const res = await client.runs.pollEvents('t/r1', { afterSequence: 7, timeoutSeconds: 5 });
     const url = new URL(captured[0]!.url);
-    expect(url.pathname).toBe('/runs/t%2Fr1/events/poll');
+    expect(url.pathname).toBe('/runs/t~2Fr1/events/poll');
     expect(url.searchParams.get('afterSequence')).toBe('7');
     expect(url.searchParams.get('timeout')).toBe('5');
     expect(url.searchParams.has('lastSequence')).toBe(false);
@@ -164,7 +164,7 @@ describe('SSE channels carry the version header and unversioned paths', () => {
     for await (const ev of streamEvents({ baseUrl: 'https://host.example', apiKey: 'k', protocolVersion: '2.0', fetch: f }, 't/r1', { lastEventId: '0', streamMode: ['updates', 'messages'] })) out.push(ev.type);
     expect(out).toEqual(['run.started', 'run.completed']);
     const url = new URL(seen[0]!.url);
-    expect(url.pathname).toBe('/runs/t%2Fr1/events');
+    expect(url.pathname).toBe('/runs/t~2Fr1/events');
     expect(url.searchParams.get('streamMode')).toBe('updates,messages');
     expect(seen[0]!.headers.get('OpenWOP-Version')).toBe('2.0');
     expect(seen[0]!.headers.get('Last-Event-ID')).toBe('0');

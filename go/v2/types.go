@@ -213,11 +213,23 @@ func (c Capabilities) MarshalJSON() ([]byte, error) {
 	return json.Marshal(merged)
 }
 
+// Subject is schemas/v2/subject.schema.json — the RFC 0170 Subject. Actor
+// names who acts on this subject's behalf (depth bounded at four).
+type Subject struct {
+	Issuer    string   `json:"issuer"`
+	SubjectID string   `json:"subjectId"`
+	Tenant    string   `json:"tenant"`
+	Lane      string   `json:"lane"`
+	Kind      string   `json:"kind"`
+	KeyClass  string   `json:"keyClass,omitempty"`
+	Actor     *Subject `json:"actor,omitempty"`
+}
+
 // RunOwner is RunSnapshot.Owner — closed; Subject is REQUIRED (identity.md).
 type RunOwner struct {
-	Tenant    string `json:"tenant"`
-	Workspace string `json:"workspace,omitempty"`
-	Subject   string `json:"subject"`
+	Tenant    string  `json:"tenant"`
+	Workspace string  `json:"workspace,omitempty"`
+	Subject   Subject `json:"subject"`
 }
 
 // RunSnapshotError mirrors `RunSnapshot.error`.
@@ -435,10 +447,18 @@ type AuditVerifyCheckpoint struct {
 }
 
 // AuditVerifyAnomaly is one entry in AuditVerifyResult.Anomalies.
+// Kind is "" for an entry that omits it, which means "chain-break" (RFC 0218
+// §C); treat an unrecognised Kind as an anomaly too. ExpectedPrevHash and
+// ActualPrevHash are set for "chain-break" only (a JSON null reads as "");
+// Checkpoint for "merkle-mismatch" / "signature-invalid" only. Detail is
+// operator-facing text — never branch on it.
 type AuditVerifyAnomaly struct {
 	AtSeq            int64  `json:"atSeq"`
-	ExpectedPrevHash string `json:"expectedPrevHash"`
-	ActualPrevHash   string `json:"actualPrevHash"`
+	Kind             string `json:"kind,omitempty"`
+	ExpectedPrevHash string `json:"expectedPrevHash,omitempty"`
+	ActualPrevHash   string `json:"actualPrevHash,omitempty"`
+	Checkpoint       string `json:"checkpoint,omitempty"`
+	Detail           string `json:"detail,omitempty"`
 }
 
 // AuditVerifyResult is the response shape from GET /audit/verify.

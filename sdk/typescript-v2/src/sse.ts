@@ -12,6 +12,7 @@
  */
 
 import type { HostEventDoc, RunEventDoc, StreamMode } from './types.js';
+import { projectId } from './wire-id.js';
 
 export interface EventsStreamOptions {
   /**
@@ -67,7 +68,7 @@ export function streamEvents(
     params.set('bufferMs', String(opts.bufferMs));
   }
   const qs = params.toString();
-  const path = `/runs/${encodeURIComponent(runId)}/events${qs ? `?${qs}` : ''}`;
+  const path = `/runs/${projectId(runId)}/events${qs ? `?${qs}` : ''}`;
   return streamSse<RunEventDoc>(ctx, path, opts);
 }
 

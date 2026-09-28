@@ -1,130 +1,95 @@
-# `openwop-client` Python Quickstart
+# `openwop-client` 2.x Python Quickstart
 
-5-minute walkthrough: install the SDK, boot the in-memory reference host on your laptop, and run an end-to-end workflow lifecycle. Zero external services required.
+Install the SDK, boot the v2 reference host on your laptop, and run a workflow end to end against the v2 wire (`spec/v2/`). No external services.
 
-> Prefer the wire-level walkthrough? See the top-level [`QUICKSTART.md`](../../QUICKSTART.md) — language-agnostic, curl-based, deeper coverage.
+> Using a v1 host? That is the 1.x line — [`sdk/python/QUICKSTART.md`](../python/QUICKSTART.md), installed with `pip install "openwop-client<2"`.
 
 ## Prerequisites
 
-- Python 3.11+
-- Node 20+ (only to run the in-memory reference host below; the SDK itself has zero runtime deps)
-- A clone of `github.com/openwop/openwop`
+- Python 3.10+
+- Node 20+ (only to run the reference host; the SDK has zero runtime deps)
+- A clone of [`github.com/openwop/openwop-examples`](https://github.com/openwop/openwop-examples)
 
 ## Install
 
 ```bash
-pip install openwop-client
+pip install "openwop-client>=2,<3"
 ```
 
-The SDK is **stdlib-only at runtime** — `urllib.request` for HTTP, no `requests`/`httpx`/`pydantic`.
+The SDK is stdlib-only at runtime: `urllib.request` for HTTP, no `requests` / `httpx` / `pydantic`.
 
-## Boot the in-memory reference host
+## Boot the v2 reference host
 
 In one terminal:
 
 ```bash
-cd examples/hosts/in-memory
-npm install
+cd examples/hosts/v2-reference
+npm install --legacy-peer-deps
 npm start
-# → [openwop-host-in-memory] listening on http://127.0.0.1:3737 (api key: openwop-inmem-dev-key, 46 fixtures loaded)
+# → openwop-host-v2-reference listening on http://127.0.0.1:3838 (…)   default api key: openwop-v2-dev-key
 ```
 
-The host loads 46 [conformance fixtures](https://github.com/openwop/openwop/blob/main/conformance/fixtures.md) so the example below has workflows to run against.
+The host serves the conformance fixtures (`conformance-noop` and friends), so the example below has a workflow to run.
 
 ## Walkthrough
 
 Create `quickstart.py`:
 
 ```python
-from openwop_client import OpenwopClient, CreateRunRequest
+import time
 
-client = OpenwopClient(
-    base_url="http://127.0.0.1:3737",
-    api_key="openwop-inmem-dev-key",
-)
+from openwop_client import CreateRunRequest, OpenwopClient, is_terminal_run_status
 
-# 1. Discovery — confirm protocol version + advertised capabilities.
-discovery = client.discovery()
-print(f"protocol: {discovery.protocol_version}")
-print(f"transports: {discovery.supported_transports}")
+client = OpenwopClient("http://127.0.0.1:3838", "openwop-v2-dev-key")  # sends OpenWOP-Version: 2.0
+
+# 1. Discovery: the closed v2 root.
+caps = client.discovery_capabilities()
+print("protocol versions:", caps.protocolVersions)
 
 # 2. Create a run against a conformance fixture.
-run = client.create_run(
-    CreateRunRequest(
-        workflow_id="conformance-noop",
-        inputs={},
-    )
-)
-print(f"created run: {run.run_id} (status={run.status})")
+run = client.runs_create(CreateRunRequest(workflowId="conformance-noop", inputs={}))
+print(f"created run: {run.runId} (status={run.status})")
 
 # 3. Poll the snapshot until terminal.
-import time
 while True:
-    snap = client.get_run(run.run_id)
-    if snap.status in ("completed", "failed", "cancelled"):
+    snap = client.runs_get(run.runId)
+    if is_terminal_run_status(snap.status):
         print(f"terminal: {snap.status}")
         break
     time.sleep(0.1)
 
-# 4. Read the event log (poll mode — JSON).
-events = client.get_run_events_poll(run.run_id)
-for e in events.events:
+# 4. Read the event log (long-poll, JSON).
+page = client.runs_poll_events(run.runId)
+for e in page.events:
     print(f"  {e.sequence:>3}  {e.type}")
 ```
 
-Run it:
-
-```bash
-python quickstart.py
-```
-
-Expected output:
-
-```
-protocol: 1.0
-transports: ['rest']
-created run: run-<uuid> (status=pending)
-terminal: completed
-    0  run.started
-    1  node.started
-    2  node.completed
-    3  run.completed
-```
+Run it with `python quickstart.py`. The run id is tenant-bound (`<tenant>/<opaque>`); the SDK puts it on the wire as one projected path segment (`<tenant>~2F<opaque>`, identity.md §5), so pass it back exactly as the host returned it.
 
 ## What you exercised
 
-| Step | SDK method | Spec |
+| Step | SDK method | Operation |
 |---|---|---|
-| Discovery | `client.discovery()` | [`capabilities.md`](https://github.com/openwop/openwop/blob/main/spec/v1/capabilities.md) |
-| Create run | `client.create_run(CreateRunRequest)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `POST /v1/runs` |
-| Poll snapshot | `client.get_run(run_id)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}` |
-| Read events | `client.get_run_events_poll(run_id)` | [`rest-endpoints.md`](https://github.com/openwop/openwop/blob/main/spec/v1/rest-endpoints.md) `GET /v1/runs/{runId}/events` (JSON mode) |
+| Discovery | `client.discovery_capabilities()` | `GET /.well-known/openwop` |
+| Create run | `client.runs_create(CreateRunRequest)` | `POST /runs` |
+| Poll snapshot | `client.runs_get(run_id)` | `GET /runs/{runId}` |
+| Read events | `client.runs_poll_events(run_id, after_sequence=...)` | `GET /runs/{runId}/events/poll` |
 
-Every method on `OpenwopClient` maps 1:1 to an OpenAPI operation in [`api/openapi.yaml`](https://github.com/openwop/openwop/blob/main/api/openapi.yaml).
+Every `OpenwopClient` method maps 1:1 to an operation in `spec/v2/path-manifest.json` (55 operations); see [`README.md`](./README.md) and [`sdk/PARITY.md`](../PARITY.md) §v2.
 
 ## Streaming events (live SSE)
 
 ```python
-for event in client.stream_run_events(run.run_id):
-    print(f"{event.type}: {event.payload}")
-    if event.type in ("run.completed", "run.failed", "run.cancelled"):
-        break
+for event in client.runs_events(run.runId):
+    print(event.sequence, event.type)
 ```
 
-`stream_run_events` is a generator-style iterator over the SSE stream — pure stdlib (`urllib.request` + manual frame parsing).
-
-## Next steps
-
-- **Survey the wire surface:** [`README.md`](./README.md) §"Endpoint coverage" lists every method.
-- **Auth profiles:** [`auth-profiles.md`](https://github.com/openwop/openwop/blob/main/spec/v1/auth-profiles.md) — API-key rotation, OAuth2 client credentials, OIDC user-bearer, mTLS.
-- **Webhooks:** subscribe to run events out-of-band; see [`webhooks.md`](https://github.com/openwop/openwop/blob/main/spec/v1/webhooks.md).
-- **Replay:** time-travel debugging via `POST /v1/runs/{runId}:fork`; see [`replay.md`](https://github.com/openwop/openwop/blob/main/spec/v1/replay.md).
-- **Build your own host:** [`examples/hosts/sqlite/README.md`](https://github.com/openwop/openwop-examples/blob/main/examples/hosts/sqlite/README.md) doubles as a "Build Your Own Host" walkthrough.
+`runs_events` is a generator over the SSE stream, pure stdlib. It ends when the host closes the stream after a terminal event.
 
 ## Troubleshooting
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `urllib.error.URLError: <urlopen error [Errno 61] Connection refused>` | The in-memory host isn't running | Boot `npm start` in `examples/hosts/in-memory/` first |
-| `401 Unauthorized` from the API | API key mismatch | Set `OPENWOP_API_KEY=openwop-inmem-dev-key` (or pass `api_key=...` explicitly to `OpenwopClient`) |
-| Run never reaches terminal | Workflow uses a fixture the host doesn't advertise | Check `client.discovery().fixtures` — only listed fixtures will start |
+| `WopError` with status `0` (connection refused) | The host isn't running | `npm start` in `examples/hosts/v2-reference/` first |
+| `401` | API key mismatch | The host's default key is `openwop-v2-dev-key` (`OPENWOP_API_KEY` overrides it) |
+| `406 protocol_version_unsupported` | The host does not serve major 2 | Point the client at a v2 host, or use the 1.x SDK for a v1 host |

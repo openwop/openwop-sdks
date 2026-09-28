@@ -953,6 +953,18 @@ export class OpenwopClient {
         body,
       }),
 
+    /** `DELETE /v1/content/pages/{pageId}` — delete a page with its sections
+     *  and every locale overlay (admin; `204`). The segment is the page's
+     *  `pageId`, not its slug (it shares the path item with `getPage`).
+     *  Throws the typed `WopError` otherwise — `404` for an id absent in the
+     *  caller's tenant. */
+    deletePage: async (pageId: string): Promise<void> => {
+      await this.#request<unknown>({
+        method: 'DELETE',
+        path: `/v1/content/pages/${encodeURIComponent(pageId)}`,
+      });
+    },
+
     /** `PUT /v1/content/pages/{pageId}/sections/{sectionId}` — upsert a
      *  section's field overlay for a locale (admin). */
     putSection: (

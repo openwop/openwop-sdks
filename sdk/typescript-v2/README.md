@@ -1,9 +1,9 @@
 # `@openwop/openwop` 2.x — TypeScript SDK for OpenWOP v2 hosts
 
-**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This package is the reference TypeScript client for the **v2 major** (`spec/v2/`, RFC 0168 §D): one typed method per operation in `spec/v2/path-manifest.json` (51 operations), an async-iterable SSE consumer for the run and host event channels, and zero runtime dependencies.
+**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This package is the reference TypeScript client for the **v2 major** (`spec/v2/`, RFC 0168 §D): one typed method per operation in `spec/v2/path-manifest.json` (55 operations), an async-iterable SSE consumer for the run and host event channels, and zero runtime dependencies.
 
 ```bash
-npm install @openwop/openwop@2   # 2.0.0 — v2-only; the 1.x client stays on `@openwop/openwop@1`
+npm install @openwop/openwop@2   # 2.4.0 — v2-only; the 1.x client stays on `@openwop/openwop@1`
 ```
 
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Corpus tag:** see [`CORPUS_TAG`](../../CORPUS_TAG) · **Mirrors:** [`api/v2/openapi.yaml`](../../api/v2/openapi.yaml), [`api/v2/asyncapi.yaml`](../../api/v2/asyncapi.yaml), [`schemas/v2/`](../../schemas/v2/), [`spec/v2/errors.json`](../../spec/v2/errors.json)
@@ -19,8 +19,9 @@ npm install @openwop/openwop@2   # 2.0.0 — v2-only; the 1.x client stays on `@
 | `X-Dedup` | `OpenWOP-Dedup` (`MutationOptions.dedup`). Every non-standard header is `OpenWOP-<Name>` (headers.md). |
 | `pollEvents({ lastSequence })` | `pollEvents({ afterSequence })`; the response is the closed `{ runId, events, lastSequence, status, isTerminal }`. |
 | Open discovery root, `supported: boolean` | The closed v2 root: `protocolVersions[]` + `preferredVersion` REQUIRED, every family a `CapabilityRecord` `{ status, since, until?, witness, …facets }` (presence is the claim). Family and metadata keys are generated from `schemas/v2/capabilities.schema.json`. |
-| `ErrorEnvelope.error: string` | `ErrorCode \| VendorErrorCode` — the 94-member union is generated from `spec/v2/errors.json` (`ERROR_CODES`, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`). |
+| `ErrorEnvelope.error: string` | `ErrorCode \| VendorErrorCode` — the 108-member union is generated from `spec/v2/errors.json` (`ERROR_CODES`, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`). |
 | `workspace.*` (4), `runs.debugBundle`, `userAgents.*` (host-sample seams), `RegistryClient` | Removed — not v2 operations. The pack registry is a separate wire surface a client resolves through `.well-known/openwop-registry.json` `endpoints` (packs.md). |
+| `encodeURIComponent(runId)` → `t%2Fr` | Tenant-bound ids (`runId`, `webhookId`) go on the wire projected: `acme/r-9f3c` → `acme~2Fr-9f3c` (identity.md §5 "Wire form"). `projectId` / `unprojectId` are exported; `unprojectId` reads both the projected and the percent form a link may carry. |
 | — | `runs.compensation`, `runs.effects`, `host.effectSeams` (RFC 0173), `host.events` (the `hostEvents` SSE channel). |
 | Webhook `openwop-Webhook-*` legacy names, `v1=<hex>` | `OpenWOP-*` only (`X-openwop-*` accepted through the overlap); `sha256=<hex>`; an unrecognized `OpenWOP-Signature-Algorithm` is rejected. Import from `@openwop/openwop/webhooks` — the barrel no longer carries `node:crypto`. |
 
@@ -90,7 +91,7 @@ const outcome = read
 
 ## Method ↔ operation map
 
-Every one of the 52 `spec/v2/path-manifest.json` operations has exactly one method; `scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json` enforces it. See [`sdk/PARITY.md`](../PARITY.md) §v2.
+Every one of the 55 `spec/v2/path-manifest.json` operations has exactly one method; `scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json` enforces it. See [`sdk/PARITY.md`](../PARITY.md) §v2.
 
 ## Development
 

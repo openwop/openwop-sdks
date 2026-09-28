@@ -18,6 +18,7 @@ from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
 from .errors import WopError
+from .wire_id import project_id
 from ._generated import CAPABILITY_FAMILY_KEYS
 from .sse import stream_events, stream_host_events
 from .types import (
@@ -95,6 +96,7 @@ from .types import (
     RunDiffResponse,
     RunEventDoc,
     RunOwner,
+    Subject,
     RunSnapshot,
     RunSnapshotError,
     RunStatus,
@@ -296,6 +298,19 @@ def _agent_inventory_entry_from_dict(d: dict[str, Any]) -> AgentInventoryEntry:
     )
 
 
+def _subject_from_dict(d: dict[str, Any]) -> Subject:
+    actor = d.get("actor")
+    return Subject(
+        issuer=str(d["issuer"]),
+        subjectId=str(d["subjectId"]),
+        tenant=str(d["tenant"]),
+        lane=str(d["lane"]),
+        kind=str(d["kind"]),
+        keyClass=d.get("keyClass"),
+        actor=_subject_from_dict(actor) if isinstance(actor, dict) else None,
+    )
+
+
 def _run_snapshot_from_dict(d: dict[str, Any]) -> RunSnapshot:
     err_dict = d.get("error")
     err = (
@@ -314,7 +329,7 @@ def _run_snapshot_from_dict(d: dict[str, Any]) -> RunSnapshot:
         status=cast(RunStatus, d["status"]),
         owner=RunOwner(
             tenant=str(owner_dict["tenant"]),
-            subject=str(owner_dict["subject"]),
+            subject=_subject_from_dict(owner_dict["subject"]),
             workspace=owner_dict.get("workspace"),
         ),
         eventLogSchemaVersion=int(d["eventLogSchemaVersion"]),
@@ -586,7 +601,7 @@ class OpenwopClient:
 
     # ── Workflows ────────────────────────────────────────────────────
     def workflows_get(self, workflow_id: str) -> dict[str, Any]:
-        return self._request_json("GET", f"/workflows/{workflow_id}")
+        return self._request_json("GET", f"/workflows/{quote(workflow_id, safe='')}")
 
     # ── Runs ─────────────────────────────────────────────────────────
     def runs_create(
@@ -606,7 +621,7 @@ class OpenwopClient:
         )
 
     def runs_get(self, run_id: str) -> RunSnapshot:
-        d = self._request_json("GET", f"/runs/{run_id}")
+        d = self._request_json("GET", f"/runs/{project_id(run_id)}")
         return _run_snapshot_from_dict(d)
 
     def runs_cancel(
@@ -619,7 +634,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",
-            f"/runs/{run_id}/cancel",
+            f"/runs/{project_id(run_id)}/cancel",
             body=_to_jsonable(body) if body is not None else {},
             headers=headers,
         )
@@ -635,7 +650,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",
-            f"/runs/{run_id}:pause",
+            f"/runs/{project_id(run_id)}:pause",
             body=_to_jsonable(body) if body is not None else {},
             headers=headers,
         )
@@ -655,7 +670,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",
-            f"/runs/{run_id}:resume",
+            f"/runs/{project_id(run_id)}:resume",
             body=_to_jsonable(body) if body is not None else {},
             headers=headers,
         )
@@ -721,8 +736,11 @@ class OpenwopClient:
         anomalies = [
             AuditVerifyAnomaly(
                 atSeq=int(a["atSeq"]),
-                expectedPrevHash=str(a["expectedPrevHash"]),
-                actualPrevHash=str(a["actualPrevHash"]),
+                expectedPrevHash=a.get("expectedPrevHash"),
+                actualPrevHash=a.get("actualPrevHash"),
+                kind=a.get("kind"),
+                checkpoint=a.get("checkpoint"),
+                detail=a.get("detail"),
             )
             for a in d.get("anomalies", [])
         ]
@@ -770,7 +788,7 @@ class OpenwopClient:
         when the subscription_id is unknown.
         """
 
-        self._request_json("DELETE", f"/webhooks/{subscription_id}")
+        self._request_json("DELETE", f"/webhooks/{project_id(subscription_id)}")
 
     def webhooks_rotate_secret(
         self,
@@ -790,7 +808,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",
-            f"/webhooks/{quote(subscription_id, safe='')}/rotate-secret",
+            f"/webhooks/{project_id(subscription_id)}/rotate-secret",
             body=_to_jsonable(body),
             headers=headers,
         )
@@ -818,7 +836,7 @@ class OpenwopClient:
             params["cursor"] = cursor
         qs = "?" + urlencode(params) if params else ""
         d = self._request_json(
-            "GET", f"/webhooks/{quote(subscription_id, safe='')}/dead-letters{qs}"
+            "GET", f"/webhooks/{project_id(subscription_id)}/dead-letters{qs}"
         )
         return WebhookDeadLetterPage(
             deliveries=[
@@ -849,7 +867,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",
-            f"/runs/{run_id}:fork",
+            f"/runs/{project_id(run_id)}:fork",
             body=_to_jsonable(body),
             headers=headers,
         )
@@ -876,7 +894,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",
-            f"/runs/{run_id}/annotations",
+            f"/runs/{project_id(run_id)}/annotations",
             body=_to_jsonable(body),
             headers=headers,
         )
@@ -893,7 +911,7 @@ class OpenwopClient:
         """RFC 0056 — list a run's annotations (tenant-scoped). Returns ``None``
         when the host doesn't advertise ``capabilities.feedback`` (404/501)."""
         try:
-            d = self._request_json("GET", f"/runs/{run_id}/annotations")
+            d = self._request_json("GET", f"/runs/{project_id(run_id)}/annotations")
         except WopError as err:
             if err.status in (404, 501):
                 return None
@@ -933,7 +951,7 @@ class OpenwopClient:
         headers = {"Accept-Language": accept_language} if accept_language else None
         try:
             d = self._request_json(
-                "GET", f"/content/pages/{slug}", headers=headers
+                "GET", f"/content/pages/{quote(slug, safe='')}", headers=headers
             )
         except WopError as err:
             if err.status in (404, 501):
@@ -949,6 +967,14 @@ class OpenwopClient:
         d = self._request_json("POST", "/content/pages", body=_to_jsonable(page))
         return _content_page_from_dict(d)
 
+    def content_delete_page(self, page_id: str) -> None:
+        """`DELETE /content/pages/{pageId}` — delete a page with its sections
+        and every locale overlay (admin; ``204``). The segment is the page's
+        ``pageId``, not its slug (it shares the path item with
+        :meth:`content_get_page`). Raises ``WopError`` on non-2xx, including
+        ``404`` for an id absent in the caller's tenant."""
+        self._request_json("DELETE", f"/content/pages/{quote(page_id, safe='')}")
+
     def content_put_section(
         self, page_id: str, section_id: str, body: PutContentSectionRequest
     ) -> LocalizedContentSection:
@@ -956,7 +982,7 @@ class OpenwopClient:
         section's field overlay for a locale (admin)."""
         d = self._request_json(
             "PUT",
-            f"/content/pages/{page_id}/sections/{section_id}",
+            f"/content/pages/{quote(page_id, safe='')}/sections/{quote(section_id, safe='')}",
             body=_to_jsonable(body),
         )
         return _content_section_from_dict(d)
@@ -1016,7 +1042,7 @@ class OpenwopClient:
         """RFC 0072 §A — one installed manifest agent's inventory entry, or
         ``None`` when absent / the capability is unadvertised (404)."""
         try:
-            d = self._request_json("GET", f"/agents/{agent_id}")
+            d = self._request_json("GET", f"/agents/{quote(agent_id, safe='')}")
         except WopError as err:
             if err.status in (404, 501):
                 return None
@@ -1030,7 +1056,7 @@ class OpenwopClient:
         (``GET /agents/{agentId}/deployments``). Returns ``None`` when the host
         doesn't advertise ``capabilities.agents.deployment`` (the endpoint 404s)."""
         try:
-            d = self._request_json_any("GET", f"/agents/{agent_id}/deployments")
+            d = self._request_json_any("GET", f"/agents/{quote(agent_id, safe='')}/deployments")
         except WopError as err:
             if err.status == 404:
                 return None
@@ -1055,7 +1081,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",
-            f"/agents/{agent_id}/deployments",
+            f"/agents/{quote(agent_id, safe='')}/deployments",
             body=_to_jsonable(body),
             headers=headers,
         )
@@ -1082,7 +1108,7 @@ class OpenwopClient:
         (``GET /agents/roster/{rosterId}``). Returns ``None`` on 404 (no such
         entry, cross-tenant, or the capability is unadvertised)."""
         try:
-            d = self._request_json("GET", f"/agents/roster/{roster_id}")
+            d = self._request_json("GET", f"/agents/roster/{quote(roster_id, safe='')}")
         except WopError as err:
             if err.status == 404:
                 return None
@@ -1305,7 +1331,7 @@ class OpenwopClient:
         """
 
         try:
-            d = self._request_json("GET", f"/runs/{run_id}/ancestry")
+            d = self._request_json("GET", f"/runs/{project_id(run_id)}/ancestry")
         except WopError as err:
             if err.status == 404:
                 return None
@@ -1335,8 +1361,8 @@ class OpenwopClient:
         doesn't implement the endpoint (404). ``divergedAtSeq`` is ``None`` and
         ``eventDiffs`` is empty when the two logs are identical."""
         path = (
-            f"/runs/{quote(run_id, safe='')}:diff"
-            f"?against={quote(against, safe='')}"
+            f"/runs/{project_id(run_id)}:diff"
+            f"?against={project_id(against)}"
         )
         try:
             d = self._request_json("GET", path)
@@ -1353,7 +1379,7 @@ class OpenwopClient:
         eval run (404). Raises ``WopError`` 409 while the run is still in
         progress."""
         try:
-            d = self._request_json("GET", f"/runs/{run_id}/eval-summary")
+            d = self._request_json("GET", f"/runs/{project_id(run_id)}/eval-summary")
         except WopError as err:
             if err.status == 404:
                 return None
@@ -1368,7 +1394,7 @@ class OpenwopClient:
         implementation-defined per the host. Returns ``None`` on 404 (no such
         artifact, or the host doesn't store artifacts)."""
         path = (
-            f"/runs/{quote(run_id, safe='')}"
+            f"/runs/{project_id(run_id)}"
             f"/artifacts/{quote(artifact_id, safe='')}"
         )
         try:
@@ -1395,7 +1421,7 @@ class OpenwopClient:
         if timeout_seconds is not None:
             params["timeout"] = str(timeout_seconds)
         qs = "?" + urlencode(params) if params else ""
-        d = self._request_json("GET", f"/runs/{quote(run_id, safe='')}/events/poll{qs}")
+        d = self._request_json("GET", f"/runs/{project_id(run_id)}/events/poll{qs}")
         return PollEventsResponse(
             runId=str(d["runId"]),
             events=[_event_from_dict(e) for e in d.get("events", [])],
@@ -1442,7 +1468,7 @@ class OpenwopClient:
         """``GET /runs/{runId}/compensation`` (RFC 0173 §C.1) — the compensation
         plan and attempts. Gated on ``compensation``; ``None`` on 404."""
         try:
-            d = self._request_json("GET", f"/runs/{quote(run_id, safe='')}/compensation")
+            d = self._request_json("GET", f"/runs/{project_id(run_id)}/compensation")
         except WopError as err:
             if err.status == 404:
                 return None
@@ -1453,7 +1479,7 @@ class OpenwopClient:
         """``GET /runs/{runId}/effects`` (RFC 0173 §C.2) — the Layer-2 effect
         ledger. Gated on ``idempotency``; ``None`` on 404."""
         try:
-            d = self._request_json("GET", f"/runs/{quote(run_id, safe='')}/effects")
+            d = self._request_json("GET", f"/runs/{project_id(run_id)}/effects")
         except WopError as err:
             if err.status == 404:
                 return None
@@ -1526,7 +1552,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",
-            f"/runs/{run_id}/interrupts/{node_id}",
+            f"/runs/{project_id(run_id)}/interrupts/{quote(node_id, safe='')}",
             body={"resumeValue": body.resumeValue},
             headers=headers,
         )
@@ -1537,7 +1563,7 @@ class OpenwopClient:
         )
 
     def interrupts_inspect_by_token(self, token: str) -> InterruptByTokenInspection:
-        d = self._request_json("GET", f"/interrupts/{token}", authenticated=False)
+        d = self._request_json("GET", f"/interrupts/{quote(token, safe='')}", authenticated=False)
         return InterruptByTokenInspection(
             kind=d["kind"],
             key=str(d["key"]),
@@ -1556,7 +1582,7 @@ class OpenwopClient:
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         return self._request_json(
             "POST",
-            f"/interrupts/{token}",
+            f"/interrupts/{quote(token, safe='')}",
             body={"resumeValue": body.resumeValue},
             headers=headers,
             authenticated=False,

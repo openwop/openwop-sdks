@@ -107,6 +107,12 @@ jobs:
           [[ "$prerelease" == true ]] && npm_tag=next
           case "$major" in
             1)
+              # 2.x holds npm `latest`; a 1.x publish must not take it back,
+              # or every unpinned `npm install @openwop/openwop` downgrades to
+              # v1. The 1.x line publishes under `latest-1` (`@1` resolves by
+              # range either way). `v1` is not usable: npm refuses a dist-tag
+              # that parses as a semver range.
+              [[ "$prerelease" == true ]] || npm_tag=latest-1
               ts_dir=sdk/typescript; py_dir=sdk/python; go_dir=go
               go_module=github.com/openwop/openwop-sdks/go ;;
             2)

@@ -617,10 +617,18 @@ type AuditVerifyCheckpoint struct {
 }
 
 // AuditVerifyAnomaly is one entry in AuditVerifyResult.Anomalies.
+// Kind is "" for an entry that omits it, which means "chain-break" (RFC 0218
+// §C); treat an unrecognised Kind as an anomaly too. ExpectedPrevHash and
+// ActualPrevHash are set for "chain-break" only (a JSON null reads as "");
+// Checkpoint for "merkle-mismatch" / "signature-invalid" only. Detail is
+// operator-facing text — never branch on it.
 type AuditVerifyAnomaly struct {
 	AtSeq            int64  `json:"atSeq"`
-	ExpectedPrevHash string `json:"expectedPrevHash"`
-	ActualPrevHash   string `json:"actualPrevHash"`
+	Kind             string `json:"kind,omitempty"`
+	ExpectedPrevHash string `json:"expectedPrevHash,omitempty"`
+	ActualPrevHash   string `json:"actualPrevHash,omitempty"`
+	Checkpoint       string `json:"checkpoint,omitempty"`
+	Detail           string `json:"detail,omitempty"`
 }
 
 // AuditVerifyResult is the response shape from GET /v1/audit/verify.

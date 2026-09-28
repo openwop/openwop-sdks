@@ -838,8 +838,11 @@ class OpenwopClient:
         anomalies = [
             AuditVerifyAnomaly(
                 atSeq=int(a["atSeq"]),
-                expectedPrevHash=str(a["expectedPrevHash"]),
-                actualPrevHash=str(a["actualPrevHash"]),
+                expectedPrevHash=a.get("expectedPrevHash"),
+                actualPrevHash=a.get("actualPrevHash"),
+                kind=a.get("kind"),
+                checkpoint=a.get("checkpoint"),
+                detail=a.get("detail"),
             )
             for a in d.get("anomalies", [])
         ]
@@ -1056,6 +1059,14 @@ class OpenwopClient:
         ``WopError`` on non-2xx (400/401/403)."""
         d = self._request_json("POST", "/v1/content/pages", body=_to_jsonable(page))
         return _content_page_from_dict(d)
+
+    def content_delete_page(self, page_id: str) -> None:
+        """`DELETE /v1/content/pages/{pageId}` — delete a page with its
+        sections and every locale overlay (admin; ``204``). The segment is the
+        page's ``pageId``, not its slug (it shares the path item with
+        :meth:`content_get_page`). Raises ``WopError`` on non-2xx, including
+        ``404`` for an id absent in the caller's tenant."""
+        self._request_json("DELETE", f"/v1/content/pages/{quote(page_id, safe='')}")
 
     def content_put_section(
         self, page_id: str, section_id: str, body: PutContentSectionRequest

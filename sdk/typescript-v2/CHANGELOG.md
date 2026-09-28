@@ -4,18 +4,25 @@ The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CH
 
 ## [Unreleased]
 
+## [2.4.0] — 2026-09-28 — corpus `v2.43.0`: `DELETE /content/pages/{pageId}`, projected tenant-bound ids
+
 ### Added
 
+- **`content.deletePage(pageId)`** — `DELETE /content/pages/{pageId}` (admin, `content.write`; `localized-content.md` §D). Resolves on `204`, throws `WopError` otherwise (`404` for an id absent in the caller's tenant). The path segment is the page's `pageId`, not its slug; the operation shares its path item with `getPage`. The SDK now covers all 55 manifest operations.
+- **`projectId(id)` / `unprojectId(wire)`** — the tenant-bound id wire form (`spec/v2/core/identity.md` §5): every UTF-8 byte outside `[A-Za-z0-9._-]` becomes `~` + two uppercase hex digits (`acme/r-9f3c` ↔ `acme~2Fr-9f3c`). `unprojectId` accepts the projected and the percent form.
 - **`webhooks.rotateSecret(webhookId, { secret })`** — `POST /webhooks/{webhookId}/rotate-secret` (RFC 0201 §E.18; gated on `webhooks.secretRotation`). Types `RotateWebhookSecretRequest` / `RotateWebhookSecretResponse`; the response carries no secret.
 - **`webhooks.deadLetters(webhookId, { limit?, cursor? })`** — `GET /webhooks/{webhookId}/dead-letters` (RFC 0188 §A.1). Types `WebhookDeadLetterPage` / `DeadLetteredDelivery`; records name a delivery and never carry its bytes.
 
 ### Changed
 
-- **Corpus pin `v2.4.1` → `v2.38.0`** (via `v2.37.0`, the first tag carrying the v1 `rotateWebhookSecret` operation; `v2.38.0` refreshes 15 more artifacts — v1 `unregisterWebhook` now declares its required `tenantId` query parameter, RFC 0212 I-JSON wording on the JCS hash inputs) (`CORPUS_TAG`; 51 vendored artifacts refreshed, plus `schemas/v2/part.schema.json` and `schemas/v2/webhook-dead-letter-page.schema.json` newly vendored).
+- **Corpus pin `v2.3.3` → `v2.43.0`** (`CORPUS_TAG`, via unpublished re-vendors at `v2.4.1`, `v2.37.0` and `v2.38.0`). `v2.43.0` brings `DELETE /content/pages/{pageId}` into `spec/v2/path-manifest.json` (55 operations), two error codes (`approval_rejected`, `replay_context_summary_unavailable`; 108 codes) and the `meaning` column in `spec/v2/errors.json`; v1 `unregisterWebhook` declares its required `tenantId` query parameter (`v2.38.0`), and `v2.37.0` was the first tag carrying `rotateWebhookSecret`.
 - **`InterruptByTokenInspection.kind` gains `'credential'`** (RFC 0199 §C) — the union now equals the schema enum; a strict consumer refused it before.
 
 ### Fixed
 
+- **`RunOwner.subject` typed `string`.** It is the RFC 0170 Subject object (`schemas/v2/subject.schema.json`); the type is now `Subject` (exported, an alias of the generated `SubjectSchema`). The value at runtime was always the object; only the type was wrong.
+- **`AuditVerifyAnomaly` matches the RFC 0218 §C shape** (corpus 2.43.0): `kind` (`AuditVerifyAnomalyKind`: `chain-break` · `hash-mismatch` · `missing-entry` · `merkle-mismatch` · `signature-invalid`; absent means `chain-break`), `checkpoint`, `detail`. `expectedPrevHash` / `actualPrevHash` are now `string | null` and optional — they are carried by `chain-break` only, and `expectedPrevHash` is `null` at the genesis entry. Code that read them as `string` must narrow; the old type described a value that a conformant host no longer always sends.
+- **Tenant-bound path segments are sent in the projected form.** `runs.*`, `interrupts.resolveByRun`, `webhooks.*` and the SSE `streamEvents` put `runId` / `webhookId` on the wire as `acme~2Fr-9f3c` (identity.md §5 "Wire form"), where 2.3.0 sent the percent form `acme%2Fr-9f3c`. Hosts must accept both, so this changes no result against a conformant host; it matches the form hosts emit in links and survives proxies that decode `%2F`. An id that is already a wire form is decoded first and never double-escaped, and `runs.diff` projects its `against` query value too.
 - **`InterruptRequestedPayload` (and `ApprovalRequestedPayload`) typed as `unknown`.** Corpus 2.36.0 bound `data` to `kind` with one `if`/`then` per kind in `suspend-request.schema.json`; `scripts/generate-payloads.mjs` intersected each conditional as `unknown` and dropped the object's own properties. A block of single-const conditionals is now generated as a discriminated union — one branch per kind with `data` typed — and the same fix types `SubjectSchema` and `ConversationTurn`, which had also read `unknown`.
 
 ## [2.3.0] — 2026-09-17 — corpus `v2.3.3`: typed event payloads, opt-in

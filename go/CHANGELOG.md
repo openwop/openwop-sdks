@@ -1,10 +1,17 @@
 # `openwopclient` Changelog
 
-## [Unreleased] — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50)
+## [Unreleased]
+
+## [v1.7.0] — 2026-09-28 — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50); `deleteContentPage`; RFC 0218 audit anomalies
+
+_All three 1.x SDKs (TypeScript 1.10.0, Python 1.8.0, Go v1.7.0), on corpus `v2.43.0`. npm publishes 1.x under dist-tag `latest-1`: `latest` stays on 2.x. Install with `@openwop/openwop@1`._
 
 - **`(*OpenwopClient).UnregisterWebhookForTenant(ctx, subscriptionID, tenantID)`** — sends `?tenantId=`, the same shape as `RotateWebhookSecret`. `spec/v1/webhooks.md` §Unregister has always required the `tenantId` query parameter and corpus 2.37.1+ (`api/openapi.yaml` `unregisterWebhook`, openwop#1530) declares it, but the 1.x helper never sent it, so a host that enforces the contract rejected the call (openwop-sdks#50). Additive — no existing call changes shape. A new function rather than a new parameter so the v1 module's exported signatures do not break.
 - **`UnregisterWebhook` is `Deprecated:`** — kept unchanged (no `tenantId`); enforcing hosts answer `400 validation_error`.
 - Pinned by `webhook_unregister_test.go`.
+
+- **`(*OpenwopClient).DeleteContentPage(ctx, pageID)`** — `DELETE /v1/content/pages/{pageId}` (`localized-content.md` §D; `api/openapi.yaml` `deleteContentPage`, corpus 2.42.2+). Admin, `content.write`; nil on `204`, a `*WopError` otherwise (`404` for an id absent in the caller's tenant). Pinned by `content_delete_page_test.go`.
+- **`AuditVerifyAnomaly` gains `Kind`, `Checkpoint` and `Detail`** (RFC 0218 §C, corpus 2.43.0); no existing field changes type.
 
 ## [v1.6.0] — 2026-09-02 — webhook helpers read the spec's headers (RFC 0165 §C.3)
 

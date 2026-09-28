@@ -132,11 +132,25 @@ defined in ``spec/v2/core/compensation.md`` §"Run rollup: compensationStatus".
 
 
 @dataclass(frozen=True)
+class Subject:
+    """``schemas/v2/subject.schema.json`` — the RFC 0170 Subject. ``actor``
+    names who acts on this subject's behalf (depth bounded at four)."""
+
+    issuer: str
+    subjectId: str
+    tenant: str
+    lane: str
+    kind: str
+    keyClass: str | None = None
+    actor: Subject | None = None
+
+
+@dataclass(frozen=True)
 class RunOwner:
     """``RunSnapshot.owner`` — closed; ``subject`` REQUIRED (identity.md)."""
 
     tenant: str
-    subject: str
+    subject: Subject
     workspace: str | None = None
 
 
@@ -358,9 +372,15 @@ class AuditVerifyCheckpoint:
 
 @dataclass(frozen=True)
 class AuditVerifyAnomaly:
+    """One detected anomaly (RFC 0218 §C). ``kind`` absent means
+    ``chain-break``; treat an unrecognised ``kind`` as an anomaly too."""
+
     atSeq: int
-    expectedPrevHash: str
-    actualPrevHash: str
+    expectedPrevHash: str | None = None  # chain-break only; None at genesis
+    actualPrevHash: str | None = None  # chain-break only
+    kind: str | None = None
+    checkpoint: str | None = None  # merkle-mismatch / signature-invalid only
+    detail: str | None = None  # operator-facing; never branch on it
 
 
 @dataclass(frozen=True)

@@ -5,36 +5,37 @@ Client SDKs for the [OpenWOP protocol](https://github.com/openwop/openwop), in l
 Carved out of the `openwop/openwop` spec corpus (full history preserved) so the protocol repo
 stays a lean spec + conformance contract.
 
-Two generations of packages live side by side. The 1.x packages target v1 hosts (`/v1/…`); the
-2.x packages (npm `2.0.0`, PyPI `2.0.0`, Go tag `go/v2.0.0` — corpus `v2.0.8`) are **v2-ONLY** siblings for the v2 major (`spec/v2/`: bare-origin unversioned
-paths, `OpenWOP-Version` negotiation, the closed discovery root, the generated error registry —
-RFC 0172 / 0171 / 0173, RFC 0168 §D). Same npm / PyPI names, a new Go major-subdirectory module.
+**v2 is the current protocol major, and the 2.x packages are the ones a new integration uses.** They
+are v2-ONLY (`spec/v2/`: bare-origin unversioned paths, `OpenWOP-Version` negotiation, the closed
+discovery root, the generated error registry — RFC 0172 / 0171 / 0173, RFC 0168 §D), cover all
+55 operations of `spec/v2/path-manifest.json`, and are at **2.4.0** on corpus **`v2.43.0`**
+([`CORPUS_TAG`](./CORPUS_TAG)).
 
-| SDK | Package | 1.x path | 2.x path | 2.x tag form |
-|---|---|---|---|---|
-| TypeScript | [`@openwop/openwop`](https://www.npmjs.com/package/@openwop/openwop) | `sdk/typescript/` | `sdk/typescript-v2/` | `openwop/v2.Y.Z` |
-| Python | [`openwop-client`](https://pypi.org/project/openwop-client/) | `sdk/python/` | `sdk/python-v2/` | `openwop-client/v2.Y.Z` |
-| Go | `github.com/openwop/openwop-sdks/go` · `…/go/v2` | `go/` | `go/v2/` | `go/v2.Y.Z` |
+The 1.x packages target v1 hosts (`/v1/…`) and are the maintained parallel line through the v1
+overlap, until v1 end-of-support (earliest 2026-12-04). Unpinned installs now resolve to 2.x, so a
+v1 integration must pin the major.
 
-A coordinated corpus tag (`v1.Y.Z` / `v2.Y.Z`, rc's `v2.0.0-rc.N`) publishes the three packages of
-that major; a pre-release tag publishes to npm under dist-tag `next` and requires a PEP 440
-pre-release version on PyPI. The vendored corpus the packages mirror is pinned by [`CORPUS_TAG`](./CORPUS_TAG).
-
-## ⚠️ Go import path change
-
-The Go module moved from `github.com/openwop/openwop/sdk/go` to
-**`github.com/openwop/openwop-sdks/go`**. Update imports and re-pin:
+| SDK | Install (v2) | Install (v1 line) | 2.x path | 1.x path | 2.x tag form |
+|---|---|---|---|---|---|
+| TypeScript [`@openwop/openwop`](https://www.npmjs.com/package/@openwop/openwop) | `npm install @openwop/openwop@2` | `npm install @openwop/openwop@1` | `sdk/typescript-v2/` | `sdk/typescript/` | `openwop/v2.Y.Z` |
+| Python [`openwop-client`](https://pypi.org/project/openwop-client/) | `pip install "openwop-client>=2,<3"` | `pip install "openwop-client<2"` | `sdk/python-v2/` | `sdk/python/` | `openwop-client/v2.Y.Z` |
+| Go | `go get github.com/openwop/openwop-sdks/go/v2` | `go get github.com/openwop/openwop-sdks/go` | `go/v2/` | `go/` | `go/v2.Y.Z` |
 
 ```go
-import openwop "github.com/openwop/openwop-sdks/go"
+import openwop "github.com/openwop/openwop-sdks/go/v2" // v2 hosts
+// import openwop "github.com/openwop/openwop-sdks/go" // the v1 line
 ```
 
-```bash
-go get github.com/openwop/openwop-sdks/go@latest
-```
+Same npm / PyPI names across the two generations; Go's v2 is the major-subdirectory module `…/go/v2`.
+A coordinated corpus tag (`v1.Y.Z` / `v2.Y.Z`, rc's `v2.0.0-rc.N`) publishes the three packages of
+that major; a pre-release tag publishes to npm under dist-tag `next` and requires a PEP 440
+pre-release version on PyPI.
 
-The old path is frozen at its last in-corpus tag; all future releases tag from this repo
-(`go/vX.Y.Z`).
+## Go import path (from the monorepo era)
+
+Before the SDKs left the spec corpus, the Go module lived at `github.com/openwop/openwop/sdk/go`.
+That path is frozen at its last in-corpus tag; the v1 line continues at
+`github.com/openwop/openwop-sdks/go` (tags `go/v1.Y.Z`) and v2 at `…/go/v2` (tags `go/v2.Y.Z`).
 
 ## Versioning
 

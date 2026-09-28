@@ -1,9 +1,9 @@
 # `openwop-client` 2.x — Python SDK for OpenWOP v2 hosts
 
-**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This package is the reference Python client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (51 operations), typed dataclasses, and pure-stdlib SSE iterators for the run and host event channels.
+**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This package is the reference Python client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (55 operations), typed dataclasses, and pure-stdlib SSE iterators for the run and host event channels.
 
 ```bash
-pip install "openwop-client>=2,<3"   # 2.0.0 — v2-only; the 1.x client stays on openwop-client<2
+pip install "openwop-client>=2,<3"   # 2.4.0 — v2-only; the 1.x client stays on openwop-client<2
 ```
 
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Corpus tag:** see [`CORPUS_TAG`](../../CORPUS_TAG) · **Mirrors:** [`api/v2/openapi.yaml`](../../api/v2/openapi.yaml), [`schemas/v2/`](../../schemas/v2/), [`spec/v2/errors.json`](../../spec/v2/errors.json) · **Sibling:** the TypeScript client at [`sdk/typescript-v2/`](../typescript-v2/)
@@ -19,8 +19,9 @@ pip install "openwop-client>=2,<3"   # 2.0.0 — v2-only; the 1.x client stays o
 | `dedup=True` → `X-Dedup` | `dedup=True` → `OpenWOP-Dedup: enforce`. |
 | `runs_poll_events(last_sequence=)` | `runs_poll_events(after_sequence=)`; the response is the closed `{ runId, events, lastSequence, status, isTerminal }`. |
 | `Capabilities` with `supported` sub-dataclasses | The closed v2 root: `protocolVersions` + `preferredVersion` required, `families: dict[str, CapabilityRecord]` (`status / since / until / witness / facets`). `CAPABILITY_FAMILY_KEYS` is generated from the schema. |
-| `HTTP_ERROR_CODES` hand-kept | `ERROR_CODES` / `ErrorCode` (94) generated from `spec/v2/errors.json`, plus `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`, `is_vendor_error_code`. |
+| `HTTP_ERROR_CODES` hand-kept | `ERROR_CODES` / `ErrorCode` (108) generated from `spec/v2/errors.json`, plus `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`, `is_vendor_error_code`. |
 | `*_workspace_file` (4), `runs_debug_bundle`, `RegistryClient` | Removed — not v2 operations (the registry is resolved through `.well-known/openwop-registry.json` `endpoints`). |
+| `quote(run_id, safe='')` → `t%2Fr` | Tenant-bound ids (`run_id`, `subscription_id`) go on the wire projected: `acme/r-9f3c` → `acme~2Fr-9f3c` (identity.md §5 "Wire form"). `project_id` / `unproject_id` are exported; `unproject_id` reads both the projected and the percent form a link may carry. |
 | — | `runs_compensation`, `runs_effects`, `host_effect_seams` (RFC 0173), `host_events` (the `hostEvents` SSE channel). |
 | Webhook `openwop-Webhook-*` names, `v1=<hex>` | `OpenWOP-*` only (`X-openwop-*` accepted through the overlap); `sha256=<hex>`; an unrecognized `OpenWOP-Signature-Algorithm` is rejected. |
 

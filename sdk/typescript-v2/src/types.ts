@@ -12,6 +12,7 @@
  */
 
 import type { CapabilityFamilyKey, ErrorCode } from './generated.js';
+import type { SubjectSchema } from './generated-payloads.js';
 
 /** Run statuses per `RunSnapshot.status` in OpenAPI. */
 export type RunStatus =
@@ -64,11 +65,14 @@ export type CompensationStatus =
   | 'failed'
   | 'manual';
 
+/** `schemas/v2/subject.schema.json` — the RFC 0170 Subject (`issuer`, `subjectId`, `tenant`, `lane`, `kind`, optional `keyClass` / `actor`). */
+export type Subject = SubjectSchema;
+
 /** `RunSnapshot.owner` — closed; `subject` REQUIRED (identity.md). */
 export interface RunOwner {
   tenant: string;
   workspace?: string;
-  subject: string;
+  subject: Subject;
 }
 
 /** `schemas/v2/run-snapshot.schema.json` — the fold of the event log through the run projection (runs.md §Snapshot). */
@@ -348,10 +352,26 @@ export interface AuditVerifyCheckpoint {
   signature: string;
 }
 
+/** What an audit-verify anomaly reports (RFC 0218 §C). Absent `kind` means `chain-break`. */
+export type AuditVerifyAnomalyKind =
+  | 'chain-break'
+  | 'hash-mismatch'
+  | 'missing-entry'
+  | 'merkle-mismatch'
+  | 'signature-invalid';
+
 export interface AuditVerifyAnomaly {
   atSeq: number;
-  expectedPrevHash: string;
-  actualPrevHash: string;
+  /** Absent means `chain-break`. Treat an unrecognised value as an anomaly too. */
+  kind?: AuditVerifyAnomalyKind | (string & {});
+  /** `chain-break` only; `null` at the genesis entry. */
+  expectedPrevHash?: string | null;
+  /** `chain-break` only; the entry's `prevHash`, `null` included. */
+  actualPrevHash?: string | null;
+  /** `merkle-mismatch` / `signature-invalid` only: the failing checkpoint's id. */
+  checkpoint?: string;
+  /** Operator-facing text; never branch on it. */
+  detail?: string;
 }
 
 /**
