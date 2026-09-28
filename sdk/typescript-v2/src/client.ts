@@ -10,6 +10,7 @@
  * Auth: a single bearer-style API key, supplied at construction.
  */
 
+import { CORPUS_VERSION } from './generated.js';
 import { streamEvents, streamHostEvents, type EventsStreamOptions, type HostEventsStreamOptions } from './sse.js';
 import { projectId } from './wire-id.js';
 import {
@@ -132,6 +133,11 @@ export class OpenwopClient {
   /** The `OpenWOP-Version` value this client sends on every request. */
   get protocolVersion(): string {
     return this.#versionHeader;
+  }
+
+  /** The `OpenWOP-Client-Version` value this client sends on every request: the corpus release it is built against (RFC 0219). */
+  get clientVersion(): string {
+    return CORPUS_VERSION;
   }
 
   constructor(opts: OpenwopClientOptions) {
@@ -945,6 +951,8 @@ export class OpenwopClient {
       Accept: 'application/json',
       // RFC 0172 §A.3 — on every request, authenticated or not.
       'OpenWOP-Version': this.#versionHeader,
+      // RFC 0219 — the corpus release this SDK is built against, never the package version.
+      'OpenWOP-Client-Version': CORPUS_VERSION,
       ...(opts.headers ?? {}),
     };
     if (opts.body !== undefined && headers['Content-Type'] === undefined) {

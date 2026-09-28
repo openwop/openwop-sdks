@@ -2,7 +2,12 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2.Y.Z`).
 
-## [Unreleased]
+## [2.5.0] — 2026-09-28 — corpus `v2.43.0`: `OpenWOP-Client-Version` on every request (RFC 0219)
+
+### Added
+
+- **`OpenWOP-Client-Version` on every request** (RFC 0219) — the JSON request path and the SSE subscribe (`StreamEvents`, `StreamHostEvents`) send it next to `OpenWOP-Version`. The value is the **corpus release** the module is built against, derived from `CORPUS_TAG` by `scripts/generate.py` into the exported const `CorpusVersion` (`2.43.0`), never the module version; a pre-release tag yields `<major>.<minor>`. Read it with `ClientVersion()`; it is not configurable. `generate.py --check` fails when it drifts from `CORPUS_TAG`. Pinned by `client_version_test.go`.
+- **Upgrade note for hosts serving browsers cross-origin.** A browser sends a CORS preflight for this new request header. A host whose `Access-Control-Allow-Headers` is an explicit list MUST add `OpenWOP-Client-Version` to it before its browser clients take this release. Otherwise every cross-origin request fails the preflight, as omitting `OpenWOP-Version` once did. Same-origin and server-side callers are unaffected.
 
 ## [2.4.0] — 2026-09-28 — corpus `v2.43.0`: `DELETE /content/pages/{pageId}`, projected tenant-bound ids
 

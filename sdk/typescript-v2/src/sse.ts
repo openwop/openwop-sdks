@@ -12,6 +12,7 @@
  */
 
 import type { HostEventDoc, RunEventDoc, StreamMode } from './types.js';
+import { CORPUS_VERSION } from './generated.js';
 import { projectId } from './wire-id.js';
 
 export interface EventsStreamOptions {
@@ -92,6 +93,7 @@ async function* streamSse<T>(
     Authorization: `Bearer ${ctx.apiKey}`,
     'Cache-Control': 'no-cache',
     'OpenWOP-Version': ctx.protocolVersion,
+    'OpenWOP-Client-Version': CORPUS_VERSION,
   };
   if (opts.lastEventId) {
     headers['Last-Event-ID'] = opts.lastEventId;

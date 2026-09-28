@@ -4,6 +4,7 @@
 Sources (vendored at CORPUS_TAG by scripts/check-vendored-sync.mjs):
     spec/v2/errors.json                 -> ErrorCodes / ErrorCodeHTTPStatus / RetriableErrorCodes / IsErrorCode
     schemas/v2/capabilities.schema.json -> CapabilityMetadataKeys / CapabilityFamilyKeys / IsCapabilityFamilyKey
+    CORPUS_TAG                          -> CorpusVersion (RFC 0219 ``OpenWOP-Client-Version``)
 
 ``python3 scripts/generate.py`` rewrites generated.go; ``--check`` exits 1 when
 the committed file differs (the sdks:check gate runs it). Stdlib only; the
@@ -13,6 +14,7 @@ output is gofmt-shaped (tabs, one literal per line, no aligned columns).
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -21,10 +23,27 @@ PKG = HERE.parent
 REPO = PKG.parent.parent
 OUT = PKG / "generated.go"
 
+_CORPUS_TAG = re.compile(
+    r"^(?:openwop-conformance/)?v?(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-[0-9A-Za-z.-]+)?$"
+)
+
+
+def corpus_version(tag: str) -> str:
+    """RFC 0219: the client names the corpus release it is built against, never
+    the module version. ``vX.Y.Z`` / ``openwop-conformance/vX.Y.Z`` / ``X.Y.Z`` ->
+    ``X.Y.Z``; a pre-release ``vX.Y.Z-rc.N`` -> ``X.Y`` (the header grammar has no
+    pre-release)."""
+    m = _CORPUS_TAG.match(tag)
+    if not m:
+        raise SystemExit(f"CORPUS_TAG: cannot derive a corpus version from {tag!r}")
+    return f"{m[1]}.{m[2]}" if m[4] else f"{m[1]}.{m[2]}.{m[3]}"
+
 
 def main() -> int:
     errors = json.loads((REPO / "spec/v2/errors.json").read_text())
     caps = json.loads((REPO / "schemas/v2/capabilities.schema.json").read_text())
+    corpus_tag = (REPO / "CORPUS_TAG").read_text().strip()
+    corpus = corpus_version(corpus_tag)
 
     rows = sorted(errors["rows"], key=lambda r: r["code"])
     codes = [r["code"] for r in rows]
@@ -142,6 +161,11 @@ def main() -> int:
         "\t_, ok := capabilityFamilyKeySet[key]\n"
         "\treturn ok\n"
         "}\n"
+        "\n"
+        f"// CorpusVersion is the corpus release this SDK is built against (CORPUS_TAG\n"
+        f"// {corpus_tag}), sent as OpenWOP-Client-Version on every request (RFC 0219).\n"
+        "// It is not the module version.\n"
+        f'const CorpusVersion = "{corpus}"\n'
     )
 
     if "--check" in sys.argv:

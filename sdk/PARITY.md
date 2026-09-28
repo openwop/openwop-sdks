@@ -9,19 +9,19 @@
 
 ---
 
-## v2 SDKs (2.4.0 — `sdk/typescript-v2`, `sdk/python-v2`, `go/v2`)
+## v2 SDKs (2.5.0 — `sdk/typescript-v2`, `sdk/python-v2`, `go/v2`)
 
 > **Status:** Current. Reviewed 2026-09-28 against corpus `v2.43.0` (`CORPUS_TAG`). Machine-enforced by
 > `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`
 > (`scripts/sdks-check.sh` step 7).
 
-The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against the corpus tag in `CORPUS_TAG` — `@openwop/openwop@2.4.0`, `openwop-client==2.4.0`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2.4.0`; tags `go/v2.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **55 operations** (the two SSE channels among them). Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. `sdks-check` also fails on any `/v1` path literal in a v2 source tree.
+The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against the corpus tag in `CORPUS_TAG` — `@openwop/openwop@2.5.0`, `openwop-client==2.5.0`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2.5.0`; tags `go/v2.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **55 operations** (the two SSE channels among them). Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. `sdks-check` also fails on any `/v1` path literal in a v2 source tree.
 
 | SDK | typed | of manifest ops |
 |---|---:|---:|
-| TypeScript (`@openwop/openwop` 2.4.0) | 55 | 55 |
-| Python (`openwop-client` 2.4.0) | 55 | 55 |
-| Go (`github.com/openwop/openwop-sdks/go/v2` v2.4.0) | 55 | 55 |
+| TypeScript (`@openwop/openwop` 2.5.0) | 55 | 55 |
+| Python (`openwop-client` 2.5.0) | 55 | 55 |
+| Go (`github.com/openwop/openwop-sdks/go/v2` v2.5.0) | 55 | 55 |
 
 **What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 53 of the 58 v1 OpenAPI operations; the v2 manifest has 55. 49 are common to both:
 
@@ -32,6 +32,7 @@ The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against t
 |---|---|---|---|
 | `GET /.well-known/openwop` (closed v2 root) | `client.discovery.capabilities()` → `Capabilities` (families as `CapabilityRecord`) | `client.discovery_capabilities()` → `Capabilities.families` | `client.GetCapabilities(ctx)` → `Capabilities.Family(key)` |
 | `OpenWOP-Version: <major>.0` on every request | ctor `major` (default 2), `client.protocolVersion` | ctor `major=2`, `client.protocol_version` | `OpenwopClient.Major` (0 ⇒ 2), `ProtocolVersion()` |
+| `OpenWOP-Client-Version: <corpus version>` on every request, SSE subscribe included (RFC 0219; unreleased, 2.5.0) | generated `CORPUS_VERSION`, `client.clientVersion` | generated `CORPUS_VERSION`, `client.client_version` | generated `CorpusVersion`, `ClientVersion()` |
 | `OpenWOP-Dedup: enforce` | `MutationOptions.dedup` | `dedup=True` | `MutationOptions{Dedup: true}` |
 | `GET /runs/{id}/events/poll?afterSequence` | `runs.pollEvents(id, { afterSequence })` → `{ runId, events, lastSequence, status, isTerminal }` | `runs_poll_events(id, after_sequence=)` | `PollRunEvents(ctx, id, PollRunEventsOptions{AfterSequence})` |
 | `GET /runs/{id}/compensation` (RFC 0173 §C.1) | `runs.compensation(id)` (`null` on 404) | `runs_compensation(id)` (`None` on 404) | `GetRunCompensation(ctx, id)` (`nil, nil` on 404) |

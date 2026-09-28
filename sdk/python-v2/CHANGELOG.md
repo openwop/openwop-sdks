@@ -2,7 +2,12 @@
 
 The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
-## [Unreleased]
+## [2.5.0] — 2026-09-28 — corpus `v2.43.0`: `OpenWOP-Client-Version` on every request (RFC 0219)
+
+### Added
+
+- **`OpenWOP-Client-Version` on every request** (RFC 0219) — the JSON request path and the SSE subscribe (`runs_events`, `host_events`, `stream_events`, `stream_host_events`) send it next to `OpenWOP-Version`. The value is the **corpus release** the SDK is built against, derived from `CORPUS_TAG` by `scripts/generate.py` into the exported `CORPUS_VERSION` (`2.43.0`), never the package version; a pre-release tag yields `<major>.<minor>`. Read it as `client.client_version`; it is not configurable. `generate.py --check` fails when it drifts from `CORPUS_TAG`. Pinned by `tests/test_client_version.py`.
+- **Upgrade note for hosts serving browsers cross-origin.** A browser sends a CORS preflight for this new request header. A host whose `Access-Control-Allow-Headers` is an explicit list MUST add `OpenWOP-Client-Version` to it before its browser clients take this release. Otherwise every cross-origin request fails the preflight, as omitting `OpenWOP-Version` once did. Same-origin and server-side callers are unaffected.
 
 ## [2.4.0] — 2026-09-28 — corpus `v2.43.0`: `DELETE /content/pages/{pageId}`, projected tenant-bound ids
 

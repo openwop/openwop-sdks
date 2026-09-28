@@ -51,6 +51,12 @@ func (c *OpenwopClient) ProtocolVersion() string {
 	return ProtocolVersionHeader(major)
 }
 
+// ClientVersion is the OpenWOP-Client-Version value this client sends on
+// every request: the corpus release it is built against (RFC 0219).
+func (c *OpenwopClient) ClientVersion() string {
+	return CorpusVersion
+}
+
 // NewClient constructs a OpenwopClient with the canonical defaults.
 // Returns an error if baseURL or apiKey is empty.
 func NewClient(baseURL, apiKey string) (*OpenwopClient, error) {
@@ -767,6 +773,8 @@ func (c *OpenwopClient) requestJSON(
 	req.Header.Set("Accept", "application/json")
 	// RFC 0172 §A.3 — on every request, authenticated or not.
 	req.Header.Set("OpenWOP-Version", c.ProtocolVersion())
+	// RFC 0219 — the corpus release this SDK is built against, never the module version.
+	req.Header.Set("OpenWOP-Client-Version", c.ClientVersion())
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}

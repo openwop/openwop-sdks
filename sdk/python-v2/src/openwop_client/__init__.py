@@ -77,6 +77,7 @@ from .events import (
 from ._generated import (
     CAPABILITY_FAMILY_KEYS,
     CAPABILITY_METADATA_KEYS,
+    CORPUS_VERSION,
     ERROR_CODE_HTTP_STATUS,
     ERROR_CODES,
     RETRIABLE_ERROR_CODES,
@@ -212,7 +213,7 @@ from .webhook_helpers import (
     webhook_delivery_headers,
 )
 
-__version__ = "2.4.0"
+__version__ = "2.5.0"
 
 __all__ = [
     "OpenwopClient",
@@ -231,6 +232,7 @@ __all__ = [
     "VENDOR_ERROR_CODE_PATTERN",
     "CAPABILITY_FAMILY_KEYS",
     "CAPABILITY_METADATA_KEYS",
+    "CORPUS_VERSION",
     "HTTP_ERROR_CODES",
     "is_http_error_code",
     "is_error_code",

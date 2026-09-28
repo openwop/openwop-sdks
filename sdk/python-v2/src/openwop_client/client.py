@@ -19,7 +19,7 @@ from urllib.request import Request, urlopen
 
 from .errors import WopError
 from .wire_id import project_id
-from ._generated import CAPABILITY_FAMILY_KEYS
+from ._generated import CAPABILITY_FAMILY_KEYS, CORPUS_VERSION
 from .sse import stream_events, stream_host_events
 from .types import (
     AgentDeployment,
@@ -590,6 +590,12 @@ class OpenwopClient:
     def protocol_version(self) -> str:
         """The ``OpenWOP-Version`` value this client sends on every request."""
         return self._version_header
+
+    @property
+    def client_version(self) -> str:
+        """The ``OpenWOP-Client-Version`` value this client sends on every request:
+        the corpus release it is built against (RFC 0219)."""
+        return CORPUS_VERSION
 
     # ── Discovery ────────────────────────────────────────────────────
     def discovery_capabilities(self) -> Capabilities:
@@ -1672,6 +1678,8 @@ class OpenwopClient:
             "Accept": "application/json",
             # RFC 0172 §A.3 — on every request, authenticated or not.
             "OpenWOP-Version": self._version_header,
+            # RFC 0219 — the corpus release this SDK is built against, never the package version.
+            "OpenWOP-Client-Version": CORPUS_VERSION,
         }
         if self._accept_language:
             all_headers["Accept-Language"] = self._accept_language

@@ -397,3 +397,8 @@ func IsCapabilityFamilyKey(key string) bool {
 	_, ok := capabilityFamilyKeySet[key]
 	return ok
 }
+
+// CorpusVersion is the corpus release this SDK is built against (CORPUS_TAG
+// v2.43.0), sent as OpenWOP-Client-Version on every request (RFC 0219).
+// It is not the module version.
+const CorpusVersion = "2.43.0"
