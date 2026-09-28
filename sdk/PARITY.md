@@ -1,15 +1,53 @@
 # SDK Parity Matrix
 
-> **Status:** Living document. Last reviewed 2026-06-02 against:
-> - `@openwop/openwop` TypeScript SDK (5 files under `sdk/typescript/src/`)
-> - `openwop-client` Python SDK (5 files under `sdk/python/src/openwop_client/`)
-> - `github.com/openwop/openwop-sdks/go` Go SDK (`go/`)
->
-> **Now machine-enforced.** `sdk/parity-expectations.json` declares a per-SDK
-> status for every OpenAPI operation, and `scripts/check-sdk-parity.mjs`
-> (`openwop:check` step 7) fails when a route lands without a declared SDK
-> helper or when a `typed` surface regresses out of an SDK. This prose matrix
-> is the human-readable companion; the JSON file is the source of truth.
+> **Status:** Living document. Two generations of SDKs are tracked: the **2.x** packages for v2 hosts
+> (the current major; section below) and the **1.x** packages for v1 hosts, the maintained parallel line
+> until v1 end-of-support (earliest 2026-12-04). Each generation is machine-enforced by
+> `scripts/check-sdk-parity.mjs` against its own expectations file (`sdk/parity-expectations-v2.json`,
+> `sdk/parity-expectations.json`); the JSON files are the source of truth and this prose is the
+> human-readable companion.
+
+---
+
+## v2 SDKs (2.4.0 — `sdk/typescript-v2`, `sdk/python-v2`, `go/v2`)
+
+> **Status:** Current. Reviewed 2026-09-28 against corpus `v2.43.0` (`CORPUS_TAG`). Machine-enforced by
+> `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`
+> (`scripts/sdks-check.sh` step 7).
+
+The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against the corpus tag in `CORPUS_TAG` — `@openwop/openwop@2.4.0`, `openwop-client==2.4.0`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2.4.0`; tags `go/v2.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **55 operations** (the two SSE channels among them). Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. `sdks-check` also fails on any `/v1` path literal in a v2 source tree.
+
+| SDK | typed | of manifest ops |
+|---|---:|---:|
+| TypeScript (`@openwop/openwop` 2.4.0) | 55 | 55 |
+| Python (`openwop-client` 2.4.0) | 55 | 55 |
+| Go (`github.com/openwop/openwop-sdks/go/v2` v2.4.0) | 55 | 55 |
+
+**What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 53 of the 58 v1 OpenAPI operations; the v2 manifest has 55. 49 are common to both:
+
+- Only in 1.x: the 4 `workspace` file operations (`/v1/host/workspace/files*`). The 5 seams the 1.x SDKs exclude (`packs-test` ×4, `getA2ATaskState`) are not v2 operations at all. Also dropped from the SDKs though never OpenAPI operations: `runs.debugBundle`, the host-sample `userAgents.*` wrappers (TS), and `RegistryClient` (v2 resolves registry paths through `.well-known/openwop-registry.json` `endpoints`, packs.md).
+- Only in 2.x: `getRunCompensation`, `getRunEffects`, `getEffectSeamManifest` (RFC 0173), `streamHostEvents` (the `hostEvents` AsyncAPI channel), `listRuns` (RFC 0182) and `listWebhookDeadLetters` (RFC 0188).
+
+| Surface (v2) | TS | Python | Go |
+|---|---|---|---|
+| `GET /.well-known/openwop` (closed v2 root) | `client.discovery.capabilities()` → `Capabilities` (families as `CapabilityRecord`) | `client.discovery_capabilities()` → `Capabilities.families` | `client.GetCapabilities(ctx)` → `Capabilities.Family(key)` |
+| `OpenWOP-Version: <major>.0` on every request | ctor `major` (default 2), `client.protocolVersion` | ctor `major=2`, `client.protocol_version` | `OpenwopClient.Major` (0 ⇒ 2), `ProtocolVersion()` |
+| `OpenWOP-Dedup: enforce` | `MutationOptions.dedup` | `dedup=True` | `MutationOptions{Dedup: true}` |
+| `GET /runs/{id}/events/poll?afterSequence` | `runs.pollEvents(id, { afterSequence })` → `{ runId, events, lastSequence, status, isTerminal }` | `runs_poll_events(id, after_sequence=)` | `PollRunEvents(ctx, id, PollRunEventsOptions{AfterSequence})` |
+| `GET /runs/{id}/compensation` (RFC 0173 §C.1) | `runs.compensation(id)` (`null` on 404) | `runs_compensation(id)` (`None` on 404) | `GetRunCompensation(ctx, id)` (`nil, nil` on 404) |
+| `GET /runs/{id}/effects` (RFC 0173 §C.2) | `runs.effects(id)` | `runs_effects(id)` | `GetRunEffects(ctx, id)` |
+| `GET /host/effect-seams` (RFC 0173 §C) | `host.effectSeams()` | `host_effect_seams()` | `GetEffectSeamManifest(ctx)` |
+| `GET /host/events` (SSE, `hostEvents` channel) | `host.events(opts)` / `streamHostEvents` | `host_events()` / `stream_host_events` | `StreamHostEvents(ctx, opts)` |
+| Error registry (`spec/v2/errors.json`, 108 codes) | generated `ERROR_CODES` / `ErrorCode` union, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`; `ErrorEnvelope.error: ErrorCode \| VendorErrorCode` | generated `ERROR_CODES` / `ErrorCode` Literal, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES` | generated `ErrorCodes`, `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsErrorCode` |
+| Tenant-bound path ids (identity.md §5 "Wire form") | projected (`acme/r-9f3c` → `acme~2Fr-9f3c`); `projectId` / `unprojectId` | same; `project_id` / `unproject_id` | same; `ProjectID` / `UnprojectID` |
+| Capability keys (`schemas/v2/capabilities.schema.json`) | generated `CAPABILITY_FAMILY_KEYS` / `CAPABILITY_METADATA_KEYS` | generated `CAPABILITY_FAMILY_KEYS` / `CAPABILITY_METADATA_KEYS` | generated `CapabilityFamilyKeys` / `CapabilityMetadataKeys` |
+| Webhook verification (`OpenWOP-*`; `X-openwop-*` through the overlap; `sha256=` only; algorithm check) | `@openwop/openwop/webhooks` `verifyWebhookSignature` + `readWebhookHeaders` | `verify_webhook_signature` + `read_webhook_headers` → `WebhookHeaderRead` | `VerifyWebhookSignature` + `ReadWebhookHeaders` (returns the algorithm too) |
+
+Each v2 package carries a generator (`sdk/typescript-v2/scripts/generate.mjs`, `sdk/python-v2/scripts/generate.py`, `go/v2/scripts/generate.py`) that emits the error-code and capability-key registries from the vendored corpus; `--check` runs in the gate so the unions cannot drift from `CORPUS_TAG`.
+
+---
+
+## 1.x SDKs (v1 line — `sdk/typescript`, `sdk/python`, `go`)
 
 This matrix records per-protocol-surface feature parity across the three reference SDKs. Each row is a protocol surface; each column shows whether the SDK has a typed helper for that surface, only-raw-HTTP coverage, or no coverage at all.
 
@@ -21,9 +59,9 @@ This matrix records per-protocol-surface feature parity across the three referen
 
 ---
 
-## Headline
+### Headline
 
-The three SDKs have a first-class typed helper for **52 of the 57 OpenAPI
+The three 1.x SDKs have a first-class typed helper for **53 of the 58 v1 OpenAPI
 operations** in TypeScript, Python, and Go. The 5 excluded ops are all
 **`/v1/host/sample/*` or `packs-test` server-side conformance seams**, not
 client surfaces:
@@ -35,7 +73,7 @@ client surfaces:
   omitted like the `packs-test` mirrors.
 
 The RFC 0099 trigger-subscription registration and the RFC 0103 localized-content
-operator + public-delivery API (7 ops) — previously a pending helper gap — are
+operator + public-delivery API (8 ops, with `deleteContentPage` from corpus 2.42.2) — previously a pending helper gap — are
 now **fully typed across all three SDKs** (`client.content.*` / `client.triggerSubscriptions.create` in TS; `content_*` / `create_trigger_subscription` in
 Python; `*ContentPage*` / `*ContentSettings` / `CreateTriggerSubscription` in Go).
 
@@ -46,9 +84,9 @@ Per-operation parity counts (from `sdk/parity-expectations.json`):
 
 | SDK | ✅ typed | excluded | ❌ undeclared gap |
 |---|---:|---:|---:|
-| TypeScript (`@openwop/openwop`) | 51 | 5 | 0 |
-| Python (`openwop-client`) | 51 | 5 | 0 |
-| Go (`github.com/openwop/openwop-sdks/go`) | 51 | 5 | 0 |
+| TypeScript (`@openwop/openwop` 1.x) | 53 | 5 | 0 |
+| Python (`openwop-client` 1.x) | 53 | 5 | 0 |
+| Go (`github.com/openwop/openwop-sdks/go`) | 53 | 5 | 0 |
 
 **2026-06-02 full port.** A parity audit found `sdk/PARITY.md`'s prior
 "34/34/34 as of 2026-05-15" headline was stale: the agent-platform surfaces
@@ -75,7 +113,7 @@ Helper parity across run-status + run-error-code predicates landed 2026-05-15 (S
 
 ---
 
-## Per-surface parity
+## 1.x per-surface parity
 
 ### Discovery + capabilities
 
@@ -169,7 +207,7 @@ Two language adaptations: TypeScript's generic `AIEnvelope<TPayload>` is `payloa
 
 ---
 
-## Summary table
+## 1.x summary table
 
 | Capability bucket | TS | Python | Go |
 |---|---|---|---|
@@ -183,44 +221,7 @@ Two language adaptations: TypeScript's generic `AIEnvelope<TPayload>` is `payloa
 
 ---
 
-## v2 SDKs (2.0.0 — `sdk/typescript-v2`, `sdk/python-v2`, `go/v2`)
-
-> **Status:** Added 2026-09-03 (v2 charter Phase 3 SDK leg, corpus tag `v2.0.0-rc.1`). Machine-enforced by
-> `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`
-> (`scripts/sdks-check.sh` step 4). The 1.x rows above are unchanged; the 1.x packages stay byte-identical.
-
-The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against the corpus tag in `CORPUS_TAG` — `@openwop/openwop@2.0.0-rc.1` (npm dist-tag `next`), `openwop-client==2.0.0rc1`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2.0.0-rc.1`; tags `go/v2.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **51 operations**. Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. The gate also fails on any `/v1` path literal in a v2 source tree.
-
-| SDK | typed | of manifest ops |
-|---|---:|---:|
-| TypeScript (`@openwop/openwop` 2.0.0) | 51 | 51 |
-| Python (`openwop-client` 2.0.0) | 51 | 51 |
-| Go (`github.com/openwop/openwop-sdks/go/v2` v2.0.0) | 51 | 51 |
-
-**What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 51 of 56 OpenAPI operations; the v2 manifest has 52 operations, but not the same 51:
-
-- Removed with the v1 surface: the 4 `workspace` file operations (`/v1/host/workspace/files*`) and the 5 seams the 1.x SDKs already excluded (`packs-test` ×4, `getA2ATaskState`). Also dropped from the SDKs though never OpenAPI operations: `runs.debugBundle`, the host-sample `userAgents.*` wrappers (TS), and `RegistryClient` (v2 resolves registry paths through `.well-known/openwop-registry.json` `endpoints`, packs.md).
-- Added (RFC 0173 + the AsyncAPI channel): `getRunCompensation`, `getRunEffects`, `getEffectSeamManifest`, `streamHostEvents`.
-
-| Surface (v2) | TS | Python | Go |
-|---|---|---|---|
-| `GET /.well-known/openwop` (closed v2 root) | `client.discovery.capabilities()` → `Capabilities` (families as `CapabilityRecord`) | `client.discovery_capabilities()` → `Capabilities.families` | `client.GetCapabilities(ctx)` → `Capabilities.Family(key)` |
-| `OpenWOP-Version: <major>.0` on every request | ctor `major` (default 2), `client.protocolVersion` | ctor `major=2`, `client.protocol_version` | `OpenwopClient.Major` (0 ⇒ 2), `ProtocolVersion()` |
-| `OpenWOP-Dedup: enforce` | `MutationOptions.dedup` | `dedup=True` | `MutationOptions{Dedup: true}` |
-| `GET /runs/{id}/events/poll?afterSequence` | `runs.pollEvents(id, { afterSequence })` → `{ runId, events, lastSequence, status, isTerminal }` | `runs_poll_events(id, after_sequence=)` | `PollRunEvents(ctx, id, PollRunEventsOptions{AfterSequence})` |
-| `GET /runs/{id}/compensation` (RFC 0173 §C.1) | `runs.compensation(id)` (`null` on 404) | `runs_compensation(id)` (`None` on 404) | `GetRunCompensation(ctx, id)` (`nil, nil` on 404) |
-| `GET /runs/{id}/effects` (RFC 0173 §C.2) | `runs.effects(id)` | `runs_effects(id)` | `GetRunEffects(ctx, id)` |
-| `GET /host/effect-seams` (RFC 0173 §C) | `host.effectSeams()` | `host_effect_seams()` | `GetEffectSeamManifest(ctx)` |
-| `GET /host/events` (SSE, `hostEvents` channel) | `host.events(opts)` / `streamHostEvents` | `host_events()` / `stream_host_events` | `StreamHostEvents(ctx, opts)` |
-| Error registry (`spec/v2/errors.json`, 94 codes) | generated `ERROR_CODES` / `ErrorCode` union, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`; `ErrorEnvelope.error: ErrorCode \| VendorErrorCode` | generated `ERROR_CODES` / `ErrorCode` Literal, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES` | generated `ErrorCodes`, `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsErrorCode` |
-| Capability keys (`schemas/v2/capabilities.schema.json`) | generated `CAPABILITY_FAMILY_KEYS` / `CAPABILITY_METADATA_KEYS` | generated `CAPABILITY_FAMILY_KEYS` / `CAPABILITY_METADATA_KEYS` | generated `CapabilityFamilyKeys` / `CapabilityMetadataKeys` |
-| Webhook verification (`OpenWOP-*`; `X-openwop-*` through the overlap; `sha256=` only; algorithm check) | `@openwop/openwop/webhooks` `verifyWebhookSignature` + `readWebhookHeaders` | `verify_webhook_signature` + `read_webhook_headers` → `WebhookHeaderRead` | `VerifyWebhookSignature` + `ReadWebhookHeaders` (returns the algorithm too) |
-
-Each v2 package carries a generator (`sdk/typescript-v2/scripts/generate.mjs`, `sdk/python-v2/scripts/generate.py`, `go/v2/scripts/generate.py`) that emits the error-code and capability-key registries from the vendored corpus; `--check` runs in the gate so the unions cannot drift from `CORPUS_TAG`.
-
----
-
-## Cross-language wire smoke
+## Cross-language wire smoke (1.x)
 
 Three runnable smoke scripts under `sdk/smoke/` exercise the same wire round-trip — capability discovery, run create, terminal poll, error envelope on bad input — against the SQLite reference host. Each script is ~50 LOC and uses only its SDK's public exports.
 

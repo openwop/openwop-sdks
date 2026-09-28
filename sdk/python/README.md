@@ -3,10 +3,12 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration** — a single contract for runs in which LLM agents, deterministic tools, sub-workflows, and human reviewers collaborate, with durable suspend / resume, replay, version negotiation, and observability owned by the protocol itself. This package is the reference Python client: synchronous, zero runtime deps, typed dataclasses for every spec'd REST endpoint plus a pure-stdlib SSE iterator.
 
 ```bash
-pip install openwop-client
+pip install "openwop-client<2"   # the 1.x line (1.7.0); unpinned resolves to 2.x
 ```
 
-> **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Status:** FINAL v1 (2026-04-27) · **Mirrors:** the TypeScript SDK at [`sdk/typescript/`](https://github.com/openwop/openwop/tree/main/sdk/typescript)
+> **v1 line.** This is the 1.x client for v1 hosts (`/v1/…`), the maintained parallel line until v1 end-of-support (earliest 2026-12-04). New integrations target v2 with [`sdk/python-v2/`](../python-v2/) (`pip install "openwop-client>=2,<3"`). An unpinned install now resolves to 2.x, so pin the major as above.
+>
+> **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Status:** v1, finalized 2026-04-27; superseded by v2 · **Mirrors:** the TypeScript SDK at [`sdk/typescript/`](https://github.com/openwop/openwop/tree/main/sdk/typescript)
 
 This SDK is hand-authored rather than codegen'd from OpenAPI. Same rationale as the TypeScript SDK — see [`sdk/typescript/README.md`](https://github.com/openwop/openwop/blob/main/sdk/typescript/README.md) §rationale.
 

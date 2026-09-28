@@ -13,7 +13,7 @@
 ## Install
 
 ```bash
-pip install openwop-client
+pip install "openwop-client<2"
 ```
 
 The SDK is **stdlib-only at runtime** — `urllib.request` for HTTP, no `requests`/`httpx`/`pydantic`.

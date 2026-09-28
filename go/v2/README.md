@@ -1,9 +1,9 @@
 # `openwopclient` v2 — Go SDK for OpenWOP v2 hosts
 
-**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This module is the reference Go client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (51 operations), strongly-typed structs, and channel-based SSE consumers for the run and host event channels.
+**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This module is the reference Go client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (55 operations), strongly-typed structs, and channel-based SSE consumers for the run and host event channels.
 
 ```bash
-go get github.com/openwop/openwop-sdks/go/v2@v2.0.0   # tag go/v2.0.0 — v2-only; the 1.x module stays at github.com/openwop/openwop-sdks/go
+go get github.com/openwop/openwop-sdks/go/v2@v2.4.0   # tag go/v2.4.0 — v2-only; the 1.x module stays at github.com/openwop/openwop-sdks/go
 ```
 
 ```go
@@ -23,8 +23,9 @@ import openwop "github.com/openwop/openwop-sdks/go/v2"
 | `MutationOptions{Dedup: true}` → `X-Dedup` | → `OpenWOP-Dedup: enforce`. |
 | `PollRunEventsOptions{LastSequence}` | `PollRunEventsOptions{AfterSequence}`; `PollEventsResponse` is the closed `{RunID, Events, LastSequence, Status, IsTerminal}`. |
 | `Capabilities` with `supported` sub-structs | The closed v2 root: `ProtocolVersions` + `PreferredVersion` required, `Families map[string]CapabilityRecord` (`Status / Since / Until / Witness / Facets`) via `caps.Family(key)`. `CapabilityFamilyKeys` is generated from the schema. |
-| `HTTPErrorCodes` hand-kept | `ErrorCodes` (94) generated from `spec/v2/errors.json`, plus `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsRetriableErrorCode`, `IsVendorErrorCode`. |
+| `HTTPErrorCodes` hand-kept | `ErrorCodes` (108) generated from `spec/v2/errors.json`, plus `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsRetriableErrorCode`, `IsVendorErrorCode`. |
 | `*WorkspaceFile*` (4), `GetDebugBundle`, `RegistryClient` | Removed — not v2 operations (the registry is resolved through `.well-known/openwop-registry.json` `endpoints`). |
+| `url.PathEscape(runID)` → `t%2Fr` | Tenant-bound ids (`runID`, `subscriptionID`) go on the wire projected: `acme/r-9f3c` → `acme~2Fr-9f3c` (identity.md §5 "Wire form"). `ProjectID` / `UnprojectID` are exported; `UnprojectID` reads both the projected and the percent form a link may carry. |
 | — | `GetRunCompensation`, `GetRunEffects`, `GetEffectSeamManifest` (RFC 0173), `StreamHostEvents` (the `hostEvents` SSE channel). |
 | Webhook `openwop-Webhook-*` names, `v1=<hex>` | `OpenWOP-*` only (`X-openwop-*` accepted through the overlap); `sha256=<hex>`; an unrecognized `OpenWOP-Signature-Algorithm` is rejected. |
 
