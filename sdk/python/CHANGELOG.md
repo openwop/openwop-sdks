@@ -1,6 +1,10 @@
 # `openwop-client` Changelog
 
-## [Unreleased] — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50); `deleteContentPage`; RFC 0218 audit anomalies
+## [Unreleased]
+
+## [1.8.0] — 2026-09-28 — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50); `deleteContentPage`; RFC 0218 audit anomalies
+
+_All three 1.x SDKs (TypeScript 1.10.0, Python 1.8.0, Go v1.7.0), on corpus `v2.43.0`. npm publishes 1.x under dist-tag `latest-1`: `latest` stays on 2.x. Install with `@openwop/openwop@1`._
 
 - **`client.webhooks_unregister(subscription_id, tenant_id=None)`** — `tenant_id` is sent as `?tenantId=`. `spec/v1/webhooks.md` §Unregister has always required the `tenantId` query parameter and corpus 2.37.1+ (`api/openapi.yaml` `unregisterWebhook`, openwop#1530) declares it, but the 1.x helper never sent it, so a host that enforces the contract rejected the call (openwop-sdks#50). Additive — no existing call changes shape. Omitting it still sends the old request but emits a `DeprecationWarning`: enforcing hosts answer `400 validation_error`. `subscription_id` is now percent-encoded in the path, matching TypeScript and Go.
 - Pinned by `tests/test_webhooks_unregister.py`.

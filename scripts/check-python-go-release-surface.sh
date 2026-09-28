@@ -2,7 +2,7 @@
 # check-python-go-release-surface — no-dependency release checks for PyPI + Go
 # (+ the npm version field), for BOTH generations of packages:
 #
-#   1.x  sdk/python (openwop-client 1.7.0)   go/    (github.com/openwop/openwop-sdks/go)
+#   1.x  sdk/python (openwop-client 1.8.0)   go/    (github.com/openwop/openwop-sdks/go)
 #   2.x  sdk/python-v2 (openwop-client, EXPECTED_V2_PYPI_VERSION) go/v2 (github.com/openwop/openwop-sdks/go/v2, tag go/v2.Y.Z)
 #        sdk/typescript-v2 (@openwop/openwop, EXPECTED_V2_NPM_VERSION)
 #
@@ -31,7 +31,7 @@ import pathlib
 import re
 
 root = pathlib.Path(".")
-expected_version = "1.7.0"
+expected_version = "1.8.0"
 pyproject_path = root / "sdk/python/pyproject.toml"
 init_path = root / "sdk/python/src/openwop_client/__init__.py"
 

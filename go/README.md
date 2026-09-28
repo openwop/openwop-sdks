@@ -3,7 +3,7 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration** — a single contract for runs in which LLM agents, deterministic tools, sub-workflows, and human reviewers collaborate, with durable suspend / resume, replay, version negotiation, and observability owned by the protocol itself. This package is the reference Go client: synchronous, zero runtime deps, strongly-typed structs for every spec'd REST endpoint plus a channel-based SSE consumer.
 
 ```bash
-go get github.com/openwop/openwop-sdks/go@v1.6.0   # the v1 line; v2 is the separate module …/go/v2
+go get github.com/openwop/openwop-sdks/go@v1.7.0   # the v1 line; v2 is the separate module …/go/v2
 ```
 
 > **v1 line.** This is the v1 module for v1 hosts (`/v1/…`), the maintained parallel line until v1 end-of-support (earliest 2026-12-04). New integrations target v2 with [`go/v2/`](./v2/) (`go get github.com/openwop/openwop-sdks/go/v2`). Go keeps the two majors in separate module paths, so this path never resolves to v2.

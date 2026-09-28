@@ -3,7 +3,7 @@
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration** — a single contract for runs in which LLM agents, deterministic tools, sub-workflows, and human reviewers collaborate, with durable suspend / resume, replay, version negotiation, and observability owned by the protocol itself. This package is the reference TypeScript client: typed methods for every spec'd REST endpoint plus an async-iterable SSE consumer, zero runtime deps.
 
 ```bash
-npm install @openwop/openwop@1   # the 1.x line (1.9.0); unpinned resolves to 2.x
+npm install @openwop/openwop@1   # the 1.x line (1.10.0); unpinned resolves to 2.x
 ```
 
 > **v1 line.** This is the 1.x client for v1 hosts (`/v1/…`), the maintained parallel line until v1 end-of-support (earliest 2026-12-04). New integrations target v2 with [`sdk/typescript-v2/`](../typescript-v2/) (`npm install @openwop/openwop@2`). An unpinned install now resolves to 2.x, so pin the major as above.
