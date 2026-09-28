@@ -55,12 +55,17 @@ class ClientVersionTests(unittest.TestCase):
         def urlopen(req: Any, timeout: float = 0) -> Any:
             seen.append(req)
             if req.get_header("Accept") == "text/event-stream":
-                return _Resp(b'event: heartbeat.evaluated\ndata: {"type":"heartbeat.evaluated","payload":{}}\n\n')
+                return _Resp(
+                    b'event: heartbeat.evaluated\ndata: {"type":"heartbeat.evaluated","payload":{}}\n\n'
+                )
             return _Resp(b"{}")
 
         client = OpenwopClient(base_url="https://host.example", api_key="k")
         self.assertEqual(client.client_version, CORPUS_VERSION)
-        with mock.patch.object(client_module, "urlopen", urlopen), mock.patch.object(sse_module, "urlopen", urlopen):
+        with (
+            mock.patch.object(client_module, "urlopen", urlopen),
+            mock.patch.object(sse_module, "urlopen", urlopen),
+        ):
             client.discovery_openapi()
             list(client.host_events())
             list(client.runs_events("t/r1"))
