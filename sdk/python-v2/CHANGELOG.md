@@ -2,6 +2,11 @@
 
 The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
+## [Unreleased] — corpus `v2.45.10`
+
+- **`client.trigger_dead_letters(subscription_id, *, limit=None, cursor=None)`** — `GET /trigger-subscriptions/{subscriptionId}/dead-letters` (RFC 0232 §B, corpus 2.45.10+), gated on `triggerBridge.deadLetter`. Returns one `TriggerDeadLetterPage`, newest first; each `DeadLetteredTriggerDelivery` is content-free, with `attempt` (the dead-lettered `trigger.delivery-attempted` payload's fields) and, when the dead-lettering changed the subscription's state, `stateChange`. The subscription id travels projected (`identity.md` §5). Pinned by `tests/test_v2_wire.py`.
+- **Re-vendored on corpus `v2.45.10`** (was `v2.43.0`): 25 artifacts. `_generated.py` regenerated: the error-code registry gains 12 codes (120 in all, among them `budget_exhausted`, `egress_denied`, `storage_limit_exceeded`, `service_unavailable`, `upstream_unavailable`); capability families are unchanged (73). `CORPUS_VERSION` becomes `2.45.10`, so `OpenWOP-Client-Version` now sends `2.45.10`.
+
 ## [2.5.0] — 2026-09-28 — corpus `v2.43.0`: `OpenWOP-Client-Version` on every request (RFC 0219)
 
 ### Added

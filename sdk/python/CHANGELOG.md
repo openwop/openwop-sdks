@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **`client.trigger_dead_letters(subscription_id, *, limit=None, cursor=None)`** — `GET /v1/trigger-subscriptions/{subscriptionId}/dead-letters` (RFC 0232 §B; `api/openapi.yaml` `listTriggerDeadLetters`, corpus 2.45.10+), gated on `capabilities.triggerBridge.deadLetter`. Returns one `TriggerDeadLetterPage`, newest first; each `DeadLetteredTriggerDelivery` is content-free. Pinned by `tests/test_trigger_dead_letters.py`.
+
 - **`QUICKSTART.md` calls methods the client has.** It used `discovery()`, `create_run`, `get_run`, `get_run_events_poll` and `stream_run_events`, none of which exist; it now uses `discovery_capabilities`, `runs_create`, `runs_get`, `runs_poll_events` and `runs_events`, and the walkthrough was run verbatim against `examples/hosts/in-memory`. Docs only; not in the published package.
 
 ## [1.8.0] — 2026-09-28 — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50); `deleteContentPage`; RFC 0218 audit anomalies

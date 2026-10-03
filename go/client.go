@@ -528,6 +528,34 @@ func (c *OpenwopClient) CreateTriggerSubscription(
 	return &out, nil
 }
 
+// ListTriggerDeadLetters calls GET /v1/trigger-subscriptions/{subscriptionID}/dead-letters
+// (RFC 0232 §B; gated on capabilities.triggerBridge.deadLetter): one page of
+// the subscription's dead-lettered deliveries, newest first. limit <= 0 and an
+// empty cursor are omitted.
+func (c *OpenwopClient) ListTriggerDeadLetters(
+	ctx context.Context,
+	subscriptionID string,
+	limit int,
+	cursor string,
+) (*TriggerDeadLetterPage, error) {
+	q := url.Values{}
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+	if cursor != "" {
+		q.Set("cursor", cursor)
+	}
+	path := "/v1/trigger-subscriptions/" + url.PathEscape(subscriptionID) + "/dead-letters"
+	if enc := q.Encode(); enc != "" {
+		path += "?" + enc
+	}
+	var out TriggerDeadLetterPage
+	if err := c.requestJSON(ctx, http.MethodGet, path, nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // ListWorkspaceFilesOptions controls GET /v1/host/workspace/files query.
 type ListWorkspaceFilesOptions struct {
 	// Prefix filters the flat path namespace; empty = no filter.

@@ -165,6 +165,29 @@ class HeaderRenameAndPathTests(unittest.TestCase):
             ["/runs/t~2Fr1/compensation", "/runs/t~2Fr1/effects", "/host/effect-seams"],
         )
 
+    def test_rfc0232_trigger_dead_letters(self) -> None:
+        record = {
+            "subscriptionId": "t/sub1",
+            "attemptEventId": "ev1",
+            "attempt": {"subscriptionId": "t/sub1", "dedupKey": "k1", "attempt": 1, "outcome": "dead-lettered"},
+            "reason": "verification_failed",
+            "deadLetteredAt": "2026-10-03T00:00:00Z",
+            "expiresAt": "2026-10-10T00:00:00Z",
+        }
+        seen, urlopen = _stub(lambda req: (200, {"deliveries": [record], "nextCursor": "c2"}))
+        with mock.patch.object(client_module, "urlopen", urlopen):
+            c = OpenwopClient("https://h.example", "k")
+            page = c.trigger_dead_letters("t/sub1", limit=10, cursor="c1")
+            c.trigger_dead_letters("sub1")
+        self.assertEqual(page.deliveries[0].reason, "verification_failed")
+        self.assertEqual(page.deliveries[0].attempt["outcome"], "dead-lettered")
+        self.assertIsNone(page.deliveries[0].stateChange)
+        self.assertEqual(page.nextCursor, "c2")
+        self.assertEqual(
+            [req.full_url.replace("https://h.example", "") for req in seen],
+            ["/trigger-subscriptions/t~2Fsub1/dead-letters?limit=10&cursor=c1", "/trigger-subscriptions/sub1/dead-letters"],
+        )
+
 
 class PollCursorTests(unittest.TestCase):
     def test_after_sequence_and_closed_response(self) -> None:

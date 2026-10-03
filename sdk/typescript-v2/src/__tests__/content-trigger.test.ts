@@ -1,6 +1,7 @@
 /**
  * SDK tests for `OpenwopClient.content.*` (RFC 0103) +
- * `OpenwopClient.triggerSubscriptions.create` (RFC 0099).
+ * `OpenwopClient.triggerSubscriptions.create` (RFC 0099) +
+ * `OpenwopClient.triggerSubscriptions.deadLetters` (RFC 0232).
  *
  * Verifies each method maps to the correct HTTP method + path + body +
  * headers, that reads return `null` on 404/501 (capability absent), and
@@ -98,5 +99,32 @@ describe('content + trigger REST helpers', () => {
     expect(captured[0]?.method).toBe('POST');
     expect(captured[0]?.url).toContain('/trigger-subscriptions');
     expect(res.binding.secretFingerprint).toBe('abc');
+  });
+
+  it('triggerSubscriptions.deadLetters maps to GET /trigger-subscriptions/{id}/dead-letters', async () => {
+    const record = {
+      subscriptionId: 'tenant-a/sub-1',
+      attemptEventId: 'ev-1',
+      attempt: { subscriptionId: 'tenant-a/sub-1', dedupKey: 'k1', attempt: 1, outcome: 'dead-lettered' },
+      reason: 'verification_failed',
+      deadLetteredAt: '2026-10-03T00:00:00Z',
+      expiresAt: '2026-10-10T00:00:00Z',
+    };
+    const { client, captured } = mockClient(() => ({ status: 200, body: { deliveries: [record], nextCursor: 'c2' } }));
+    const page = await client.triggerSubscriptions.deadLetters('tenant-a/sub-1', { limit: 10, cursor: 'c1' });
+    expect(captured[0]?.method).toBe('GET');
+    const url = new URL(captured[0]!.url);
+    expect(url.pathname).toBe('/trigger-subscriptions/tenant-a~2Fsub-1/dead-letters');
+    expect(url.searchParams.get('limit')).toBe('10');
+    expect(url.searchParams.get('cursor')).toBe('c1');
+    expect(page.deliveries[0]?.reason).toBe('verification_failed');
+    expect(page.deliveries[0]?.stateChange).toBeUndefined();
+    expect(page.nextCursor).toBe('c2');
+  });
+
+  it('triggerSubscriptions.deadLetters sends no query string when no options are given', async () => {
+    const { client, captured } = mockClient(() => ({ status: 200, body: { deliveries: [] } }));
+    await client.triggerSubscriptions.deadLetters('sub-1');
+    expect(new URL(captured[0]!.url).search).toBe('');
   });
 });

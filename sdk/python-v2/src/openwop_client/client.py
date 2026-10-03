@@ -83,6 +83,8 @@ from .types import (
     RotateWebhookSecretResponse,
     DeadLetteredDelivery,
     WebhookDeadLetterPage,
+    TriggerDeadLetterPage,
+    DeadLetteredTriggerDelivery,
     RenderPromptRequest,
     RenderPromptResponse,
     ResolveInterruptRequest,
@@ -1028,6 +1030,45 @@ class OpenwopClient:
         return CreateTriggerSubscriptionResponse(
             subscription=dict(d.get("subscription", {})),
             binding=dict(d.get("binding", {})),
+        )
+
+    def trigger_dead_letters(
+        self,
+        subscription_id: str,
+        *,
+        limit: int | None = None,
+        cursor: str | None = None,
+    ) -> TriggerDeadLetterPage:
+        """One page of a trigger subscription's dead-lettered deliveries,
+        newest first (RFC 0232 §B; gated on ``triggerBridge.deadLetter``).
+
+        Records name a delivery and never carry what was delivered (§C).
+        """
+
+        params: dict[str, Any] = {}
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        qs = "?" + urlencode(params) if params else ""
+        d = self._request_json(
+            "GET",
+            f"/trigger-subscriptions/{project_id(subscription_id)}/dead-letters{qs}",
+        )
+        return TriggerDeadLetterPage(
+            deliveries=[
+                DeadLetteredTriggerDelivery(
+                    subscriptionId=str(x["subscriptionId"]),
+                    attemptEventId=str(x["attemptEventId"]),
+                    attempt=dict(x["attempt"]),
+                    reason=x["reason"],
+                    deadLetteredAt=str(x["deadLetteredAt"]),
+                    expiresAt=str(x["expiresAt"]),
+                    stateChange=dict(x["stateChange"]) if x.get("stateChange") is not None else None,
+                )
+                for x in d.get("deliveries", [])
+            ],
+            nextCursor=d.get("nextCursor"),
         )
 
     def agents_list(self) -> list[AgentInventoryEntry] | None:

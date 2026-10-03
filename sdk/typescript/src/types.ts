@@ -2068,3 +2068,31 @@ export interface CreateTriggerSubscriptionResponse {
   subscription: TriggerSubscription;
   binding: Record<string, unknown>;
 }
+
+/** `GET /v1/trigger-subscriptions/{subscriptionId}/dead-letters` query (RFC 0232 §B). */
+export interface ListTriggerDeadLettersRequest {
+  /** Page size; the host clamps it to `triggerBridge.deadLetter.maxPageSize`. */
+  limit?: number;
+  cursor?: string;
+}
+
+/** One dead-lettered trigger delivery — content-free (RFC 0232 §C): no inbound body, headers,
+ *  signature, secret or credential. `attempt` carries the dead-lettered
+ *  `trigger.delivery.attempted` payload's fields; `stateChange` is the
+ *  `trigger.subscription.state.changed` payload it caused, absent for a delivery refused by
+ *  verification. */
+export interface DeadLetteredTriggerDelivery {
+  subscriptionId: string;
+  attemptEventId: string;
+  attempt: Record<string, unknown>;
+  stateChange?: Record<string, unknown>;
+  reason: 'verification_failed' | 'retries_exhausted';
+  deadLetteredAt: string;
+  expiresAt: string;
+}
+
+/** `trigger-dead-letter-page.schema.json` — newest first. */
+export interface TriggerDeadLetterPage {
+  deliveries: readonly DeadLetteredTriggerDelivery[];
+  nextCursor?: string;
+}

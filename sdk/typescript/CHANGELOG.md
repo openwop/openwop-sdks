@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- **`client.triggerSubscriptions.deadLetters(subscriptionId, { limit?, cursor? })`** — `GET /v1/trigger-subscriptions/{subscriptionId}/dead-letters` (RFC 0232 §B; `api/openapi.yaml` `listTriggerDeadLetters`, corpus 2.45.10+), gated on `capabilities.triggerBridge.deadLetter`. Returns one `TriggerDeadLetterPage`, newest first; each `DeadLetteredTriggerDelivery` is content-free. Pinned by `content-trigger.test.ts`.
+
 ## [1.10.0] — 2026-09-28 — `unregisterWebhook` sends the required `tenantId` (openwop-sdks#50); `deleteContentPage`; RFC 0218 audit anomalies
 
 _All three 1.x SDKs (TypeScript 1.10.0, Python 1.8.0, Go v1.7.0), on corpus `v2.43.0`. npm publishes 1.x under dist-tag `latest-1`: `latest` stays on 2.x. Install with `@openwop/openwop@1`._

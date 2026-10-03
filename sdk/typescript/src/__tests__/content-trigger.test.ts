@@ -86,4 +86,24 @@ describe('content + trigger REST helpers', () => {
     expect(captured[0]?.url).toContain('/v1/trigger-subscriptions');
     expect(res.binding.secretFingerprint).toBe('abc');
   });
+
+  it('triggerSubscriptions.deadLetters maps to GET /v1/trigger-subscriptions/{id}/dead-letters', async () => {
+    const { client, captured } = mockClient(() => ({
+      status: 200,
+      body: {
+        deliveries: [{
+          subscriptionId: 'sub-1', attemptEventId: 'ev-1',
+          attempt: { subscriptionId: 'sub-1', dedupKey: 'k1', attempt: 1, outcome: 'dead-lettered' },
+          reason: 'retries_exhausted', deadLetteredAt: '2026-10-03T00:00:00Z', expiresAt: '2026-10-10T00:00:00Z',
+        }],
+      },
+    }));
+    const page = await client.triggerSubscriptions.deadLetters('sub 1', { limit: 5 });
+    expect(captured[0]?.method).toBe('GET');
+    const url = new URL(captured[0]!.url);
+    expect(url.pathname).toBe('/v1/trigger-subscriptions/sub%201/dead-letters');
+    expect(url.search).toBe('?limit=5');
+    expect(page.deliveries[0]?.reason).toBe('retries_exhausted');
+    expect(page.nextCursor).toBeUndefined();
+  });
 });

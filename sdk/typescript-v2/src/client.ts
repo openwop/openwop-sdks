@@ -23,6 +23,8 @@ import {
   type LocalizedContentSection,
   type PutContentSectionRequest,
   type TriggerSubscriptionRegistration,
+  type ListTriggerDeadLettersRequest,
+  type TriggerDeadLetterPage,
   type BulkCancelRunsRequest,
   type BulkCancelRunsResponse,
   type Capabilities,
@@ -926,6 +928,25 @@ export class OpenwopClient {
         path: '/trigger-subscriptions',
         body,
       }),
+
+    /**
+     * `GET /trigger-subscriptions/{subscriptionId}/dead-letters` (RFC 0232 §B; gated on
+     * `triggerBridge.deadLetter`) — one page of dead-lettered deliveries, newest first. Records
+     * name a delivery and never carry what was delivered.
+     */
+    deadLetters: (
+      subscriptionId: string,
+      req: ListTriggerDeadLettersRequest = {},
+    ): Promise<TriggerDeadLetterPage> => {
+      const search = new URLSearchParams();
+      if (req.limit !== undefined) search.set('limit', String(req.limit));
+      if (req.cursor !== undefined) search.set('cursor', req.cursor);
+      const qs = search.toString();
+      return this.#request<TriggerDeadLetterPage>({
+        method: 'GET',
+        path: `/trigger-subscriptions/${projectId(subscriptionId)}/dead-letters${qs ? `?${qs}` : ''}`,
+      });
+    },
   };
 
   // ── Internals ────────────────────────────────────────────────────────

@@ -526,6 +526,34 @@ func (c *OpenwopClient) CreateTriggerSubscription(
 	return &out, nil
 }
 
+// ListTriggerDeadLetters calls GET /trigger-subscriptions/{subscriptionID}/dead-letters
+// (RFC 0232 §B; gated on triggerBridge.deadLetter): one page of the
+// subscription's dead-lettered deliveries, newest first. limit <= 0 and an
+// empty cursor are omitted.
+func (c *OpenwopClient) ListTriggerDeadLetters(
+	ctx context.Context,
+	subscriptionID string,
+	limit int,
+	cursor string,
+) (*TriggerDeadLetterPage, error) {
+	q := url.Values{}
+	if limit > 0 {
+		q.Set("limit", strconv.Itoa(limit))
+	}
+	if cursor != "" {
+		q.Set("cursor", cursor)
+	}
+	path := "/trigger-subscriptions/" + ProjectID(subscriptionID) + "/dead-letters"
+	if enc := q.Encode(); enc != "" {
+		path += "?" + enc
+	}
+	var out TriggerDeadLetterPage
+	if err := c.requestJSON(ctx, http.MethodGet, path, nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 // RunAncestry calls GET /runs/{runID}/ancestry per RFC 0040 §C and
 // spec/v2/core/multi-agent-execution.md §"GET /runs/{runId}/ancestry".
 //
