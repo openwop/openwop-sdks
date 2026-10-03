@@ -313,14 +313,14 @@ export type AgentInvocationCompletedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0077. Emitted by a host advertising `capabilities.agents.liveRuntime.supported: true` as the FIRST agent-scoped event of a live manifest invocation, bracketing the existing `agent.*` family with `agent.invocation.completed`. Content-free: identifiers + selection metadata only — prompt/task content is served by the run's normal projection, never on this event. A recorded-fact event per `replay.md` §"Recorded-fact events": on replay it is re-emitted from the log and the host MUST NOT regenerate its `invocationId` (or any identifier). Distinct from the deterministic RFC 0070 sample floor. */
+/** RFC 0077. Emitted by a host advertising `capabilities.agents.liveRuntime.supported: true` as the FIRST agent-scoped event of a live manifest invocation, bracketing the existing `agent.*` family with `agent.invocation.completed`. Content-free: identifiers + selection metadata only — prompt/task content is served by the run's normal projection, never on this event. A recorded-fact event per `replay.md` §"Recorded-fact events": on replay it is re-emitted from the log and the host MUST NOT regenerate its `invocationId` (or any identifier). Distinct from the deterministic RFC 0070 sample floor. For one live invocation the agent-scoped events MUST appear in the order `agent.invocation-started` → `agent.prompt-resolved` → (`agent.reasoning-delta`* → `agent.reasoned`)+ → (`agent.tool-called` → `agent.tool-returned`)* → `agent.decided`+ → `agent.handoff`? → `agent.invocation-completed`: this event precedes every other agent-scoped event of the invocation, and `agent.invocation-completed` follows them all and, for a sub-run, precedes the run-scoped `output.harvested`. On replay the host MUST NOT regenerate its timestamps either. */
 export type AgentInvocationStartedPayload = {
   /** Host-defined id correlating this agent invocation within its run, UNIQUE-WITHIN-RUN (not a mandated global id-space). Distinct from `runId` — one run MAY dispatch several invocations (multiple agent nodes, or a handoff chain) — but a host MAY derive it from an existing per-node-execution receipt id (e.g. `runId:nodeId:seq`) or mint a UUID; a single-invocation run MAY reuse `runId`. Recorded-fact: re-read from the log on replay, never regenerated (`replay.md` §"Recorded-fact events"). Correlates to the matching `agent.invocation.completed`. */ "invocationId": string;
   /** The manifest agentId being invoked (matches `AgentManifest.agentId`). */ "agentId": IdsSchema_AgentId;
   /** Which entry point launched the invocation. All sources emit this identical family. */ "source": "workflow-node" | "run-api" | "chat-mention";
   /** MAY — the manifest's abstract `modelClass`. Always populatable at start. */ "modelClass"?: string;
   /** MAY — the concrete model the host selected. OPTIONAL: modelClass→concrete resolution MAY happen downstream (with capability-gated fallback substitution), so a dispatch-time start event genuinely may not know it; a host MAY also omit for deployment-privacy. */ "resolvedModel"?: string;
-  /** MAY — the concrete provider the host routed to (aligns with `capabilities.aiProviders.supported` / RFC 0067 `authModes`). OPTIONAL, same rationale as `resolvedModel`. */ "resolvedProvider"?: string;
+  /** MAY — the concrete provider the host routed to (aligns with `capabilities.aiProviders.providers` / RFC 0067 `authModes`). OPTIONAL, same rationale as `resolvedModel`. */ "resolvedProvider"?: string;
   /** MAY — RFC 0082 §B. When this invocation's `AgentRef` bound a `channel` (rather than an exact `version`), the concrete agent-definition version the host pinned per-(run, agentId, channel) at first resolution. A RECORDED FACT: re-read from the log on replay and NEVER re-resolved against a moved channel (the whole event is recorded-fact). Absent when the ref used an exact `version` or host-default resolution. */ "resolvedAgentVersion"?: string;
   /** MAY — RFC 0082 §B. The named `channel` the `AgentRef` bound (mirrors `AgentRef.channel`), for which `resolvedAgentVersion` is the pinned resolution. Content-free label; present only when the ref bound a channel. */ "resolvedChannel"?: string;
   /** MAY — number of tools in the constructed surface after `toolAllowlist` filtering. Content-free count, not the tool ids. */ "toolSurfaceCount"?: number;
@@ -390,7 +390,7 @@ export type AgentToolCalledPayload = {
 
 /** Reusable error shape used by run.failed / node.failed / workflow.stalled / etc. */
 export type ErrorObjectPayload = {
-  "code": string;
+  /** A registered code from spec/v2/errors.json or a vendor code (errors.md §The registry, corrected by openwop#1698): the producer rule binds run.failed, node.failed and the snapshot error exactly as it binds an error response. Kept an open string on purpose — a consumer MUST accept an unknown code (overview.md §0) — so this schema does not enforce the rule; the suite's event-code-registered leg does. */ "code": string;
   "message": string;
   "details"?: {
     [key: string]: unknown;
@@ -518,7 +518,7 @@ export type SuspendRequestSchema_ApprovalData = {
   "artifactId": string;
   "artifactType": string;
   "title": string;
-  /** RFC 0186 §A.3 — the disposition applied when `timeoutMs` elapses with no resolution. Every gate with a timer needs one; two production hosts recorded it as a bare key on `approval.requested` (280 rows on one) because the seat did not exist. `escalate` pairs with a host-defined escalation target. A `timeoutMs` of `0` means no timer, and `onTimeout` is then meaningless. Absent means `reject` (RFC 0223; interrupt.md §Rejection): the gate fails closed, the node and run fail with `approval_rejected` unless an edge routes the failure. No JSON-Schema `default` is declared, because a validator that fills defaults would write a value the host never recorded. */ "onTimeout"?: "reject" | "approve" | "escalate";
+  /** RFC 0186 §A.3, corrected by RFC 0223 (openwop#1696) — a hint recorded with the gate; it does not choose the outcome. Whatever it holds, when a non-zero `timeoutMs` elapses with no resolution the host MUST resolve the gate rejected (`action: timeout`, `decision: rejected`, `reason: timeout`) and the node and run fail with `approval_rejected` unless an edge routes the failure (interrupt.md §Rejection). A timeout never grants a gate: a host MUST treat `approve` as `reject` and SHOULD NOT emit it (RFC 0093 ruled fail-open non-conformant; the value stays in the enum only so recorded payloads validate). `escalate` MAY notify a host-defined target but MUST NOT extend or grant the gate. Absent means `reject`. A `timeoutMs` of `0` means no timer. Two production hosts recorded this as a bare key on `approval.requested` (280 rows on one) before the seat existed. No JSON-Schema `default` is declared, because a validator that fills defaults would write a value the host never recorded. */ "onTimeout"?: "reject" | "approve" | "escalate";
   "description"?: string;
   "artifactData"?: unknown;
   /** Allowed actions. Server MUST enforce on resolve. The 'ask' action does NOT exit the suspend — Q&A exchanges accumulate via askService until accept/reject/refine/edit-accept fires. See `interrupt.md` §`ApprovalResume` for the action vocabulary + per-action required fields. */ "actions": Array<"accept" | "reject" | "refine" | "edit-accept" | "ask">;
@@ -608,7 +608,7 @@ export type SuspendRequestSchema_CredentialData = {
 
 export type SuspendRequestSchema = ({
   "kind": "approval";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
@@ -616,7 +616,7 @@ export type SuspendRequestSchema = ({
   "data": SuspendRequestSchema_ApprovalData;
 } | {
   "kind": "clarification";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
@@ -624,7 +624,7 @@ export type SuspendRequestSchema = ({
   "data": SuspendRequestSchema_ClarificationData;
 } | {
   "kind": "external-event";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
@@ -632,7 +632,7 @@ export type SuspendRequestSchema = ({
   "data": SuspendRequestSchema_ExternalEventData;
 } | {
   "kind": "custom";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
@@ -640,7 +640,7 @@ export type SuspendRequestSchema = ({
   "data": SuspendRequestSchema_CustomData;
 } | {
   "kind": "conversation.start";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
@@ -648,7 +648,7 @@ export type SuspendRequestSchema = ({
   "data": SuspendRequestSchema_ConversationStartData;
 } | {
   "kind": "conversation.exchange";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
@@ -656,7 +656,7 @@ export type SuspendRequestSchema = ({
   "data": SuspendRequestSchema_ConversationExchangeData;
 } | {
   "kind": "conversation.close";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
@@ -664,7 +664,7 @@ export type SuspendRequestSchema = ({
   "data": SuspendRequestSchema_ConversationCloseData;
 } | {
   "kind": "low-confidence";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   /** Optional JSON Schema for resume value. Servers SHOULD validate before returning to the suspended executor. */ "resumeSchema"?: {
     [key: string]: unknown;
   };
@@ -672,7 +672,7 @@ export type SuspendRequestSchema = ({
   "data": SuspendRequestSchema_LowConfidenceData;
 } | {
   "kind": "credential";
-  /** Deterministic key used to short-circuit on re-entry after process death. If two interrupt() calls in the same run emit the same key, the second returns the cached result of the first. Recommended: ${runId}:${nodeId}:${interruptCount}. */ "key": string;
+  /** The deterministic re-entry key of ONE invocation of an interrupt (interrupt.md §Re-entry and resume values; corrected 2026-09-28 by openwop#1697). A host MUST derive it from at least the run, the node and the node's visit index; the spelling is host-defined. Recommended: ${runId}:${nodeId}:${interruptCount}, where interruptCount is the visit index — the number of interrupts this node raised in this run whose resolution was consumed before the current execution of the node began (plus an ordinal when one execution raises several). A replay or recovery of the same execution re-derives the same key and returns the recorded resume value; a later execution of the node (a loop back over an edge) derives a new key and raises a new interrupt.requested. */ "key": string;
   "resumeSchema": {"type":"object","additionalProperties":false,"required":["outcome"],"properties":{"outcome":{"enum":["authorized","declined"]}}};
   /** Optional auto-reject after this duration. Engine throws InterruptTimeoutError when exceeded. */ "timeoutMs"?: number;
   "data": SuspendRequestSchema_CredentialData;
@@ -860,7 +860,7 @@ export type ConnectorAuthorizedPayload = {
   /** Scopes granted for the acquired token. */ "scopes"?: Array<string>;
 };
 
-/** RFC 0111. Emitted when the host replaces older in-window orchestrator transcript turns with a host-produced summary to honor `multiAgent.executionModel.contextBudget.transcriptTokenBudget`. CONTENT-FREE: the summary text is NEVER inlined — `summaryRef` is an artifactId resolved via `GET /runs/{runId}/artifacts/{artifactId}`. The summary is a NONDETERMINISTIC host output governed like an RFC 0041 envelope: on `:fork mode:replay` the host MUST reuse this recorded `summaryRef` and MUST NOT re-summarize (see multi-agent-execution.md §"Context economy (RFC 0111)"). `replacedTurns` lists the event ids the summary stands in for, so a replay engine reconstructs the exact transcript. */
+/** RFC 0111. Emitted when the host replaces older in-window orchestrator transcript turns with a host-produced summary to honor `multiAgent.executionModel.contextBudget.transcriptTokenBudget`. CONTENT-FREE: the summary text is NEVER inlined — `summaryRef` is an artifactId resolved via `GET /runs/{runId}/artifacts/{artifactId}`. The summary is a NONDETERMINISTIC host output governed like an RFC 0041 envelope: on `:fork mode:replay` the host MUST reuse this recorded `summaryRef` and MUST NOT re-summarize (execution.md §multiAgent). `replacedTurns` lists the event ids the summary stands in for, so a replay engine reconstructs the exact transcript. A host MUST NOT emit it unless it advertises `multiAgent.executionModel.contextBudget.summarization`. */
 export type ContextSummarizedPayload = {
   /** The orchestrator-loop iteration (the `runOrchestrator.decided.iteration` counter) whose transcript assembly triggered this summarization. */ "iteration": number;
   /** Event ids (run event-log entries) the summary stands in for. A replay engine reconstructs the exact model-facing transcript by substituting the `summaryRef` artifact for this contiguous range. */ "replacedTurns": Array<string>;
@@ -1150,7 +1150,7 @@ export type ModelCapabilityInsufficientPayload = {
   /** Provider id of the active model the host attempted to use. */ "provider": string;
   /** Model id of the active model. */ "model": string;
   /** Subset of `NodeModule.requiredModelCapabilities` that the active model did not satisfy. */ "missingCapabilities": Array<string>;
-  /** True if the host attempted to authenticate to a declared `fallbackModel` and that attempt failed (e.g., no credential resolvable, or the fallback provider was outside `capabilities.aiProviders.supported`). False if no `fallbackModel` was declared on the NodeModule. */ "fallbackAttempted"?: boolean;
+  /** True if the host attempted to authenticate to a declared `fallbackModel` and that attempt failed (e.g., no credential resolvable, or the fallback provider was outside `capabilities.aiProviders.providers`). False if no `fallbackModel` was declared on the NodeModule. */ "fallbackAttempted"?: boolean;
 };
 
 /** RFC 0031 §D. Emitted when a host substitutes the active model with a NodeModule's declared `fallbackModel` because the active model lacks one or more of the `requiredModelCapabilities`. MUST event per RFC 0031 §B step 3. The `fallbackProvider` + `fallbackModel` pair MAY be redacted as all-or-nothing `"[REDACTED]"` when workspace policy treats multi-vendor posture as confidential per SECURITY invariant `model-capability-substituted-no-credential-disclosure`. The other fields are not redactable — `originalProvider` is already public via `RunOptions.configurable.ai.provider`, and `nodeId` / `missingCapabilities` carry no provider-possession information. */
@@ -1511,7 +1511,7 @@ export type TriggerDeliveryAttemptedPayload = {
   /** The TriggerSubscription the delivery is for. */ "subscriptionId": IdsSchema_SubscriptionId;
   /** The de-duplication key (§C-1). MUST be a **host-opaque** stable key (e.g. `hash(subscriptionId + inbound-event-id)`); it MUST NOT embed inbound body / path / header content in cleartext (SR-1 — a key like `POST /webhook/orders/12345?token=…` would leak). A repeat within retention is a no-op returning the prior runId. */ "dedupKey": string;
   /** 1-based attempt counter. */ "attempt": number;
-  /** `delivered`: the run started; `retrying`: failed, will retry per policy; `dead-lettered`: retries exhausted, routed to the RFC 0053 sink (no run). */ "outcome": "delivered" | "retrying" | "dead-lettered";
+  /** `delivered`: the run started; `retrying`: failed, will retry per policy; `dead-lettered`: retries exhausted, no run started; the subscription keeps the record (`webhooks.md` §Inbound triggers), not the run sink. */ "outcome": "delivered" | "retrying" | "dead-lettered";
   /** MAY — the run started by a `delivered` outcome. Absent for `retrying` / `dead-lettered`. **It does NOT carry this delivery's id as `causationId`:** `deliveryId` is tenant-bound and REQUIRES a `/`, while `causationId` is bound to the `eventId` kind whose grammar admits none — no string is both. An earlier revision asserted that equality here and in `trigger-event.schema.json`; 2.6.0 corrected the latter and missed this one, which is the more load-bearing of the two: `triggerDeliveryAttempted` is a DURABLE event-log payload and rides replay and `:fork`, where `trigger-event` is an in-run payload that never reaches the log. How a run points back at its causing delivery is deliberately left open — RFC 0040 §Alternatives already rejected overloading `causationId` for a cross-space pointer in favour of a sibling field, and the v2 seat needs a trigger-ingestion document that `spec/v2/core/` does not yet have. */ "runId"?: IdsSchema_RunId;
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
@@ -1593,7 +1593,7 @@ export type VoiceTurnCommitPayload = {
   /** The settled transcript for the committed turn (untrusted input). */ "finalText": string;
 };
 
-/** RFC 0039 §A — emitted when a supervisor's OrchestratorDecision carries `confidence` below the active confidence floor (spec floor 0.5 OR operator-stricter `capabilities.multiAgent.executionModel.confidenceEscalationFloor`). Recorded BEFORE the host fires the matching clarify-or-escalate interrupt so the run event log carries the decision point even if the user later confirms the original decision. MUST NOT be emitted unless `capabilities.multiAgent.executionModel.version >= 2`. */
+/** RFC 0039 §A — emitted when a supervisor's OrchestratorDecision carries `confidence` below the active confidence floor (spec floor 0.5 OR operator-stricter `capabilities.multiAgent.executionModel.confidenceEscalationFloor`). Recorded BEFORE the host fires the matching clarify-or-escalate interrupt so the run event log carries the decision point even if the user later confirms the original decision. MUST NOT be emitted unless `capabilities.multiAgent.executionModel.version >= 2`. It MUST precede both that interrupt and any `core.workflowChain.event` with `phase: dispatch.began` for the escalated decision. Its `causationId` MAY be absent; when present it MUST resolve to an event already on the run's log, and need not be a `runOrchestrator.decided`: a host holding the decision until ratification has none to name. */
 export type CoreWorkflowChainConfidenceEscalatedPayload = {
   /** The supervisor's stated confidence on the escalated decision, copied verbatim from `OrchestratorDecision.confidence`. */ "confidence": number;
   /** The floor that triggered escalation — either the spec floor (0.5) when the host doesn't advertise a stricter `confidenceEscalationFloor`, or the host-advertised stricter value. */ "floor": number;

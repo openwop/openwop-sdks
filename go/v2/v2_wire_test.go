@@ -223,3 +223,31 @@ func TestSSEChannelsCarryTheVersionHeader(t *testing.T) {
 		t.Errorf("runEvents subscribe: query=%q Last-Event-ID=%q", seen[0].Query, seen[0].Header.Get("Last-Event-ID"))
 	}
 }
+
+func TestListTriggerDeadLetters(t *testing.T) {
+	// RFC 0232 §B: the subscription id is tenant-bound and travels projected.
+	srv, captured := newWireServer(t, 200, `{"deliveries":[{"subscriptionId":"t/sub1","attemptEventId":"ev1","attempt":{"subscriptionId":"t/sub1","dedupKey":"k1","attempt":1,"outcome":"dead-lettered"},"reason":"verification_failed","deadLetteredAt":"2026-10-03T00:00:00Z","expiresAt":"2026-10-10T00:00:00Z"}],"nextCursor":"c2"}`, nil)
+	client, _ := NewClient(srv.URL, "k")
+	ctx := context.Background()
+	page, err := client.ListTriggerDeadLetters(ctx, "t/sub1", 10, "c1")
+	if err != nil || len(page.Deliveries) != 1 || page.NextCursor != "c2" {
+		t.Fatalf("page: %v %+v", err, page)
+	}
+	d := page.Deliveries[0]
+	if d.Reason != "verification_failed" || d.Attempt["outcome"] != "dead-lettered" || d.StateChange != nil {
+		t.Errorf("record: %+v", d)
+	}
+	if _, err := client.ListTriggerDeadLetters(ctx, "sub1", 0, ""); err != nil {
+		t.Fatal(err)
+	}
+	reqs := *captured
+	if reqs[0].Path != "/trigger-subscriptions/t~2Fsub1/dead-letters" || reqs[0].Method != http.MethodGet {
+		t.Errorf("request 0: %s %q", reqs[0].Method, reqs[0].Path)
+	}
+	if reqs[0].Query != "cursor=c1&limit=10" {
+		t.Errorf("query: %q", reqs[0].Query)
+	}
+	if reqs[1].Path != "/trigger-subscriptions/sub1/dead-letters" || reqs[1].Query != "" {
+		t.Errorf("request 1: %q ?%q", reqs[1].Path, reqs[1].Query)
+	}
+}

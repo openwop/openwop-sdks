@@ -1241,6 +1241,31 @@ type CreateTriggerSubscriptionResponse struct {
 	Binding      map[string]any `json:"binding"`
 }
 
+// DeadLetteredTriggerDelivery is one dead-lettered trigger delivery (RFC 0232
+// §C) — content-free: no inbound body, headers, signature, secret or
+// credential. A dead-lettered delivery started no run, so this record is where
+// it is visible. Attempt carries the fields of the dead-lettered
+// trigger.delivery-attempted payload (its outcome is always "dead-lettered");
+// StateChange is the trigger.subscription-state-changed payload the
+// dead-lettering caused, nil for a delivery refused by verification. Reason is
+// "verification_failed" or "retries_exhausted".
+type DeadLetteredTriggerDelivery struct {
+	SubscriptionID string         `json:"subscriptionId"`
+	AttemptEventID string         `json:"attemptEventId"`
+	Attempt        map[string]any `json:"attempt"`
+	StateChange    map[string]any `json:"stateChange,omitempty"`
+	Reason         string         `json:"reason"`
+	DeadLetteredAt string         `json:"deadLetteredAt"`
+	ExpiresAt      string         `json:"expiresAt"`
+}
+
+// TriggerDeadLetterPage is one page, newest first; NextCursor is empty on the
+// last page.
+type TriggerDeadLetterPage struct {
+	Deliveries []DeadLetteredTriggerDelivery `json:"deliveries"`
+	NextCursor string                        `json:"nextCursor,omitempty"`
+}
+
 // ── AI Envelope surface (spec/v2/core/ai-envelope.md) ──────────────────────────
 // Inbound LLM-emission envelope + per-kind payloads. Mirrors the TypeScript
 // SDK's envelope surface (previously TS-only; see sdk/PARITY.md). Distinct from

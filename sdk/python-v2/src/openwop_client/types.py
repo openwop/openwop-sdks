@@ -1243,6 +1243,33 @@ class CreateTriggerSubscriptionResponse:
     binding: dict[str, Any]
 
 
+# RFC 0232 §B — GET /trigger-subscriptions/{subscriptionId}/dead-letters.
+@dataclass(frozen=True)
+class DeadLetteredTriggerDelivery:
+    """One dead-lettered trigger delivery — content-free (RFC 0232 §C): no
+    inbound body, headers, signature, secret or credential. A dead-lettered
+    delivery started no run, so this record is where it is visible.
+
+    ``attempt`` is the dead-lettered ``trigger.delivery-attempted`` payload's
+    fields (``outcome`` is always ``"dead-lettered"``); ``state_change`` is the
+    ``trigger.subscription-state-changed`` payload the dead-lettering caused,
+    absent for a delivery refused by verification."""
+
+    subscriptionId: str
+    attemptEventId: str
+    attempt: dict[str, Any]
+    reason: Literal["verification_failed", "retries_exhausted"]
+    deadLetteredAt: str
+    expiresAt: str
+    stateChange: dict[str, Any] | None = None
+
+
+@dataclass(frozen=True)
+class TriggerDeadLetterPage:
+    deliveries: list[DeadLetteredTriggerDelivery]
+    nextCursor: str | None = None
+
+
 # ── AI Envelope surface (spec/v2/core/ai-envelope.md) ──────────────────────────
 # Inbound LLM-emission envelope + per-kind payloads. Mirrors the TypeScript
 # SDK's envelope surface (previously TS-only; see sdk/PARITY.md). Distinct from

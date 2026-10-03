@@ -12,7 +12,11 @@
  */
 
 import type { CapabilityFamilyKey, ErrorCode } from './generated.js';
-import type { SubjectSchema } from './generated-payloads.js';
+import type {
+  SubjectSchema,
+  TriggerDeliveryAttemptedPayload,
+  TriggerSubscriptionStateChangedPayload,
+} from './generated-payloads.js';
 
 /** Run statuses per `RunSnapshot.status` in OpenAPI. */
 export type RunStatus =
@@ -1890,4 +1894,37 @@ export type TriggerSubscription = Record<string, unknown>;
 export interface CreateTriggerSubscriptionResponse {
   subscription: TriggerSubscription;
   binding: Record<string, unknown>;
+}
+
+/** `GET /trigger-subscriptions/{subscriptionId}/dead-letters` query (RFC 0232 §B). */
+export interface ListTriggerDeadLettersRequest {
+  /** Page size; the host clamps it to `triggerBridge.deadLetter.maxPageSize`. */
+  limit?: number;
+  cursor?: string;
+}
+
+/**
+ * One dead-lettered trigger delivery — content-free (RFC 0232 §C): no inbound body, headers,
+ * signature, secret or credential. A dead-lettered delivery started no run, so this record is
+ * where it is visible.
+ * Mirror of `reason` at `schemas/v2/trigger-dead-letter-page.schema.json#/$defs/deadLetteredTriggerDelivery/properties/reason`
+ */
+export interface DeadLetteredTriggerDelivery {
+  subscriptionId: string;
+  /** The id of the dead-lettered `trigger.delivery-attempted`. */
+  attemptEventId: string;
+  /** The fields of the dead-lettered attempt's payload; `outcome` is always `dead-lettered`. */
+  attempt: TriggerDeliveryAttemptedPayload & { outcome: 'dead-lettered' };
+  /** The state change this dead-lettering caused; absent for a delivery refused by verification. */
+  stateChange?: TriggerSubscriptionStateChangedPayload;
+  reason: 'verification_failed' | 'retries_exhausted';
+  deadLetteredAt: string;
+  /** When the record ages out; `expiresAt − deadLetteredAt` makes `retentionDays` observable. */
+  expiresAt: string;
+}
+
+/** `trigger-dead-letter-page.schema.json` — newest first. */
+export interface TriggerDeadLetterPage {
+  deliveries: readonly DeadLetteredTriggerDelivery[];
+  nextCursor?: string;
 }

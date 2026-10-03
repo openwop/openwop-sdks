@@ -2,6 +2,11 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2.Y.Z`).
 
+## [Unreleased] — corpus `v2.45.10`
+
+- **`(*OpenwopClient).ListTriggerDeadLetters(ctx, subscriptionID, limit, cursor)`** — `GET /trigger-subscriptions/{subscriptionId}/dead-letters` (RFC 0232 §B, corpus 2.45.10+), gated on `triggerBridge.deadLetter`. Returns one `TriggerDeadLetterPage`, newest first; each `DeadLetteredTriggerDelivery` is content-free, with `attempt` (the dead-lettered `trigger.delivery-attempted` payload's fields) and, when the dead-lettering changed the subscription's state, `stateChange`. The subscription id travels projected (`identity.md` §5). Pinned by `v2_wire_test.go`.
+- **Re-vendored on corpus `v2.45.10`** (was `v2.43.0`): 25 artifacts. `generated.go` regenerated: the error-code registry gains 12 codes (120 in all, among them `budget_exhausted`, `egress_denied`, `storage_limit_exceeded`, `service_unavailable`, `upstream_unavailable`); capability families are unchanged (73). `CorpusVersion` becomes `2.45.10`, so `OpenWOP-Client-Version` now sends `2.45.10`.
+
 ## [2.5.0] — 2026-09-28 — corpus `v2.43.0`: `OpenWOP-Client-Version` on every request (RFC 0219)
 
 ### Added

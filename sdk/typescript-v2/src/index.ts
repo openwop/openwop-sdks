@@ -250,6 +250,10 @@ export type {
   TriggerSubscriptionRegistration,
   TriggerSubscription,
   CreateTriggerSubscriptionResponse,
+  // RFC 0232 — trigger dead-letter read
+  ListTriggerDeadLettersRequest,
+  DeadLetteredTriggerDelivery,
+  TriggerDeadLetterPage,
 } from './types.js';
 
 // RFC 0030 §A `reasoning` field prompt-directive helper.

@@ -13,6 +13,8 @@ import {
   WopError,
   type AuditVerifyResult,
   type CreateTriggerSubscriptionResponse,
+  type ListTriggerDeadLettersRequest,
+  type TriggerDeadLetterPage,
   type LocalizedContentLanguageSettings,
   type LocalizedContentPage,
   type LocalizedContentPageResponse,
@@ -1017,6 +1019,23 @@ export class OpenwopClient {
         path: '/v1/trigger-subscriptions',
         body,
       }),
+
+    /** `GET /v1/trigger-subscriptions/{subscriptionId}/dead-letters` (RFC 0232 §B; gated on
+     *  `capabilities.triggerBridge.deadLetter`) — one page of dead-lettered deliveries, newest
+     *  first. Records name a delivery and never carry what was delivered. */
+    deadLetters: (
+      subscriptionId: string,
+      req: ListTriggerDeadLettersRequest = {},
+    ): Promise<TriggerDeadLetterPage> => {
+      const search = new URLSearchParams();
+      if (req.limit !== undefined) search.set('limit', String(req.limit));
+      if (req.cursor !== undefined) search.set('cursor', req.cursor);
+      const qs = search.toString();
+      return this.#request<TriggerDeadLetterPage>({
+        method: 'GET',
+        path: `/v1/trigger-subscriptions/${encodeURIComponent(subscriptionId)}/dead-letters${qs ? `?${qs}` : ''}`,
+      });
+    },
   };
 
   // ── Agent workspace files (RFC 0059; gated on capabilities.workspace) ──

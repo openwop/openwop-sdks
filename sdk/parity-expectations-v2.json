@@ -678,6 +678,19 @@
       }
     },
     {
+      "operationId": "listTriggerDeadLetters",
+      "method": "GET",
+      "path": "/trigger-subscriptions/{subscriptionId}/dead-letters",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "triggerSubscriptions.deadLetters",
+        "py": "trigger_dead_letters",
+        "go": "ListTriggerDeadLetters"
+      }
+    },
+    {
       "operationId": "registerWebhook",
       "method": "POST",
       "path": "/webhooks",

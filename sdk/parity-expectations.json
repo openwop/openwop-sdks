@@ -463,6 +463,14 @@
       "go": "typed"
     },
     {
+      "operationId": "listTriggerDeadLetters",
+      "method": "GET",
+      "path": "/v1/trigger-subscriptions/{subscriptionId}/dead-letters",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed"
+    },
+    {
       "operationId": "listContentPages",
       "method": "GET",
       "path": "/v1/content/pages",
