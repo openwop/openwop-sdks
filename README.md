@@ -1,6 +1,6 @@
 # OpenWOP SDKs
 
-OpenWOP is the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval, replay, and move between hosts.
+OpenWOP is the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval and replay, on any host that implements it.
 
 This repo holds the official TypeScript, Python, and Go client SDKs, in lockstep with the
 [spec](https://github.com/openwop/openwop).

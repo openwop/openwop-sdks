@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "openwop-client"
 version = "2.5.0"
-description = "Python SDK for OpenWOP, the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval, replay, and move between hosts."
+description = "Python SDK for OpenWOP, the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval and replay, on any host that implements it."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
