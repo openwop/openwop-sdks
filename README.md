@@ -1,6 +1,17 @@
-# openwop-sdks
+# OpenWOP SDKs
 
-Client SDKs for the [OpenWOP protocol](https://github.com/openwop/openwop), in lockstep with the spec.
+OpenWOP is the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval, replay, and move between hosts.
+
+This repo holds the official TypeScript, Python, and Go client SDKs, in lockstep with the
+[spec](https://github.com/openwop/openwop).
+
+[openwop.dev](https://openwop.dev) · [Quickstart](https://openwop.dev/quickstart/)
+
+```bash
+npm install @openwop/openwop@2                   # TypeScript
+pip install "openwop-client>=2,<3"                # Python
+go get github.com/openwop/openwop-sdks/go/v2      # Go
+```
 
 Carved out of the `openwop/openwop` spec corpus (full history preserved) so the protocol repo
 stays a lean spec + conformance contract.

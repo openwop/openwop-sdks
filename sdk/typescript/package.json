@@ -1,7 +1,7 @@
 {
   "name": "@openwop/openwop",
   "version": "1.10.0",
-  "description": "Production-ready TypeScript reference SDK for OpenWOP v1.0 compliant servers.",
+  "description": "Production-ready TypeScript SDK for OpenWOP v1 hosts (the 1.x line). OpenWOP is the open-source protocol for multi-agent workflow orchestration; new integrations use @openwop/openwop@2.",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/openwop/openwop-sdks.git",
