@@ -5,12 +5,23 @@ build-backend = "hatchling.build"
 [project]
 name = "openwop-client"
 version = "2.5.0"
-description = "Production-ready Python reference SDK for OpenWOP v2 hosts — bare-origin unversioned paths, OpenWOP-Version negotiation, the closed discovery root, and the generated error-code registry."
+description = "Python SDK for OpenWOP, the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval and replay, on any host that implements it."
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 authors = [{ name = "openwop spec working group" }]
-keywords = ["openwop", "workflow", "orchestration", "sdk"]
+keywords = [
+  "openwop",
+  "multi-agent",
+  "workflow-orchestration",
+  "ai-agents",
+  "agent-orchestration",
+  "human-in-the-loop",
+  "llm",
+  "workflow",
+  "orchestration",
+  "sdk",
+]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "Intended Audience :: Developers",
@@ -20,6 +31,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
@@ -36,7 +48,9 @@ dev = [
 ]
 
 [project.urls]
-"Homepage" = "https://github.com/openwop/openwop-sdks"
+"Homepage" = "https://openwop.dev"
+"Documentation" = "https://openwop.dev/quickstart/"
+"Repository" = "https://github.com/openwop/openwop-sdks"
 "Source" = "https://github.com/openwop/openwop-sdks/tree/main/sdk/python-v2"
 "Bug Tracker" = "https://github.com/openwop/openwop-sdks/issues"
 "Changelog" = "https://github.com/openwop/openwop-sdks/blob/main/sdk/python-v2/CHANGELOG.md"

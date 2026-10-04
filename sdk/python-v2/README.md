@@ -1,6 +1,25 @@
-# `openwop-client` 2.x — Python SDK for OpenWOP v2 hosts
+# `openwop-client` 2.x — Python SDK for OpenWOP
 
-**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This package is the reference Python client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (55 operations), typed dataclasses, and pure-stdlib SSE iterators for the run and host event channels.
+OpenWOP is the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval and replay, on any host that implements it.
+
+[openwop.dev](https://openwop.dev) · [Quickstart](https://openwop.dev/quickstart/)
+
+```bash
+pip install "openwop-client>=2,<3"
+```
+
+```python
+from openwop_client import CreateRunRequest, OpenwopClient
+
+client = OpenwopClient(base_url="https://api.example.com", api_key="hk_test_abc123")
+resp = client.runs_create(CreateRunRequest(workflowId="my-workflow", inputs={"q": "hello"}))
+for event in client.runs_events(resp.runId):
+    print(event.sequence, event.type)
+```
+
+## For implementers
+
+This package is the reference Python client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (55 operations), typed dataclasses, and pure-stdlib SSE iterators for the run and host event channels.
 
 ```bash
 pip install "openwop-client>=2,<3"   # 2.5.0 — v2-only; the 1.x client stays on openwop-client<2

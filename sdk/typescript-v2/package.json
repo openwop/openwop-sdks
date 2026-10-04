@@ -1,7 +1,23 @@
 {
   "name": "@openwop/openwop",
   "version": "2.5.0",
-  "description": "TypeScript reference SDK for OpenWOP v2 hosts — bare-origin unversioned paths, OpenWOP-Version negotiation, the closed discovery root, and the generated error-code registry.",
+  "description": "TypeScript SDK for OpenWOP, the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval and replay, on any host that implements it.",
+  "keywords": [
+    "openwop",
+    "multi-agent",
+    "workflow-orchestration",
+    "ai-agents",
+    "agent-orchestration",
+    "human-in-the-loop",
+    "llm",
+    "workflow",
+    "orchestration",
+    "sdk"
+  ],
+  "homepage": "https://openwop.dev",
+  "bugs": {
+    "url": "https://github.com/openwop/openwop-sdks/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/openwop/openwop-sdks.git",

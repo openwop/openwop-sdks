@@ -1,6 +1,24 @@
-# `@openwop/openwop` 2.x — TypeScript SDK for OpenWOP v2 hosts
+# `@openwop/openwop` 2.x — TypeScript SDK for OpenWOP
 
-**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This package is the reference TypeScript client for the **v2 major** (`spec/v2/`, RFC 0168 §D): one typed method per operation in `spec/v2/path-manifest.json` (55 operations), an async-iterable SSE consumer for the run and host event channels, and zero runtime dependencies.
+OpenWOP is the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval and replay, on any host that implements it.
+
+[openwop.dev](https://openwop.dev) · [Quickstart](https://openwop.dev/quickstart/)
+
+```bash
+npm install @openwop/openwop@2
+```
+
+```typescript
+import { OpenwopClient } from '@openwop/openwop';
+
+const client = new OpenwopClient({ baseUrl: 'https://api.example.com', apiKey: 'hk_test_abc123' });
+const { runId } = await client.runs.create({ workflowId: 'my-workflow', inputs: { q: 'hello' } });
+for await (const event of client.runs.events(runId)) console.log(event.sequence, event.type);
+```
+
+## For implementers
+
+This package is the reference TypeScript client for the **v2 major** (`spec/v2/`, RFC 0168 §D): one typed method per operation in `spec/v2/path-manifest.json` (55 operations), an async-iterable SSE consumer for the run and host event channels, and zero runtime dependencies.
 
 ```bash
 npm install @openwop/openwop@2   # 2.5.0 — v2-only; the 1.x client stays on `@openwop/openwop@1`

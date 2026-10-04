@@ -1,6 +1,25 @@
-# `openwopclient` v2 — Go SDK for OpenWOP v2 hosts
+# `openwopclient` v2 — Go SDK for OpenWOP
 
-**openwop is an open, wire-level protocol for multi-agent workflow orchestration.** This module is the reference Go client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (55 operations), strongly-typed structs, and channel-based SSE consumers for the run and host event channels.
+OpenWOP is the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval and replay, on any host that implements it.
+
+[openwop.dev](https://openwop.dev) · [Quickstart](https://openwop.dev/quickstart/)
+
+```bash
+go get github.com/openwop/openwop-sdks/go/v2
+```
+
+```go
+ctx := context.Background()
+client, _ := openwop.NewClient("https://api.example.com", "hk_test_abc123")
+resp, _ := client.CreateRun(ctx, openwop.CreateRunRequest{WorkflowID: "my-workflow"}, openwop.MutationOptions{})
+events, cleanup, _ := client.StreamEvents(ctx, resp.RunID, openwop.StreamEventsOptions{})
+defer cleanup()
+for ev := range events { fmt.Println(ev.Sequence, ev.Type) }
+```
+
+## For implementers
+
+This module is the reference Go client for the **v2 major** (`spec/v2/`, RFC 0168 §D): synchronous, zero runtime deps, one typed method per operation in `spec/v2/path-manifest.json` (55 operations), strongly-typed structs, and channel-based SSE consumers for the run and host event channels.
 
 ```bash
 go get github.com/openwop/openwop-sdks/go/v2@v2.5.0   # tag go/v2.5.0 — v2-only; the 1.x module stays at github.com/openwop/openwop-sdks/go

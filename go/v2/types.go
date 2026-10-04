@@ -1,4 +1,9 @@
-// Package openwopclient implements a Go client for OpenWOP v2 hosts.
+// Package openwopclient is the Go SDK for OpenWOP, the open-source protocol
+// for multi-agent workflow orchestration: run AI agents as workflows you can
+// watch, pause for human approval and replay, on any host that implements it. See
+// https://openwop.dev and https://openwop.dev/quickstart/.
+//
+// This module is the reference client for OpenWOP v2 hosts.
 //
 // Types mirror the v2 OpenAPI 3.1 spec (../../api/v2/openapi.yaml) and JSON
 // Schemas (../../schemas/v2/). Hand-authored — see README.md §rationale.
