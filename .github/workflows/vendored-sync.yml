@@ -17,6 +17,11 @@ on:
       - 'CORPUS_TAG'
       - 'scripts/check-vendored-sync.mjs'
 
+# Read-only check: it compares the vendored copies against the corpus fetched
+# anonymously over HTTPS and pushes nothing.
+permissions:
+  contents: read
+
 jobs:
   vendored-sync:
     runs-on: ubuntu-latest
