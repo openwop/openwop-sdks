@@ -78,7 +78,7 @@ ${list(retriable)}
 ] as const;
 
 /** Grammar of a vendor error code: \`<org>.<name>\`, \`openwop.\` reserved (\`spec/v2/errors.json\` \`vendorCodePattern\`). */
-export const VENDOR_ERROR_CODE_PATTERN = /${errors.vendorCodePattern.replace(/\//g, '\\/')}/;
+export const VENDOR_ERROR_CODE_PATTERN = /${new RegExp(errors.vendorCodePattern).source}/;
 
 /** Root metadata keys of the closed v2 discovery document (capabilities.md §3.1). */
 export const CAPABILITY_METADATA_KEYS = [

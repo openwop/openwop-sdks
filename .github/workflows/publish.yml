@@ -57,6 +57,13 @@ on:
       - 'openwop-client/v*'
       - 'go/v*'
 
+# Least privilege. validate-tag, resolve, preflight and publish-go only read the
+# tagged tree (publish-go asks proxy.golang.org; the tag itself is the release).
+# The npm and PyPI jobs widen their own token with `id-token: write` for OIDC.
+# No job creates a tag or a GitHub release.
+permissions:
+  contents: read
+
 jobs:
   validate-tag:
     runs-on: ubuntu-latest
