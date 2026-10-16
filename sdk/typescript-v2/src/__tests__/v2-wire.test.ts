@@ -166,6 +166,7 @@ describe('SSE channels carry the version header and unversioned paths', () => {
     const url = new URL(seen[0]!.url);
     expect(url.pathname).toBe('/runs/t~2Fr1/events');
     expect(url.searchParams.get('streamMode')).toBe('updates,messages');
+    expect(url.searchParams.get('resumable')).toBe('true'); // RFC 0247 opt-in, on by default
     expect(seen[0]!.headers.get('OpenWOP-Version')).toBe('2.0');
     expect(seen[0]!.headers.get('Last-Event-ID')).toBe('0');
   });
@@ -173,11 +174,11 @@ describe('SSE channels carry the version header and unversioned paths', () => {
   it('hostEvents: /host/events by default, overridable by heartbeat.deliveryChannel', async () => {
     const { f, seen } = sse(': keep-alive\n\nevent: heartbeat.evaluated\ndata: {"type":"heartbeat.evaluated","payload":{"heartbeatId":"h1","status":"ok","changed":false}}\n\n');
     const out = [];
-    for await (const ev of streamHostEvents({ baseUrl: 'https://host.example', apiKey: 'k', protocolVersion: '2.0', fetch: f })) out.push(ev.type);
+    for await (const ev of streamHostEvents({ baseUrl: 'https://host.example', apiKey: 'k', protocolVersion: '2.0', fetch: f }, { reconnect: false })) out.push(ev.type);
     expect(out).toEqual(['heartbeat.evaluated']);
     expect(new URL(seen[0]!.url).pathname).toBe('/host/events');
     expect(seen[0]!.headers.get('OpenWOP-Version')).toBe('2.0');
-    for await (const _ of streamHostEvents({ baseUrl: 'https://host.example', apiKey: 'k', protocolVersion: '2.0', fetch: f }, { path: '/ops/heartbeats' })) void _;
+    for await (const _ of streamHostEvents({ baseUrl: 'https://host.example', apiKey: 'k', protocolVersion: '2.0', fetch: f }, { path: '/ops/heartbeats', reconnect: false })) void _;
     expect(new URL(seen[1]!.url).pathname).toBe('/ops/heartbeats');
   });
 });

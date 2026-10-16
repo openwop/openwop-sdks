@@ -1546,10 +1546,13 @@ class OpenwopClient:
         path: str = "/host/events",
         last_event_id: str | None = None,
         timeout_seconds: float = 30.0,
+        reconnect: bool = True,
     ) -> Iterator[HostEventDoc]:
         """``GET /host/events`` — the ``hostEvents`` channel (heartbeat messages)
         as SSE; content-free of run data. A host MAY declare another address
-        under ``heartbeat.deliveryChannel`` — pass it as ``path``."""
+        under ``heartbeat.deliveryChannel`` — pass it as ``path``. With
+        ``reconnect`` on (RFC 0247, the default) the stream resumes from the
+        last durable event id whenever the connection ends."""
         return stream_host_events(
             self._base_url,
             self._api_key,
@@ -1557,6 +1560,7 @@ class OpenwopClient:
             path=path,
             last_event_id=last_event_id,
             timeout_seconds=timeout_seconds,
+            reconnect=reconnect,
         )
 
     def runs_events(
@@ -1567,9 +1571,12 @@ class OpenwopClient:
         last_event_id: str | None = None,
         timeout_seconds: float = 30.0,
         buffer_ms: int | None = None,
+        reconnect: bool = True,
     ) -> Iterator[RunEventDoc]:
-        """SSE consumer. Connection auto-closes when the server closes the
-        stream (terminal run event); break out of the loop to terminate early.
+        """SSE consumer. Yields through the run's terminal event; break out of
+        the loop to terminate early. With ``reconnect`` on (RFC 0247, the
+        default) a stream the host ends before the terminal event is resumed
+        with ``Last-Event-ID``; ``reconnect=False`` keeps one connection.
 
         ``stream_mode`` accepts a single mode or a sequence of modes for
         S4 mixed-mode (sequences serialize to comma-separated). ``buffer_ms``
@@ -1585,6 +1592,7 @@ class OpenwopClient:
             last_event_id=last_event_id,
             timeout_seconds=timeout_seconds,
             buffer_ms=buffer_ms,
+            reconnect=reconnect,
         )
 
     # ── HITL interrupts ──────────────────────────────────────────────
