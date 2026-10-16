@@ -67,14 +67,14 @@ func TestClientVersionOnJSONAndSSERequests(t *testing.T) {
 	if _, err := client.GetOpenAPI(ctx); err != nil {
 		t.Fatal(err)
 	}
-	host, cleanup, err := client.StreamHostEvents(ctx, HostEventsOptions{})
+	host, cleanup, err := client.StreamHostEvents(ctx, HostEventsOptions{Reconnect: ReconnectOptions{Disabled: true}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for range host {
 	}
 	cleanup()
-	events, cleanup2, err := client.StreamEvents(ctx, "t/r1", StreamEventsOptions{})
+	events, cleanup2, err := client.StreamEvents(ctx, "t/r1", StreamEventsOptions{Reconnect: ReconnectOptions{Disabled: true}})
 	if err != nil {
 		t.Fatal(err)
 	}

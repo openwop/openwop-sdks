@@ -198,7 +198,7 @@ func TestSSEChannelsCarryTheVersionHeader(t *testing.T) {
 		t.Fatalf("batch frames must flatten: %v", types)
 	}
 
-	host, cleanup2, err := client.StreamHostEvents(ctx, HostEventsOptions{})
+	host, cleanup2, err := client.StreamHostEvents(ctx, HostEventsOptions{Reconnect: ReconnectOptions{Disabled: true}})
 	if err != nil {
 		t.Fatal(err)
 	}

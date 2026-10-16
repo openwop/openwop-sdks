@@ -131,7 +131,7 @@ export type {
   RunAncestryResponse,
 } from './types.js';
 export { streamEvents, streamHostEvents } from './sse.js';
-export type { EventsStreamContext, EventsStreamOptions, HostEventsStreamOptions } from './sse.js';
+export type { EventsStreamContext, EventsStreamOptions, HostEventsStreamOptions, StreamReconnectOptions } from './sse.js';
 
 // Generated from spec/v2/errors.json + schemas/v2/capabilities.schema.json + CORPUS_TAG.
 export {

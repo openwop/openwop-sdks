@@ -67,8 +67,8 @@ class ClientVersionTests(unittest.TestCase):
             mock.patch.object(sse_module, "urlopen", urlopen),
         ):
             client.discovery_openapi()
-            list(client.host_events())
-            list(client.runs_events("t/r1"))
+            list(client.host_events(reconnect=False))
+            list(client.runs_events("t/r1", reconnect=False))
 
         self.assertEqual(len(seen), 3)
         for req in seen:

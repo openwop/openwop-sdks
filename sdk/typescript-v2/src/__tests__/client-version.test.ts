@@ -46,8 +46,8 @@ describe('OpenWOP-Client-Version (RFC 0219)', () => {
 
     await client.discovery.capabilities();
     await client.runs.get('t/r1');
-    for await (const _ of client.host.events()) void _;
-    for await (const _ of client.runs.events('t/r1')) void _;
+    for await (const _ of client.host.events({ reconnect: false })) void _;
+    for await (const _ of client.runs.events('t/r1', { reconnect: false })) void _;
 
     expect(seen).toHaveLength(4);
     for (const h of seen) expect(h.get('OpenWOP-Client-Version')).toBe(expectedFromCorpusTag());
