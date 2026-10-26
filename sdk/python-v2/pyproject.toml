@@ -81,5 +81,10 @@ python_files = ["test_*.py"]
 target-version = "py310"
 line-length = 88
 
+[tool.ruff.format]
+# scripts/generate.py owns this file; `generate.py --check` compares it byte-for-byte.
+# Markdown code blocks stay as written: the README examples favour one-line calls.
+exclude = ["src/openwop_client/_generated.py", "*.md"]
+
 [tool.ruff.lint]
 select = ["E4", "E7", "E9", "F"]

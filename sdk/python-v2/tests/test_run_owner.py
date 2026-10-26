@@ -25,13 +25,23 @@ class _Resp(io.BytesIO):
 
 class RunOwnerTest(unittest.TestCase):
     def test_subject_is_parsed_with_its_actor(self) -> None:
-        with mock.patch.object(client_module, "urlopen", lambda req, timeout=0: _Resp(SNAP)):
-            snap = OpenwopClient("https://h.example", "k").runs_get("acme/r-0000000000000001")
+        with mock.patch.object(
+            client_module, "urlopen", lambda req, timeout=0: _Resp(SNAP)
+        ):
+            snap = OpenwopClient("https://h.example", "k").runs_get(
+                "acme/r-0000000000000001"
+            )
         subj = snap.owner.subject
         self.assertIsInstance(subj, Subject)
-        self.assertEqual((subj.issuer, subj.subjectId, subj.lane, subj.kind), ("urn:host:api-key", "default", "api-key", "agent"))
+        self.assertEqual(
+            (subj.issuer, subj.subjectId, subj.lane, subj.kind),
+            ("urn:host:api-key", "default", "api-key", "agent"),
+        )
         assert subj.actor is not None
-        self.assertEqual((subj.actor.subjectId, subj.actor.kind, subj.actor.actor), ("u1", "user", None))
+        self.assertEqual(
+            (subj.actor.subjectId, subj.actor.kind, subj.actor.actor),
+            ("u1", "user", None),
+        )
 
 
 if __name__ == "__main__":

@@ -1,6 +1,11 @@
 import unittest
 
-from openwop_client import ERROR_CODES, HTTP_ERROR_CODES, is_error_code, is_http_error_code
+from openwop_client import (
+    ERROR_CODES,
+    HTTP_ERROR_CODES,
+    is_error_code,
+    is_http_error_code,
+)
 
 
 class HTTPErrorHelperTests(unittest.TestCase):

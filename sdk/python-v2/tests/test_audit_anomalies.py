@@ -38,7 +38,10 @@ class AuditAnomalyTest(unittest.TestCase):
         self.assertIsNone(genesis.kind)
         self.assertIsNone(genesis.expectedPrevHash)
         self.assertEqual(genesis.actualPrevHash, "ab")
-        self.assertEqual((merkle.kind, merkle.checkpoint, merkle.detail), ("merkle-mismatch", "cp-1", "root differs"))
+        self.assertEqual(
+            (merkle.kind, merkle.checkpoint, merkle.detail),
+            ("merkle-mismatch", "cp-1", "root differs"),
+        )
         self.assertIsNone(merkle.expectedPrevHash)
         self.assertEqual((missing.atSeq, missing.kind), (3, "missing-entry"))
 

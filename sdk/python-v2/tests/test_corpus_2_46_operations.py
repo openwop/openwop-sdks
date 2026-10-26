@@ -64,7 +64,9 @@ PROPOSAL = {
 
 class EvalBaselineSelectionTests(unittest.TestCase):
     def test_both_fields_sent_at_the_root(self) -> None:
-        seen, urlopen = _stub(lambda req: {"runId": "t/r2", "status": "pending", "eventsUrl": ""})
+        seen, urlopen = _stub(
+            lambda req: {"runId": "t/r2", "status": "pending", "eventsUrl": ""}
+        )
         with mock.patch.object(client_module, "urlopen", urlopen):
             OpenwopClient("https://h.example", "k").runs_create(
                 CreateRunRequest(
@@ -87,7 +89,9 @@ class EvalBaselineSelectionTests(unittest.TestCase):
         )
 
     def test_omitted_when_absent(self) -> None:
-        seen, urlopen = _stub(lambda req: {"runId": "t/r2", "status": "pending", "eventsUrl": ""})
+        seen, urlopen = _stub(
+            lambda req: {"runId": "t/r2", "status": "pending", "eventsUrl": ""}
+        )
         with mock.patch.object(client_module, "urlopen", urlopen):
             OpenwopClient("https://h.example", "k").runs_create(
                 CreateRunRequest(mode="eval", evalSuiteRef="suite://s", agentId="a")
@@ -97,18 +101,30 @@ class EvalBaselineSelectionTests(unittest.TestCase):
         self.assertNotIn("baselineRunId", body)
 
     def test_fixture_runs_sent_at_the_root_and_omitted_when_absent(self) -> None:
-        seen, urlopen = _stub(lambda req: {"runId": "t/r3", "status": "pending", "eventsUrl": ""})
+        seen, urlopen = _stub(
+            lambda req: {"runId": "t/r3", "status": "pending", "eventsUrl": ""}
+        )
         with mock.patch.object(client_module, "urlopen", urlopen):
             c = OpenwopClient("https://h.example", "k")
             c.runs_create(
                 CreateRunRequest(
-                    mode="eval", evalSuiteRef="suite://s", agentId="a", fixtureRuns={"record": "t/r1"}
+                    mode="eval",
+                    evalSuiteRef="suite://s",
+                    agentId="a",
+                    fixtureRuns={"record": "t/r1"},
                 )
             )
-            c.runs_create(CreateRunRequest(mode="eval", evalSuiteRef="suite://s", agentId="a"))
+            c.runs_create(
+                CreateRunRequest(mode="eval", evalSuiteRef="suite://s", agentId="a")
+            )
         self.assertEqual(
             _body(seen[0]),
-            {"mode": "eval", "evalSuiteRef": "suite://s", "agentId": "a", "fixtureRuns": {"record": "t/r1"}},
+            {
+                "mode": "eval",
+                "evalSuiteRef": "suite://s",
+                "agentId": "a",
+                "fixtureRuns": {"record": "t/r1"},
+            },
         )
         self.assertNotIn("fixtureRuns", _body(seen[1]))
 
@@ -125,19 +141,31 @@ class ProposalTests(unittest.TestCase):
         seen, urlopen = _stub(responder)
         with mock.patch.object(client_module, "urlopen", urlopen):
             c = OpenwopClient("https://h.example", "k")
-            page = c.proposals_list(state="draft", kind="prompt-template", limit=5, cursor="c")
-            c.proposals_submit(SubmitProposalRequest(kind="prompt-template", artifact={"templateId": "x"}), idempotency_key="i1")
+            page = c.proposals_list(
+                state="draft", kind="prompt-template", limit=5, cursor="c"
+            )
+            c.proposals_submit(
+                SubmitProposalRequest(
+                    kind="prompt-template", artifact={"templateId": "x"}
+                ),
+                idempotency_key="i1",
+            )
             got = c.proposals_get("p/1")
             c.proposals_revise("p1", ReviseProposalRequest(title="t"))
             c.proposals_archive("p1")
-            gate = c.proposals_apply("p1", artifact_digest="sha256:ab", idempotency_key="i2")
+            gate = c.proposals_apply(
+                "p1", artifact_digest="sha256:ab", idempotency_key="i2"
+            )
             c.proposals_reject("p1", reason="no")
         self.assertEqual(page.items[0].id, "p1")
         self.assertEqual(page.nextCursor, "c2")
         self.assertIsInstance(got, Proposal)
         self.assertEqual(gate, ApplyProposalGateResponse(runId="t/gate"))
         self.assertEqual(
-            [f"{r.get_method()} {r.full_url.replace('https://h.example', '')}" for r in seen],
+            [
+                f"{r.get_method()} {r.full_url.replace('https://h.example', '')}"
+                for r in seen
+            ],
             [
                 "GET /proposals?state=draft&kind=prompt-template&limit=5&cursor=c",
                 "POST /proposals",
@@ -159,8 +187,17 @@ class ConnectionProviderTests(unittest.TestCase):
         def responder(req: Any) -> Any:
             if req.full_url.endswith("/connection-providers"):
                 return {
-                    "providers": [{"id": "slack", "source": "pack", "packName": "@acme/slack"}],
-                    "refusals": [{"packName": "@b/slack", "providerId": "slack", "code": "connection_provider_conflict", "heldBy": "@acme/slack"}],
+                    "providers": [
+                        {"id": "slack", "source": "pack", "packName": "@acme/slack"}
+                    ],
+                    "refusals": [
+                        {
+                            "packName": "@b/slack",
+                            "providerId": "slack",
+                            "code": "connection_provider_conflict",
+                            "heldBy": "@acme/slack",
+                        }
+                    ],
                 }
             return {"id": "slack", "source": "builtin"}
 
@@ -175,13 +212,19 @@ class ConnectionProviderTests(unittest.TestCase):
         self.assertEqual(one.source, "builtin")
         self.assertEqual(
             [r.full_url.replace("https://h.example", "") for r in seen],
-            ["/connection-providers", "/connection-providers/slack", "/connection-providers/slack?pack=%40acme%2Fslack"],
+            [
+                "/connection-providers",
+                "/connection-providers/slack",
+                "/connection-providers/slack?pack=%40acme%2Fslack",
+            ],
         )
 
 
 class HostTestEventAndUiPluginTests(unittest.TestCase):
     def test_emit_test_event(self) -> None:
-        seen, urlopen = _stub(lambda req: {"eventId": "e1", "type": "host-test.ephemeral-triggered"})
+        seen, urlopen = _stub(
+            lambda req: {"eventId": "e1", "type": "host-test.ephemeral-triggered"}
+        )
         with mock.patch.object(client_module, "urlopen", urlopen):
             out = OpenwopClient("https://h.example", "k").host_emit_test_event(
                 "ephemeral", workspace_id="w1", idempotency_key="k1"
@@ -197,21 +240,39 @@ class HostTestEventAndUiPluginTests(unittest.TestCase):
         def responder(req: Any) -> Any:
             if req.get_method() == "GET":
                 return html
-            return {"openwop": "ui-plugin/1", "type": "response", "id": 1, "ok": False, "error": {"code": "method_not_allowed"}}
+            return {
+                "openwop": "ui-plugin/1",
+                "type": "response",
+                "id": 1,
+                "ok": False,
+                "error": {"code": "method_not_allowed"},
+            }
 
         seen, urlopen = _stub(responder)
         with mock.patch.object(client_module, "urlopen", urlopen):
             c = OpenwopClient("https://h.example", "k")
             frame = c.host_ui_plugin_frame("@acme/editor", "main")
-            res = c.host_dispatch_ui_plugin_request("@acme/editor", "main", UiPluginRequest(id=1, method="host.toast"))
+            res = c.host_dispatch_ui_plugin_request(
+                "@acme/editor", "main", UiPluginRequest(id=1, method="host.toast")
+            )
         self.assertEqual(frame, html.decode())
         self.assertEqual(seen[0].get_header("Accept"), "text/html")
-        self.assertEqual(seen[0].full_url, "https://h.example/host/ui-plugins/%40acme%2Feditor/main/frame")
+        self.assertEqual(
+            seen[0].full_url,
+            "https://h.example/host/ui-plugins/%40acme%2Feditor/main/frame",
+        )
         self.assertFalse(res.ok)
         self.assertEqual(res.error, {"code": "method_not_allowed"})
         self.assertEqual(
             _body(seen[1]),
-            {"message": {"id": 1, "method": "host.toast", "openwop": "ui-plugin/1", "type": "request"}},
+            {
+                "message": {
+                    "id": 1,
+                    "method": "host.toast",
+                    "openwop": "ui-plugin/1",
+                    "type": "request",
+                }
+            },
         )
 
 

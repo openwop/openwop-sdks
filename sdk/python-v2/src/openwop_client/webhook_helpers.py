@@ -93,7 +93,10 @@ def verify_webhook_signature(
     if provided_hex is None:
         return VerifyInvalid(reason="malformed_signature_header")
 
-    if algorithm_header is not None and algorithm_header not in WEBHOOK_SIGNATURE_ALGORITHMS:
+    if (
+        algorithm_header is not None
+        and algorithm_header not in WEBHOOK_SIGNATURE_ALGORITHMS
+    ):
         return VerifyInvalid(reason="unsupported_signature_algorithm")
 
     try:
@@ -163,7 +166,7 @@ def parse_signature_value(value: str) -> str | None:
     ``v1=<hex>`` form) -> None."""
     if not value.startswith(_SIGNATURE_VALUE_PREFIX):
         return None
-    hex_part = value[len(_SIGNATURE_VALUE_PREFIX):]
+    hex_part = value[len(_SIGNATURE_VALUE_PREFIX) :]
     return hex_part if _HEX_RE.fullmatch(hex_part) else None
 
 
@@ -172,8 +175,18 @@ def parse_signature_value(value: str) -> str | None:
 #: ``(signature_header, timestamp_header, algorithm_header, family)``.
 #: Lookups are case-insensitive.
 WEBHOOK_HEADER_FAMILIES: tuple[tuple[str, str, str, str], ...] = (
-    ("OpenWOP-Signature", "OpenWOP-Timestamp", "OpenWOP-Signature-Algorithm", "openwop"),
-    ("X-openwop-Signature", "X-openwop-Timestamp", "X-openwop-Signature-Algorithm", "x-openwop"),
+    (
+        "OpenWOP-Signature",
+        "OpenWOP-Timestamp",
+        "OpenWOP-Signature-Algorithm",
+        "openwop",
+    ),
+    (
+        "X-openwop-Signature",
+        "X-openwop-Timestamp",
+        "X-openwop-Signature-Algorithm",
+        "x-openwop",
+    ),
 )
 
 
@@ -194,7 +207,9 @@ def read_webhook_headers(headers: "Mapping[str, str]") -> WebhookHeaderRead | No
         sig = lowered.get(sig_name.lower())
         ts = lowered.get(ts_name.lower())
         if sig is not None and ts is not None:
-            fam: Literal["openwop", "x-openwop"] = "openwop" if family == "openwop" else "x-openwop"
+            fam: Literal["openwop", "x-openwop"] = (
+                "openwop" if family == "openwop" else "x-openwop"
+            )
             return WebhookHeaderRead(
                 signature=sig,
                 timestamp=ts,

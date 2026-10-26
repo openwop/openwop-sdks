@@ -49,7 +49,10 @@ def _ev(event_type: str, payload: object) -> RunEventDoc:
 
 class AgentEventTypeGuardsTrue(unittest.TestCase):
     def test_is_agent_reasoned_matches_well_formed(self) -> None:
-        ev = _ev("agent.reasoned", {"agentId": "asst-1", "reasoning": "thinking…", "verbosity": "full"})
+        ev = _ev(
+            "agent.reasoned",
+            {"agentId": "asst-1", "reasoning": "thinking…", "verbosity": "full"},
+        )
         self.assertTrue(is_agent_reasoned(ev))
         payload = agent_reasoned_payload(ev)
         assert payload is not None
@@ -57,7 +60,10 @@ class AgentEventTypeGuardsTrue(unittest.TestCase):
         self.assertEqual(payload["verbosity"], "full")
 
     def test_is_agent_reasoning_delta_matches_well_formed(self) -> None:
-        ev = _ev("agent.reasoning.delta", {"agentId": "asst-1", "delta": "step 1", "sequence": 0})
+        ev = _ev(
+            "agent.reasoning.delta",
+            {"agentId": "asst-1", "delta": "step 1", "sequence": 0},
+        )
         self.assertTrue(is_agent_reasoning_delta(ev))
         payload = agent_reasoning_delta_payload(ev)
         assert payload is not None
@@ -65,16 +71,39 @@ class AgentEventTypeGuardsTrue(unittest.TestCase):
         self.assertEqual(payload["sequence"], 0)
 
     def test_is_agent_tool_called_matches_well_formed(self) -> None:
-        ev = _ev("agent.toolCalled", {"agentId": "asst-1", "toolName": "echo", "callId": "c-1", "inputs": {"x": 1}})
+        ev = _ev(
+            "agent.toolCalled",
+            {
+                "agentId": "asst-1",
+                "toolName": "echo",
+                "callId": "c-1",
+                "inputs": {"x": 1},
+            },
+        )
         self.assertTrue(is_agent_tool_called(ev))
 
     def test_is_agent_tool_returned_matches_well_formed(self) -> None:
-        ev = _ev("agent.toolReturned", {"agentId": "asst-1", "toolName": "echo", "callId": "c-1", "outcome": {"x": 1}})
+        ev = _ev(
+            "agent.toolReturned",
+            {
+                "agentId": "asst-1",
+                "toolName": "echo",
+                "callId": "c-1",
+                "outcome": {"x": 1},
+            },
+        )
         self.assertTrue(is_agent_tool_returned(ev))
 
     def test_is_agent_handoff_matches_distinct_field_names(self) -> None:
         # Note: agent.handoff uses fromAgentId / toAgentId, NOT a single agentId.
-        ev = _ev("agent.handoff", {"fromAgentId": "asst-1", "toAgentId": "researcher", "reason": "specialist"})
+        ev = _ev(
+            "agent.handoff",
+            {
+                "fromAgentId": "asst-1",
+                "toAgentId": "researcher",
+                "reason": "specialist",
+            },
+        )
         self.assertTrue(is_agent_handoff(ev))
         payload = agent_handoff_payload(ev)
         assert payload is not None
@@ -82,7 +111,10 @@ class AgentEventTypeGuardsTrue(unittest.TestCase):
         self.assertEqual(payload["toAgentId"], "researcher")
 
     def test_is_agent_decided_matches_well_formed(self) -> None:
-        ev = _ev("agent.decided", {"agentId": "asst-1", "decision": {"next": "done"}, "confidence": 0.95})
+        ev = _ev(
+            "agent.decided",
+            {"agentId": "asst-1", "decision": {"next": "done"}, "confidence": 0.95},
+        )
         self.assertTrue(is_agent_decided(ev))
 
 
@@ -94,25 +126,54 @@ class AgentEventTypeGuardsFalse(unittest.TestCase):
 
     def test_missing_required_fields_rejected(self) -> None:
         # agent.reasoned without `reasoning`
-        self.assertFalse(is_agent_reasoned(_ev("agent.reasoned", {"agentId": "asst-1"})))
+        self.assertFalse(
+            is_agent_reasoned(_ev("agent.reasoned", {"agentId": "asst-1"}))
+        )
         # agent.reasoning.delta without `delta`
-        self.assertFalse(is_agent_reasoning_delta(_ev("agent.reasoning.delta", {"agentId": "asst-1", "sequence": 0})))
+        self.assertFalse(
+            is_agent_reasoning_delta(
+                _ev("agent.reasoning.delta", {"agentId": "asst-1", "sequence": 0})
+            )
+        )
         # agent.reasoning.delta with negative sequence
         self.assertFalse(
-            is_agent_reasoning_delta(_ev("agent.reasoning.delta", {"agentId": "asst-1", "delta": "x", "sequence": -1}))
+            is_agent_reasoning_delta(
+                _ev(
+                    "agent.reasoning.delta",
+                    {"agentId": "asst-1", "delta": "x", "sequence": -1},
+                )
+            )
         )
         # agent.reasoning.delta with float sequence (must be int)
         self.assertFalse(
-            is_agent_reasoning_delta(_ev("agent.reasoning.delta", {"agentId": "asst-1", "delta": "x", "sequence": 1.5}))
+            is_agent_reasoning_delta(
+                _ev(
+                    "agent.reasoning.delta",
+                    {"agentId": "asst-1", "delta": "x", "sequence": 1.5},
+                )
+            )
         )
         # agent.reasoning.delta with bool sequence (bool subclasses int in Python — must reject)
         self.assertFalse(
-            is_agent_reasoning_delta(_ev("agent.reasoning.delta", {"agentId": "asst-1", "delta": "x", "sequence": True}))
+            is_agent_reasoning_delta(
+                _ev(
+                    "agent.reasoning.delta",
+                    {"agentId": "asst-1", "delta": "x", "sequence": True},
+                )
+            )
         )
         # agent.handoff with wrong field names (single agentId)
-        self.assertFalse(is_agent_handoff(_ev("agent.handoff", {"agentId": "asst-1", "toAgentId": "x"})))
+        self.assertFalse(
+            is_agent_handoff(
+                _ev("agent.handoff", {"agentId": "asst-1", "toAgentId": "x"})
+            )
+        )
         # agent.toolReturned without callId
-        self.assertFalse(is_agent_tool_returned(_ev("agent.toolReturned", {"agentId": "asst-1", "toolName": "t"})))
+        self.assertFalse(
+            is_agent_tool_returned(
+                _ev("agent.toolReturned", {"agentId": "asst-1", "toolName": "t"})
+            )
+        )
 
     def test_non_dict_payload_rejected(self) -> None:
         self.assertFalse(is_agent_reasoned(_ev("agent.reasoned", None)))
@@ -137,11 +198,14 @@ class AgentEventExtractorsReturnNone(unittest.TestCase):
         self.assertIsNone(agent_reasoned_payload(ev))
 
     def test_extractor_returns_payload_on_match(self) -> None:
-        ev = _ev("agent.toolCalled", {
-            "agentId": "asst-1",
-            "toolName": "echo",
-            "callId": "c-1",
-        })
+        ev = _ev(
+            "agent.toolCalled",
+            {
+                "agentId": "asst-1",
+                "toolName": "echo",
+                "callId": "c-1",
+            },
+        )
         payload = agent_tool_called_payload(ev)
         assert payload is not None
         self.assertEqual(payload["toolName"], "echo")
@@ -165,7 +229,9 @@ class AgentEventSchemaMirrorSanity(unittest.TestCase):
     def _check(self, def_name: str, expected_required: list[str]) -> None:
         defs = self.schema["$defs"]
         self.assertIn(def_name, defs, f"$def.{def_name} present")
-        self.assertEqual(sorted(defs[def_name].get("required", [])), sorted(expected_required))
+        self.assertEqual(
+            sorted(defs[def_name].get("required", [])), sorted(expected_required)
+        )
 
     def test_agent_reasoned_required_matches(self) -> None:
         self._check("agentReasoned", ["agentId", "reasoning"])
@@ -201,36 +267,67 @@ class VoiceAndPresenceGuards(unittest.TestCase):
 
         good = _ev(
             "voice.transcript",
-            {"text": "transfer information", "isFinal": True, "atMs": 1200, "contentTrust": "untrusted"},
+            {
+                "text": "transfer information",
+                "isFinal": True,
+                "atMs": 1200,
+                "contentTrust": "untrusted",
+            },
         )
         self.assertTrue(is_voice_transcript(good))
         self.assertEqual(voice_transcript_payload(good)["contentTrust"], "untrusted")
         # missing contentTrust → no match
         self.assertFalse(
-            is_voice_transcript(_ev("voice.transcript", {"text": "x", "isFinal": False, "atMs": 1}))
+            is_voice_transcript(
+                _ev("voice.transcript", {"text": "x", "isFinal": False, "atMs": 1})
+            )
         )
         # contentTrust must be 'untrusted', not 'trusted'
         self.assertFalse(
             is_voice_transcript(
-                _ev("voice.transcript", {"text": "x", "isFinal": False, "atMs": 1, "contentTrust": "trusted"})
+                _ev(
+                    "voice.transcript",
+                    {
+                        "text": "x",
+                        "isFinal": False,
+                        "atMs": 1,
+                        "contentTrust": "trusted",
+                    },
+                )
             )
         )
         # bool atMs must not satisfy the numeric check (bool is an int subclass)
         self.assertFalse(
             is_voice_transcript(
-                _ev("voice.transcript", {"text": "x", "isFinal": True, "atMs": True, "contentTrust": "untrusted"})
+                _ev(
+                    "voice.transcript",
+                    {
+                        "text": "x",
+                        "isFinal": True,
+                        "atMs": True,
+                        "contentTrust": "untrusted",
+                    },
+                )
             )
         )
 
     def test_voice_turn_commit_and_synthesis_chunk(self) -> None:
         from openwop_client import is_voice_synthesis_chunk, is_voice_turn_commit
 
-        self.assertTrue(is_voice_turn_commit(_ev("voice.turn_commit", {"atMs": 9, "finalText": "done"})))
+        self.assertTrue(
+            is_voice_turn_commit(
+                _ev("voice.turn_commit", {"atMs": 9, "finalText": "done"})
+            )
+        )
         self.assertFalse(is_voice_turn_commit(_ev("voice.turn_commit", {"atMs": 9})))
         self.assertTrue(
-            is_voice_synthesis_chunk(_ev("voice.synthesis_chunk", {"seq": 0, "mimeType": "audio/mpeg"}))
+            is_voice_synthesis_chunk(
+                _ev("voice.synthesis_chunk", {"seq": 0, "mimeType": "audio/mpeg"})
+            )
         )
-        self.assertFalse(is_voice_synthesis_chunk(_ev("voice.synthesis_chunk", {"seq": 0})))
+        self.assertFalse(
+            is_voice_synthesis_chunk(_ev("voice.synthesis_chunk", {"seq": 0}))
+        )
 
     def test_voice_endpoint_barge_cancel(self) -> None:
         from openwop_client import (
@@ -239,19 +336,36 @@ class VoiceAndPresenceGuards(unittest.TestCase):
             is_voice_endpoint_candidate,
         )
 
-        self.assertTrue(is_voice_endpoint_candidate(_ev("voice.endpoint_candidate", {"atMs": 5})))
+        self.assertTrue(
+            is_voice_endpoint_candidate(_ev("voice.endpoint_candidate", {"atMs": 5}))
+        )
         self.assertTrue(is_voice_barge_in(_ev("voice.barge_in", {"atMs": 5})))
-        self.assertTrue(is_voice_cancelled(_ev("voice.cancelled", {"atMs": 5, "reason": "barge-in"})))
+        self.assertTrue(
+            is_voice_cancelled(
+                _ev("voice.cancelled", {"atMs": 5, "reason": "barge-in"})
+            )
+        )
 
     def test_channel_presence(self) -> None:
         from openwop_client import channel_presence_payload, is_channel_presence
 
-        ev = _ev("channel.presence", {"conversationId": "conv-1", "present": ["user:a", "agent:b"], "typing": ["user:a"]})
+        ev = _ev(
+            "channel.presence",
+            {
+                "conversationId": "conv-1",
+                "present": ["user:a", "agent:b"],
+                "typing": ["user:a"],
+            },
+        )
         self.assertTrue(is_channel_presence(ev))
         self.assertEqual(channel_presence_payload(ev)["present"], ["user:a", "agent:b"])
-        self.assertFalse(is_channel_presence(_ev("channel.presence", {"conversationId": "conv-1"})))
         self.assertFalse(
-            is_channel_presence(_ev("conversation.exchanged", {"conversationId": "c", "present": []}))
+            is_channel_presence(_ev("channel.presence", {"conversationId": "conv-1"}))
+        )
+        self.assertFalse(
+            is_channel_presence(
+                _ev("conversation.exchanged", {"conversationId": "c", "present": []})
+            )
         )
 
 

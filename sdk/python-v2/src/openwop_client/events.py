@@ -425,7 +425,9 @@ def is_voice_transcript(ev: RunEventDoc) -> bool:
         return False
     if not _payload_has_str(ev.payload, "text"):
         return False
-    if not isinstance(ev.payload, dict) or not isinstance(ev.payload.get("isFinal"), bool):
+    if not isinstance(ev.payload, dict) or not isinstance(
+        ev.payload.get("isFinal"), bool
+    ):
         return False
     if not _payload_has_number(ev.payload, "atMs"):
         return False
@@ -434,7 +436,9 @@ def is_voice_transcript(ev: RunEventDoc) -> bool:
 
 def is_voice_endpoint_candidate(ev: RunEventDoc) -> bool:
     """`voice.endpoint_candidate` discriminator + required `atMs` (RFC 0106)."""
-    return ev.type == "voice.endpoint_candidate" and _payload_has_number(ev.payload, "atMs")
+    return ev.type == "voice.endpoint_candidate" and _payload_has_number(
+        ev.payload, "atMs"
+    )
 
 
 def is_voice_turn_commit(ev: RunEventDoc) -> bool:

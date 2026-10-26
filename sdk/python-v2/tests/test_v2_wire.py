@@ -69,15 +69,23 @@ class VersionHeaderTests(unittest.TestCase):
         self.assertEqual(protocol_version_header(3), "3.0")
         with self.assertRaises(ValueError):
             protocol_version_header(-1)
-        self.assertEqual(OpenwopClient("https://h.example/", "k").protocol_version, "2.0")
-        self.assertEqual(OpenwopClient("https://h.example/", "k", major=3).protocol_version, "3.0")
+        self.assertEqual(
+            OpenwopClient("https://h.example/", "k").protocol_version, "2.0"
+        )
+        self.assertEqual(
+            OpenwopClient("https://h.example/", "k", major=3).protocol_version, "3.0"
+        )
 
     def test_sent_on_every_request(self) -> None:
         def responder(req: Any) -> tuple[int, Any]:
             if req.full_url.endswith("/.well-known/openwop"):
                 return 200, {"protocolVersions": ["2.0"], "preferredVersion": "2.0"}
             if req.full_url.endswith("/runs"):
-                return 201, {"runId": "t/r", "status": "pending", "eventsUrl": "/runs/t%2Fr/events"}
+                return 201, {
+                    "runId": "t/r",
+                    "status": "pending",
+                    "eventsUrl": "/runs/t%2Fr/events",
+                }
             return 200, {}
 
         seen, urlopen = _stub(responder)
@@ -86,7 +94,9 @@ class VersionHeaderTests(unittest.TestCase):
             c.discovery_capabilities()
             c.workflows_get("wf")
             c.discovery_openapi()
-            c.runs_create(CreateRunRequest(workflowId="wf"), idempotency_key="idem-1", dedup=True)
+            c.runs_create(
+                CreateRunRequest(workflowId="wf"), idempotency_key="idem-1", dedup=True
+            )
         self.assertEqual(len(seen), 4)
         for req in seen:
             self.assertEqual(req.get_header("Openwop-version"), "2.0")
@@ -99,7 +109,11 @@ class VersionHeaderTests(unittest.TestCase):
         _, urlopen = _stub(
             lambda req: (
                 406,
-                {"error": "protocol_version_unsupported", "message": "unlisted", "details": {"protocolVersions": ["1.12"]}},
+                {
+                    "error": "protocol_version_unsupported",
+                    "message": "unlisted",
+                    "details": {"protocolVersions": ["1.12"]},
+                },
             )
         )
         with mock.patch.object(client_module, "urlopen", urlopen):
@@ -113,7 +127,16 @@ class VersionHeaderTests(unittest.TestCase):
 
 class HeaderRenameAndPathTests(unittest.TestCase):
     def test_openwop_dedup_replaces_x_dedup(self) -> None:
-        seen, urlopen = _stub(lambda req: (201, {"runId": "t/r", "status": "pending", "eventsUrl": "/runs/t%2Fr/events"}))
+        seen, urlopen = _stub(
+            lambda req: (
+                201,
+                {
+                    "runId": "t/r",
+                    "status": "pending",
+                    "eventsUrl": "/runs/t%2Fr/events",
+                },
+            )
+        )
         with mock.patch.object(client_module, "urlopen", urlopen):
             OpenwopClient("https://h.example", "k").runs_create(
                 CreateRunRequest(workflowId="wf"), idempotency_key="idem-1", dedup=True
@@ -137,18 +160,40 @@ class HeaderRenameAndPathTests(unittest.TestCase):
         paths = [req.full_url.replace("https://h.example", "") for req in seen]
         self.assertEqual(
             paths,
-            ["/openapi.json", "/workflows/wf", "/agents/org-chart", "/tools", "/prompts/p1", "/webhooks/wh1"],
+            [
+                "/openapi.json",
+                "/workflows/wf",
+                "/agents/org-chart",
+                "/tools",
+                "/prompts/p1",
+                "/webhooks/wh1",
+            ],
         )
 
     def test_rfc0173_reads_and_host_seams(self) -> None:
         def responder(req: Any) -> tuple[int, Any]:
             url = req.full_url
             if url.endswith("/compensation"):
-                return 200, {"runId": "t/r1", "status": "none", "plan": [], "attempts": []}
+                return 200, {
+                    "runId": "t/r1",
+                    "status": "none",
+                    "plan": [],
+                    "attempts": [],
+                }
             if url.endswith("/effects"):
                 return 404, {"error": "not_found", "message": "no"}
-            return 200, {"manifestVersion": "1", "host": {"name": "h", "build": {"kind": "commit", "id": "abc"}}, "seams": [
-                {"seam": "http.fetch", "kind": "http", "guarded": True, "guardedBy": "interceptor"}]}
+            return 200, {
+                "manifestVersion": "1",
+                "host": {"name": "h", "build": {"kind": "commit", "id": "abc"}},
+                "seams": [
+                    {
+                        "seam": "http.fetch",
+                        "kind": "http",
+                        "guarded": True,
+                        "guardedBy": "interceptor",
+                    }
+                ],
+            }
 
         seen, urlopen = _stub(responder)
         with mock.patch.object(client_module, "urlopen", urlopen):
@@ -169,12 +214,19 @@ class HeaderRenameAndPathTests(unittest.TestCase):
         record = {
             "subscriptionId": "t/sub1",
             "attemptEventId": "ev1",
-            "attempt": {"subscriptionId": "t/sub1", "dedupKey": "k1", "attempt": 1, "outcome": "dead-lettered"},
+            "attempt": {
+                "subscriptionId": "t/sub1",
+                "dedupKey": "k1",
+                "attempt": 1,
+                "outcome": "dead-lettered",
+            },
             "reason": "verification_failed",
             "deadLetteredAt": "2026-10-03T00:00:00Z",
             "expiresAt": "2026-10-10T00:00:00Z",
         }
-        seen, urlopen = _stub(lambda req: (200, {"deliveries": [record], "nextCursor": "c2"}))
+        seen, urlopen = _stub(
+            lambda req: (200, {"deliveries": [record], "nextCursor": "c2"})
+        )
         with mock.patch.object(client_module, "urlopen", urlopen):
             c = OpenwopClient("https://h.example", "k")
             page = c.trigger_dead_letters("t/sub1", limit=10, cursor="c1")
@@ -185,16 +237,27 @@ class HeaderRenameAndPathTests(unittest.TestCase):
         self.assertEqual(page.nextCursor, "c2")
         self.assertEqual(
             [req.full_url.replace("https://h.example", "") for req in seen],
-            ["/trigger-subscriptions/t~2Fsub1/dead-letters?limit=10&cursor=c1", "/trigger-subscriptions/sub1/dead-letters"],
+            [
+                "/trigger-subscriptions/t~2Fsub1/dead-letters?limit=10&cursor=c1",
+                "/trigger-subscriptions/sub1/dead-letters",
+            ],
         )
 
 
 class PollCursorTests(unittest.TestCase):
     def test_after_sequence_and_closed_response(self) -> None:
-        page = {"runId": "t/r1", "events": [], "lastSequence": -1, "status": "running", "isTerminal": False}
+        page = {
+            "runId": "t/r1",
+            "events": [],
+            "lastSequence": -1,
+            "status": "running",
+            "isTerminal": False,
+        }
         seen, urlopen = _stub(lambda req: (200, page))
         with mock.patch.object(client_module, "urlopen", urlopen):
-            res = OpenwopClient("https://h.example", "k").runs_poll_events("t/r1", after_sequence=7, timeout_seconds=5)
+            res = OpenwopClient("https://h.example", "k").runs_poll_events(
+                "t/r1", after_sequence=7, timeout_seconds=5
+            )
         url = seen[0].full_url
         self.assertIn("/runs/t~2Fr1/events/poll?", url)
         self.assertIn("afterSequence=7", url)
@@ -232,7 +295,10 @@ class ClosedRootTests(unittest.TestCase):
         self.assertEqual(wh.status, "stable")
         self.assertEqual(
             wh.facets,
-            {"signatureAlgorithms": ["v1"], "retryPolicy": {"maxAttempts": 5, "backoff": "exponential"}},
+            {
+                "signatureAlgorithms": ["v1"],
+                "retryPolicy": {"maxAttempts": 5, "backoff": "exponential"},
+            },
         )
         self.assertIsNone(caps.family("compensation"))
         self.assertEqual(caps.extensions, {"acme.thing": {"x": 1}})
@@ -240,8 +306,13 @@ class ClosedRootTests(unittest.TestCase):
     def test_generated_keys_partition_the_schema(self) -> None:
         schema = json.loads((REPO / "schemas/v2/capabilities.schema.json").read_text())
         self.assertIs(schema["additionalProperties"], False)
-        self.assertEqual(sorted(schema["required"]), ["preferredVersion", "protocolVersions"])
-        self.assertEqual(sorted(CAPABILITY_FAMILY_KEYS + CAPABILITY_METADATA_KEYS), sorted(schema["properties"]))
+        self.assertEqual(
+            sorted(schema["required"]), ["preferredVersion", "protocolVersions"]
+        )
+        self.assertEqual(
+            sorted(CAPABILITY_FAMILY_KEYS + CAPABILITY_METADATA_KEYS),
+            sorted(schema["properties"]),
+        )
         for key in CAPABILITY_FAMILY_KEYS:
             self.assertIn("witness", schema["properties"][key]["required"])
 
@@ -254,7 +325,10 @@ class GeneratedRegistryTests(unittest.TestCase):
         self.assertIs(HTTP_ERROR_CODES, ERROR_CODES)
         for r in registry["rows"]:
             self.assertEqual(ERROR_CODE_HTTP_STATUS[r["code"]], r["httpStatus"])
-        self.assertEqual(RETRIABLE_ERROR_CODES, frozenset(r["code"] for r in registry["rows"] if r["retriable"]))
+        self.assertEqual(
+            RETRIABLE_ERROR_CODES,
+            frozenset(r["code"] for r in registry["rows"] if r["retriable"]),
+        )
         self.assertTrue(is_retriable_error_code("rate_limited"))
         self.assertFalse(is_retriable_error_code("not_found"))
         self.assertFalse(is_error_code("acme.quota_exceeded"))

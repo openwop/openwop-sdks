@@ -10,7 +10,9 @@ import re
 
 from .types import ErrorEnvelope
 
-_TRACEPARENT_RE = re.compile(r"^[0-9a-f]{2}-([0-9a-f]{32})-[0-9a-f]{16}-[0-9a-f]{2}$", re.IGNORECASE)
+_TRACEPARENT_RE = re.compile(
+    r"^[0-9a-f]{2}-([0-9a-f]{32})-[0-9a-f]{16}-[0-9a-f]{2}$", re.IGNORECASE
+)
 
 
 def _extract_trace_id(traceparent: str | None) -> str | None:
@@ -54,7 +56,9 @@ class WopError(Exception):
         self.trace_id = _extract_trace_id(traceparent)
 
         base_message = (
-            envelope.message if envelope is not None else f"openwop request failed: HTTP {status}"
+            envelope.message
+            if envelope is not None
+            else f"openwop request failed: HTTP {status}"
         )
         message = (
             f"{base_message} (trace={self.trace_id})" if self.trace_id else base_message
