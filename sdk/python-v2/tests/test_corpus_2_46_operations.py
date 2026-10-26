@@ -96,6 +96,22 @@ class EvalBaselineSelectionTests(unittest.TestCase):
         self.assertNotIn("evalModes", body)
         self.assertNotIn("baselineRunId", body)
 
+    def test_fixture_runs_sent_at_the_root_and_omitted_when_absent(self) -> None:
+        seen, urlopen = _stub(lambda req: {"runId": "t/r3", "status": "pending", "eventsUrl": ""})
+        with mock.patch.object(client_module, "urlopen", urlopen):
+            c = OpenwopClient("https://h.example", "k")
+            c.runs_create(
+                CreateRunRequest(
+                    mode="eval", evalSuiteRef="suite://s", agentId="a", fixtureRuns={"record": "t/r1"}
+                )
+            )
+            c.runs_create(CreateRunRequest(mode="eval", evalSuiteRef="suite://s", agentId="a"))
+        self.assertEqual(
+            _body(seen[0]),
+            {"mode": "eval", "evalSuiteRef": "suite://s", "agentId": "a", "fixtureRuns": {"record": "t/r1"}},
+        )
+        self.assertNotIn("fixtureRuns", _body(seen[1]))
+
 
 class ProposalTests(unittest.TestCase):
     def test_each_operation(self) -> None:

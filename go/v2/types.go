@@ -324,6 +324,14 @@ type CreateRunRequest struct {
 	// 400 validation_error, identically whatever the reason (§C).
 	EvalModes     []EvalMode `json:"evalModes,omitempty"`
 	BaselineRunID string     `json:"baselineRunId,omitempty"`
+	// FixtureRuns (RFC 0252) maps a suite taskId to a prior run whose recorded
+	// tool calls become that task's fixtures, served under onMiss "fail"; at
+	// least one entry. Only with Mode "eval", and only to a host advertising
+	// agents.evalSuite.recordedFixtures (a client MUST NOT send it otherwise).
+	// An unusable source run is refused 400 validation_error, identically
+	// whatever the reason; the accepted map is echoed on eval.started
+	// fixtureRuns.
+	FixtureRuns map[string]string `json:"fixtureRuns,omitempty"`
 }
 
 // EvalMode is an RFC 0081 §D eval mode (agent-eval-suite.schema.json modes).

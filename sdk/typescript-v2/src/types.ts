@@ -217,6 +217,14 @@ export interface CreateRunRequest {
    * baseline is refused `400 validation_error`, identically whatever the reason (§C).
    */
   baselineRunId?: string;
+  /**
+   * RFC 0252. Maps a suite `taskId` to a prior run whose recorded tool calls become that task's
+   * fixtures, served under `onMiss` `fail`; at least one entry. Only with `mode: 'eval'`, and only
+   * to a host advertising `agents.evalSuite.recordedFixtures` (a client MUST NOT send it
+   * otherwise). An unusable source run is refused `400 validation_error`, identically whatever the
+   * reason. The host echoes the accepted map on `eval.started` `fixtureRuns`.
+   */
+  fixtureRuns?: Readonly<Record<string, string>>;
 }
 
 /**

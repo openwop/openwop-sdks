@@ -57,6 +57,13 @@ describe('runs.create eval baseline selection (RFC 0251 §B)', () => {
     expect('evalModes' in body).toBe(false);
     expect('baselineRunId' in body).toBe(false);
   });
+  it('sends fixtureRuns at the body root and omits it when absent (RFC 0252)', async () => {
+    const { client, captured } = mockClient(() => ({ status: 201, body: { runId: 't/r3', status: 'pending', eventsUrl: '' } }));
+    await client.runs.create({ mode: 'eval', evalSuiteRef: 'suite://s', agentId: 'a', fixtureRuns: { record: 't/r1' } });
+    await client.runs.create({ mode: 'eval', evalSuiteRef: 'suite://s', agentId: 'a' });
+    expect(captured[0]!.body).toEqual({ mode: 'eval', evalSuiteRef: 'suite://s', agentId: 'a', fixtureRuns: { record: 't/r1' } });
+    expect('fixtureRuns' in (captured[1]!.body as Record<string, unknown>)).toBe(false);
+  });
 });
 
 describe('proposals (RFC 0249)', () => {
