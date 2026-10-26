@@ -754,6 +754,162 @@
         "py": "workflows_get",
         "go": "GetWorkflow"
       }
+    },
+    {
+      "operationId": "listConnectionProviders",
+      "method": "GET",
+      "path": "/connection-providers",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "connectionProviders.list",
+        "py": "connection_providers_list",
+        "go": "ListConnectionProviders"
+      }
+    },
+    {
+      "operationId": "resolveConnectionProvider",
+      "method": "GET",
+      "path": "/connection-providers/{providerId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "connectionProviders.resolve",
+        "py": "connection_providers_resolve",
+        "go": "ResolveConnectionProvider"
+      }
+    },
+    {
+      "operationId": "emitTestHostEvent",
+      "method": "POST",
+      "path": "/host/events/test",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "host.emitTestEvent",
+        "py": "host_emit_test_event",
+        "go": "EmitTestHostEvent"
+      }
+    },
+    {
+      "operationId": "getUiPluginFrame",
+      "method": "GET",
+      "path": "/host/ui-plugins/{packName}/{pluginId}/frame",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "host.uiPluginFrame",
+        "py": "host_ui_plugin_frame",
+        "go": "GetUiPluginFrame"
+      }
+    },
+    {
+      "operationId": "dispatchUiPluginRequest",
+      "method": "POST",
+      "path": "/host/ui-plugins/{packName}/{pluginId}/rpc",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "host.dispatchUiPluginRequest",
+        "py": "host_dispatch_ui_plugin_request",
+        "go": "DispatchUiPluginRequest"
+      }
+    },
+    {
+      "operationId": "listProposals",
+      "method": "GET",
+      "path": "/proposals",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "proposals.list",
+        "py": "proposals_list",
+        "go": "ListProposals"
+      }
+    },
+    {
+      "operationId": "submitProposal",
+      "method": "POST",
+      "path": "/proposals",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "proposals.submit",
+        "py": "proposals_submit",
+        "go": "SubmitProposal"
+      }
+    },
+    {
+      "operationId": "archiveProposal",
+      "method": "DELETE",
+      "path": "/proposals/{proposalId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "proposals.archive",
+        "py": "proposals_archive",
+        "go": "ArchiveProposal"
+      }
+    },
+    {
+      "operationId": "getProposal",
+      "method": "GET",
+      "path": "/proposals/{proposalId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "proposals.get",
+        "py": "proposals_get",
+        "go": "GetProposal"
+      }
+    },
+    {
+      "operationId": "reviseProposal",
+      "method": "PATCH",
+      "path": "/proposals/{proposalId}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "proposals.revise",
+        "py": "proposals_revise",
+        "go": "ReviseProposal"
+      }
+    },
+    {
+      "operationId": "applyProposal",
+      "method": "POST",
+      "path": "/proposals/{proposalId}:apply",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "proposals.apply",
+        "py": "proposals_apply",
+        "go": "ApplyProposal"
+      }
+    },
+    {
+      "operationId": "rejectProposal",
+      "method": "POST",
+      "path": "/proposals/{proposalId}:reject",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "proposals.reject",
+        "py": "proposals_reject",
+        "go": "RejectProposal"
+      }
     }
   ]
 }

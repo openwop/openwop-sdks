@@ -84,6 +84,19 @@ from .types import (
     DeadLetteredDelivery,
     WebhookDeadLetterPage,
     TriggerDeadLetterPage,
+    Proposal,
+    ProposalKind,
+    ProposalState,
+    ProposalListResponse,
+    SubmitProposalRequest,
+    ReviseProposalRequest,
+    ApplyProposalGateResponse,
+    ConnectionProvider,
+    ConnectionProviderRefusal,
+    ConnectionProviderRegistry,
+    EmitTestHostEventResponse,
+    UiPluginRequest,
+    UiPluginResponse,
     DeadLetteredTriggerDelivery,
     RenderPromptRequest,
     RenderPromptResponse,
@@ -517,6 +530,28 @@ def _prompt_template_from_dict(d: dict[str, Any]) -> PromptTemplate:
         tags=d.get("tags"),
         meta=d.get("meta"),
     )
+
+
+def _proposal_from_dict(d: dict[str, Any]) -> Proposal:
+    return Proposal(
+        id=str(d["id"]),
+        kind=cast(ProposalKind, d["kind"]),
+        state=cast(ProposalState, d["state"]),
+        artifact=dict(d["artifact"]),
+        provenance=dict(d["provenance"]),
+        owner=dict(d["owner"]),
+        createdAt=str(d["createdAt"]),
+        title=d.get("title"),
+        rationale=d.get("rationale"),
+        artifactDigest=d.get("artifactDigest"),
+        duplicateOf=d.get("duplicateOf"),
+        activation=dict(d["activation"]) if d.get("activation") is not None else None,
+        updatedAt=d.get("updatedAt"),
+    )
+
+
+def _connection_provider_from_dict(d: dict[str, Any]) -> ConnectionProvider:
+    return ConnectionProvider(id=str(d["id"]), source=d["source"], packName=d.get("packName"))
 
 
 def _run_diff_from_dict(d: dict[str, Any]) -> RunDiffResponse:
@@ -1071,6 +1106,115 @@ class OpenwopClient:
             nextCursor=d.get("nextCursor"),
         )
 
+    # ── Proposals (RFC 0249; gated on ``agents.proposals``) ─────────────
+    # A host that does not advertise ``agents.proposals`` answers ``404``, and a
+    # proposal another tenant owns is answered exactly as an unknown id.
+    def proposals_list(
+        self,
+        *,
+        state: ProposalState | None = None,
+        kind: ProposalKind | None = None,
+        limit: int | None = None,
+        cursor: str | None = None,
+    ) -> ProposalListResponse:
+        """``GET /proposals`` — one page, scoped to the caller's tenant and workspace."""
+        params: dict[str, Any] = {}
+        if state is not None:
+            params["state"] = state
+        if kind is not None:
+            params["kind"] = kind
+        if limit is not None:
+            params["limit"] = limit
+        if cursor is not None:
+            params["cursor"] = cursor
+        qs = "?" + urlencode(params) if params else ""
+        d = self._request_json("GET", f"/proposals{qs}")
+        return ProposalListResponse(
+            items=[_proposal_from_dict(x) for x in d.get("items", [])],
+            nextCursor=d.get("nextCursor"),
+        )
+
+    def proposals_submit(
+        self, body: SubmitProposalRequest, *, idempotency_key: str | None = None
+    ) -> Proposal:
+        """``POST /proposals`` — a client draft in ``state: draft``; served only
+        when ``agents.proposals.clientDrafts`` is ``true``."""
+        headers = self._mutation_headers(idempotency_key=idempotency_key)
+        return _proposal_from_dict(
+            self._request_json("POST", "/proposals", body=_to_jsonable(body), headers=headers)
+        )
+
+    def proposals_get(self, proposal_id: str) -> Proposal:
+        """``GET /proposals/{proposalId}`` — carries ``artifactDigest``, the value
+        ``proposals_apply`` binds to."""
+        return _proposal_from_dict(self._request_json("GET", f"/proposals/{quote(proposal_id, safe='')}"))
+
+    def proposals_revise(self, proposal_id: str, body: ReviseProposalRequest) -> Proposal:
+        """``PATCH /proposals/{proposalId}`` — sets ``state: revised`` and never
+        activates; ``409`` on a terminal or stale proposal."""
+        return _proposal_from_dict(
+            self._request_json("PATCH", f"/proposals/{quote(proposal_id, safe='')}", body=_to_jsonable(body))
+        )
+
+    def proposals_archive(self, proposal_id: str) -> Proposal:
+        """``DELETE /proposals/{proposalId}`` — sets ``state: archived``; archiving uninstalls nothing."""
+        return _proposal_from_dict(self._request_json("DELETE", f"/proposals/{quote(proposal_id, safe='')}"))
+
+    def proposals_apply(
+        self,
+        proposal_id: str,
+        *,
+        artifact_digest: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> Proposal | ApplyProposalGateResponse:
+        """``POST /proposals/{proposalId}:apply`` — routes through
+        ``agents.proposals.activation``: the applied proposal (``direct-rbac``),
+        or the approval-gate run (``approval-gate``, a ``202 {runId}``)."""
+        headers = self._mutation_headers(idempotency_key=idempotency_key)
+        body = {"artifactDigest": artifact_digest} if artifact_digest is not None else {}
+        d = self._request_json(
+            "POST", f"/proposals/{quote(proposal_id, safe='')}:apply", body=body, headers=headers
+        )
+        if "id" not in d and "runId" in d:
+            return ApplyProposalGateResponse(runId=str(d["runId"]))
+        return _proposal_from_dict(d)
+
+    def proposals_reject(self, proposal_id: str, *, reason: str | None = None) -> Proposal:
+        """``POST /proposals/{proposalId}:reject`` — sets ``state: rejected``."""
+        body = {"reason": reason} if reason is not None else {}
+        return _proposal_from_dict(
+            self._request_json("POST", f"/proposals/{quote(proposal_id, safe='')}:reject", body=body)
+        )
+
+    # ── Connection providers (gated on ``connections.providerRead``) ────
+    def connection_providers_list(self) -> ConnectionProviderRegistry:
+        """``GET /connection-providers`` — every definition the host resolves
+        against, and the pack registrations it refused."""
+        d = self._request_json("GET", "/connection-providers")
+        return ConnectionProviderRegistry(
+            providers=[_connection_provider_from_dict(x) for x in d.get("providers", [])],
+            refusals=[
+                ConnectionProviderRefusal(
+                    packName=str(x["packName"]),
+                    providerId=str(x["providerId"]),
+                    code=x["code"],
+                    heldBy=x.get("heldBy"),
+                )
+                for x in d.get("refusals", [])
+            ],
+        )
+
+    def connection_providers_resolve(
+        self, provider_id: str, *, pack: str | None = None
+    ) -> ConnectionProvider:
+        """``GET /connection-providers/{providerId}`` — a bare id, or with
+        ``pack`` the qualified form ``<packName>#<providerId>``. Not resolvable:
+        ``404 connection_provider_unresolved``."""
+        qs = "?" + urlencode({"pack": pack}) if pack is not None else ""
+        return _connection_provider_from_dict(
+            self._request_json("GET", f"/connection-providers/{quote(provider_id, safe='')}{qs}")
+        )
+
     def agents_list(self) -> list[AgentInventoryEntry] | None:
         """RFC 0072 §A — list installed manifest agents. Read-only; returns
         ``None`` when the host doesn't advertise
@@ -1563,6 +1707,54 @@ class OpenwopClient:
             reconnect=reconnect,
         )
 
+    def host_emit_test_event(
+        self,
+        delivery: Literal["durable", "ephemeral"],
+        *,
+        workspace_id: str | None = None,
+        idempotency_key: str | None = None,
+    ) -> EmitTestHostEventResponse:
+        """``POST /host/events/test`` (RFC 0250) — emits one empty-payload event
+        of the delivery class's reserved ``host-test.*`` type through the
+        ordinary host-event path. Bound only for a class whose type
+        ``hostEvents.types[]`` lists; otherwise ``404``."""
+        body: dict[str, Any] = {"delivery": delivery}
+        if workspace_id is not None:
+            body["workspaceId"] = workspace_id
+        headers = self._mutation_headers(idempotency_key=idempotency_key)
+        d = self._request_json("POST", "/host/events/test", body=body, headers=headers)
+        return EmitTestHostEventResponse(eventId=str(d["eventId"]), type=d["type"])
+
+    def host_ui_plugin_frame(self, pack_name: str, plugin_id: str) -> str:
+        """``GET /host/ui-plugins/{packName}/{pluginId}/frame`` — the HTML
+        document the host mounts the plugin in, verbatim. Gated on
+        ``uiPlugins.served``; an uninstalled plugin answers ``404``."""
+        _, text, _ = self._request_decoded(
+            "GET",
+            f"/host/ui-plugins/{quote(pack_name, safe='')}/{quote(plugin_id, safe='')}/frame",
+            headers={"Accept": "text/html"},
+            decode=False,
+        )
+        return text
+
+    def host_dispatch_ui_plugin_request(
+        self, pack_name: str, plugin_id: str, message: UiPluginRequest
+    ) -> UiPluginResponse:
+        """``POST /host/ui-plugins/{packName}/{pluginId}/rpc`` — one
+        ``ui-plugin/1`` request, as the caller and as the named plugin. A refused
+        call is ``ok: False`` inside a ``200``, never an HTTP error."""
+        d = self._request_json(
+            "POST",
+            f"/host/ui-plugins/{quote(pack_name, safe='')}/{quote(plugin_id, safe='')}/rpc",
+            body={"message": _to_jsonable(message)},
+        )
+        return UiPluginResponse(
+            id=int(d["id"]),
+            ok=bool(d["ok"]),
+            result=d.get("result"),
+            error=d.get("error"),
+        )
+
     def runs_events(
         self,
         run_id: str,
@@ -1718,10 +1910,12 @@ class OpenwopClient:
         body: Any = None,
         headers: dict[str, str] | None = None,
         authenticated: bool = True,
+        decode: bool = True,
     ) -> tuple[Any, str, str | None]:
         """Issue the request and JSON-decode the 2xx body. Returns
         ``(decoded_or_None, raw_text, traceparent)``; ``decoded`` is ``None`` for
-        an empty body. Raises :class:`WopError` on non-2xx or non-JSON 2xx."""
+        an empty body, or when ``decode`` is ``False`` (a non-JSON body such as
+        the plugin frame). Raises :class:`WopError` on non-2xx or non-JSON 2xx."""
         url = f"{self._base_url}{path}"
         all_headers: dict[str, str] = {
             "Accept": "application/json",
@@ -1759,7 +1953,7 @@ class OpenwopClient:
             raise WopError(0, str(url_err), None, None) from url_err
 
         text = raw.decode("utf-8", errors="replace")
-        if not text:
+        if not text or not decode:
             return None, text, traceparent
         try:
             decoded = json.loads(text)

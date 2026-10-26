@@ -316,7 +316,26 @@ type CreateRunRequest struct {
 	Mode         string           `json:"mode,omitempty"`
 	EvalSuiteRef string           `json:"evalSuiteRef,omitempty"`
 	AgentID      string           `json:"agentId,omitempty"`
+	// EvalModes and BaselineRunID (RFC 0251 §B) are sent only with Mode
+	// "eval", and only to a host advertising agents.evalSuite.baselineSelection
+	// (§A: a client MUST NOT send either otherwise). EvalModes is a non-empty
+	// subset of the suite's and the host's modes; BaselineRunID requires
+	// EvalModeRegression in it. An unusable baseline is refused
+	// 400 validation_error, identically whatever the reason (§C).
+	EvalModes     []EvalMode `json:"evalModes,omitempty"`
+	BaselineRunID string     `json:"baselineRunId,omitempty"`
 }
+
+// EvalMode is an RFC 0081 §D eval mode (agent-eval-suite.schema.json modes).
+type EvalMode string
+
+const (
+	EvalModeGolden      EvalMode = "golden"
+	EvalModeRubric      EvalMode = "rubric"
+	EvalModeAdversarial EvalMode = "adversarial"
+	EvalModeRegression  EvalMode = "regression"
+	EvalModeLiveShadow  EvalMode = "live-shadow"
+)
 
 // CreateRunResponse mirrors the 201 payload.
 type CreateRunResponse struct {
@@ -1431,4 +1450,127 @@ type A2UISurfaceDeltaFrame struct {
 	// Patch is a non-empty RFC 6902 document applied over the surface last
 	// delivered under SurfaceRef.
 	Patch []A2UISurfacePatchOp `json:"patch"`
+}
+
+// ── RFC 0249 — proposal operations (gated on agents.proposals) ───────────
+
+// Proposal mirrors schemas/v2/proposal.schema.json. Artifact is the kind's own
+// shape; Activation is set only when State is "applied" (its
+// installedArtifact names the v2 GET that serves the installed artifact, RFC
+// 0249 §C).
+type Proposal struct {
+	ID             string         `json:"id"`
+	Kind           string         `json:"kind"`
+	State          string         `json:"state"`
+	Title          string         `json:"title,omitempty"`
+	Rationale      string         `json:"rationale,omitempty"`
+	Artifact       map[string]any `json:"artifact"`
+	ArtifactDigest string         `json:"artifactDigest,omitempty"`
+	Provenance     map[string]any `json:"provenance"`
+	DuplicateOf    *string        `json:"duplicateOf,omitempty"`
+	Owner          map[string]any `json:"owner"`
+	Activation     map[string]any `json:"activation,omitempty"`
+	CreatedAt      string         `json:"createdAt"`
+	UpdatedAt      string         `json:"updatedAt,omitempty"`
+}
+
+// ListProposalsOptions is the GET /proposals query; zero values are omitted.
+type ListProposalsOptions struct {
+	State  string
+	Kind   string
+	Limit  int
+	Cursor string
+}
+
+// ProposalListResponse is one page, scoped to the caller's tenant and
+// workspace; NextCursor is empty on the last page.
+type ProposalListResponse struct {
+	Items      []Proposal `json:"items"`
+	NextCursor string     `json:"nextCursor,omitempty"`
+}
+
+// SubmitProposalRequest is the POST /proposals body (served only when
+// agents.proposals.clientDrafts is true).
+type SubmitProposalRequest struct {
+	Kind      string         `json:"kind"`
+	Artifact  map[string]any `json:"artifact"`
+	Title     string         `json:"title,omitempty"`
+	Rationale string         `json:"rationale,omitempty"`
+}
+
+// ReviseProposalRequest is the PATCH /proposals/{proposalId} body.
+type ReviseProposalRequest struct {
+	Artifact  map[string]any `json:"artifact,omitempty"`
+	Title     string         `json:"title,omitempty"`
+	Rationale string         `json:"rationale,omitempty"`
+}
+
+// ApplyProposalResult is the :apply answer: Proposal under direct-rbac (200),
+// or GateRunID, the approval-gate run, under approval-gate (202).
+type ApplyProposalResult struct {
+	Proposal  *Proposal
+	GateRunID string
+}
+
+// ── Connection-provider registry (gated on connections.providerRead) ────
+
+// ConnectionProvider is one provider definition, also the answer to
+// ResolveConnectionProvider. PackName is set exactly when Source is "pack".
+type ConnectionProvider struct {
+	ID       string `json:"id"`
+	Source   string `json:"source"`
+	PackName string `json:"packName,omitempty"`
+}
+
+// ConnectionProviderRefusal is one refused pack registration.
+type ConnectionProviderRefusal struct {
+	PackName   string `json:"packName"`
+	ProviderID string `json:"providerId"`
+	Code       string `json:"code"`
+	HeldBy     string `json:"heldBy,omitempty"`
+}
+
+// ConnectionProviderRegistry mirrors connection-provider-registry.schema.json:
+// host-global, no tenant data.
+type ConnectionProviderRegistry struct {
+	Providers []ConnectionProvider        `json:"providers"`
+	Refusals  []ConnectionProviderRefusal `json:"refusals"`
+}
+
+// ── Host test events ─────────────────────────────────────────────────────
+
+// EmitTestHostEventRequest is the POST /host/events/test body; Delivery is
+// "durable" or "ephemeral".
+type EmitTestHostEventRequest struct {
+	Delivery    string `json:"delivery"`
+	WorkspaceID string `json:"workspaceId,omitempty"`
+}
+
+// EmitTestHostEventResponse is the 202 body; EventID is the envelope's.
+type EmitTestHostEventResponse struct {
+	EventID string `json:"eventId"`
+	Type    string `json:"type"`
+}
+
+// ── Front-end plugin RPC (gated on uiPlugins.served) ─────────────────────
+
+// UiPluginRequest is one ui-plugin/1 call (ui-plugin-message.schema.json
+// #/$defs/request). Openwop and Type are filled in when empty.
+type UiPluginRequest struct {
+	Openwop string         `json:"openwop"`
+	Type    string         `json:"type"`
+	ID      int            `json:"id"`
+	Method  string         `json:"method"`
+	Params  map[string]any `json:"params,omitempty"`
+}
+
+// UiPluginResponse is the ui-plugin/1 reply. A refused call is OK false inside
+// a 200, never an HTTP error.
+type UiPluginResponse struct {
+	Openwop string         `json:"openwop"`
+	Type    string         `json:"type"`
+	ID      int            `json:"id"`
+	OK      bool           `json:"ok"`
+	Result  map[string]any `json:"result,omitempty"`
+	Error   map[string]any `json:"error,omitempty"`
 }

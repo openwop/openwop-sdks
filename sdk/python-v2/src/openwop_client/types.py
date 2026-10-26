@@ -214,6 +214,10 @@ class RunConfigurable:
 
 # ── Run lifecycle requests/responses ────────────────────────────────────
 
+# RFC 0081 §D — agent-eval-suite.schema.json ``modes`` items.
+EvalMode = Literal["golden", "rubric", "adversarial", "regression", "live-shadow"]
+
+
 @dataclass
 class CreateRunRequest:
     """``POST /runs`` body — closed at the composition (runs.md §Create).
@@ -229,6 +233,14 @@ class CreateRunRequest:
     mode: Literal["eval"] | None = None
     evalSuiteRef: str | None = None
     agentId: str | None = None
+    # RFC 0251 §B — only with ``mode == "eval"``, and only to a host advertising
+    # ``agents.evalSuite.baselineSelection`` (§A: a client MUST NOT send either
+    # otherwise). ``evalModes`` is a non-empty subset of the suite's and the
+    # host's ``modes``; ``baselineRunId`` requires ``"regression"`` in it. An
+    # unusable baseline is refused ``400 validation_error``, identically
+    # whatever the reason (§C).
+    evalModes: list[EvalMode] | None = None
+    baselineRunId: str | None = None
     configurable: RunConfigurable | dict[str, Any] | None = None
     tags: list[str] | None = None
     metadata: dict[str, Any] | None = None
@@ -1456,3 +1468,123 @@ class A2uiSurfaceDeltaFrame(TypedDict, total=False):
     surfaceRef: str
     catalogVersion: str
     patch: list[A2uiSurfacePatchOp]
+
+
+# ── RFC 0249 — proposal operations (gated on ``agents.proposals``) ─────────
+ProposalKind = Literal["agent-pack", "workflow-chain-pack", "prompt-template", "automation"]
+ProposalState = Literal["draft", "revised", "applied", "rejected", "archived"]
+
+
+@dataclass(frozen=True)
+class Proposal:
+    """``schemas/v2/proposal.schema.json`` — a host-held proposal. ``artifact``
+    is the kind's own shape; ``activation`` is populated only when
+    ``state == "applied"`` (its ``installedArtifact`` names the v2 GET that
+    serves the installed artifact, RFC 0249 §C)."""
+
+    id: str
+    kind: ProposalKind
+    state: ProposalState
+    artifact: dict[str, Any]
+    provenance: dict[str, Any]
+    owner: dict[str, Any]
+    createdAt: str
+    title: str | None = None
+    rationale: str | None = None
+    artifactDigest: str | None = None
+    duplicateOf: str | None = None
+    activation: dict[str, Any] | None = None
+    updatedAt: str | None = None
+
+
+@dataclass(frozen=True)
+class ProposalListResponse:
+    items: list[Proposal]
+    nextCursor: str | None = None
+
+
+@dataclass
+class SubmitProposalRequest:
+    """``POST /proposals`` body — served only when
+    ``agents.proposals.clientDrafts`` is ``true``."""
+
+    kind: ProposalKind
+    artifact: dict[str, Any]
+    title: str | None = None
+    rationale: str | None = None
+
+
+@dataclass
+class ReviseProposalRequest:
+    """``PATCH /proposals/{proposalId}`` body — sets ``state: revised``, never activates."""
+
+    artifact: dict[str, Any] | None = None
+    title: str | None = None
+    rationale: str | None = None
+
+
+@dataclass(frozen=True)
+class ApplyProposalGateResponse:
+    """``202`` from ``:apply`` under ``approval-gate``: the gate run that
+    suspends on an ``approval`` interrupt; the host installs only on accept."""
+
+    runId: str
+
+
+# ── Connection-provider registry (gated on ``connections.providerRead``) ──
+@dataclass(frozen=True)
+class ConnectionProvider:
+    """One provider definition; also the answer to ``resolve``. ``packName``
+    is present exactly when ``source == "pack"``."""
+
+    id: str
+    source: Literal["builtin", "pack"]
+    packName: str | None = None
+
+
+@dataclass(frozen=True)
+class ConnectionProviderRefusal:
+    packName: str
+    providerId: str
+    code: Literal["connection_provider_conflict", "connection_provider_unresolved"]
+    heldBy: str | None = None
+
+
+@dataclass(frozen=True)
+class ConnectionProviderRegistry:
+    """``schemas/v2/connection-provider-registry.schema.json`` — host-global, no tenant data."""
+
+    providers: list[ConnectionProvider]
+    refusals: list[ConnectionProviderRefusal]
+
+
+# ── Host test events ───────────────────────────────────────────────────
+@dataclass(frozen=True)
+class EmitTestHostEventResponse:
+    """``POST /host/events/test`` ``202`` body; ``eventId`` is the envelope's."""
+
+    eventId: str
+    type: Literal["host-test.durable-triggered", "host-test.ephemeral-triggered"]
+
+
+# ── Front-end plugin RPC (gated on ``uiPlugins.served``) ───────────────
+@dataclass
+class UiPluginRequest:
+    """``ui-plugin-message.schema.json#/$defs/request`` — one ``ui-plugin/1`` call."""
+
+    id: int
+    method: Literal["artifact.read", "artifact.write", "host.toast", "host.navigate", "host.announce"]
+    params: dict[str, Any] | None = None
+    openwop: Literal["ui-plugin/1"] = "ui-plugin/1"
+    type: Literal["request"] = "request"
+
+
+@dataclass(frozen=True)
+class UiPluginResponse:
+    """``ui-plugin-message.schema.json#/$defs/response`` — a refused call is
+    ``ok: False`` inside a ``200``, never an HTTP error."""
+
+    id: int
+    ok: bool
+    result: dict[str, Any] | None = None
+    error: dict[str, Any] | None = None

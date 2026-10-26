@@ -25,6 +25,20 @@ import {
   type TriggerSubscriptionRegistration,
   type ListTriggerDeadLettersRequest,
   type TriggerDeadLetterPage,
+  type ApplyProposalRequest,
+  type ApplyProposalResponse,
+  type ConnectionProvider,
+  type ConnectionProviderRegistry,
+  type EmitTestHostEventRequest,
+  type EmitTestHostEventResponse,
+  type ListProposalsRequest,
+  type Proposal,
+  type ProposalListResponse,
+  type RejectProposalRequest,
+  type ReviseProposalRequest,
+  type SubmitProposalRequest,
+  type UiPluginRequest,
+  type UiPluginResponse,
   type BulkCancelRunsRequest,
   type BulkCancelRunsResponse,
   type Capabilities,
@@ -123,6 +137,8 @@ interface RawRequestOptions {
   readonly body?: unknown;
   readonly headers?: Record<string, string>;
   readonly signal?: AbortSignal;
+  /** `'text'` returns the 2xx body verbatim instead of parsing JSON (the plugin frame is `text/html`). */
+  readonly responseType?: 'text';
 }
 
 export class OpenwopClient {
@@ -471,6 +487,51 @@ export class OpenwopClient {
      */
     events: (opts: HostEventsStreamOptions = {}): AsyncGenerator<HostEventDoc, void, void> =>
       streamHostEvents(this.#streamContext(), opts),
+
+    /**
+     * `POST /host/events/test` (RFC 0250) — emits one empty-payload event of the requested
+     * delivery class's reserved `host-test.*` type through the ordinary host-event path. Bound
+     * only for a class whose type `hostEvents.types[]` lists; otherwise `404`.
+     */
+    emitTestEvent: (
+      body: EmitTestHostEventRequest,
+      opts: MutationOptions = {},
+    ): Promise<EmitTestHostEventResponse> =>
+      this.#request<EmitTestHostEventResponse>({
+        method: 'POST',
+        path: '/host/events/test',
+        body,
+        headers: this.#mutationHeaders(opts),
+      }),
+
+    /**
+     * `GET /host/ui-plugins/{packName}/{pluginId}/frame` — the HTML document the host mounts the
+     * plugin in, returned verbatim. Gated on `uiPlugins.served`; an unadvertised host or an
+     * uninstalled plugin answers `404`.
+     */
+    uiPluginFrame: (packName: string, pluginId: string): Promise<string> =>
+      this.#request<string>({
+        method: 'GET',
+        path: `/host/ui-plugins/${encodeURIComponent(packName)}/${encodeURIComponent(pluginId)}/frame`,
+        headers: { Accept: 'text/html' },
+        responseType: 'text',
+      }),
+
+    /**
+     * `POST /host/ui-plugins/{packName}/{pluginId}/rpc` — runs one `ui-plugin/1` request as the
+     * caller and as the named plugin. A refused call is `ok: false` inside a `200`, never an
+     * HTTP error. Gated on `uiPlugins.served`.
+     */
+    dispatchUiPluginRequest: (
+      packName: string,
+      pluginId: string,
+      message: UiPluginRequest,
+    ): Promise<UiPluginResponse> =>
+      this.#request<UiPluginResponse>({
+        method: 'POST',
+        path: `/host/ui-plugins/${encodeURIComponent(packName)}/${encodeURIComponent(pluginId)}/rpc`,
+        body: { message },
+      }),
   };
 
   // ── Manifest-agent inventory (RFC 0072 §A) ───────────────────────────
@@ -949,6 +1010,90 @@ export class OpenwopClient {
     },
   };
 
+  // ── Proposals (RFC 0249; gated on `agents.proposals`) ────────────────
+  // A host that does not advertise `agents.proposals` answers `404`, and a
+  // proposal another tenant owns is answered exactly as an unknown id.
+  readonly proposals = {
+    /** `GET /proposals` — one page, scoped to the caller's tenant and workspace. */
+    list: (req: ListProposalsRequest = {}): Promise<ProposalListResponse> => {
+      const search = new URLSearchParams();
+      if (req.state !== undefined) search.set('state', req.state);
+      if (req.kind !== undefined) search.set('kind', req.kind);
+      if (req.limit !== undefined) search.set('limit', String(req.limit));
+      if (req.cursor !== undefined) search.set('cursor', req.cursor);
+      const qs = search.toString();
+      return this.#request<ProposalListResponse>({ method: 'GET', path: `/proposals${qs ? `?${qs}` : ''}` });
+    },
+
+    /** `POST /proposals` — a client draft, `state: 'draft'`; served only when `agents.proposals.clientDrafts` is `true`. */
+    submit: (body: SubmitProposalRequest, opts: MutationOptions = {}): Promise<Proposal> =>
+      this.#request<Proposal>({
+        method: 'POST',
+        path: '/proposals',
+        body,
+        headers: this.#mutationHeaders(opts),
+      }),
+
+    /** `GET /proposals/{proposalId}` — carries `artifactDigest`, the value `apply` binds to. */
+    get: (proposalId: string): Promise<Proposal> =>
+      this.#request<Proposal>({ method: 'GET', path: `/proposals/${encodeURIComponent(proposalId)}` }),
+
+    /** `PATCH /proposals/{proposalId}` — sets `state: 'revised'` and never activates; `409` on a terminal or stale proposal. */
+    revise: (proposalId: string, body: ReviseProposalRequest): Promise<Proposal> =>
+      this.#request<Proposal>({
+        method: 'PATCH',
+        path: `/proposals/${encodeURIComponent(proposalId)}`,
+        body,
+      }),
+
+    /** `DELETE /proposals/{proposalId}` — sets `state: 'archived'`; archiving uninstalls nothing. */
+    archive: (proposalId: string): Promise<Proposal> =>
+      this.#request<Proposal>({ method: 'DELETE', path: `/proposals/${encodeURIComponent(proposalId)}` }),
+
+    /**
+     * `POST /proposals/{proposalId}:apply` — routes through `agents.proposals.activation`: the
+     * applied proposal (`direct-rbac`), or `{ runId }` of an approval-gate run (`approval-gate`).
+     */
+    apply: (
+      proposalId: string,
+      body: ApplyProposalRequest = {},
+      opts: MutationOptions = {},
+    ): Promise<ApplyProposalResponse> =>
+      this.#request<ApplyProposalResponse>({
+        method: 'POST',
+        path: `/proposals/${encodeURIComponent(proposalId)}:apply`,
+        body,
+        headers: this.#mutationHeaders(opts),
+      }),
+
+    /** `POST /proposals/{proposalId}:reject` — sets `state: 'rejected'`. */
+    reject: (proposalId: string, body: RejectProposalRequest = {}): Promise<Proposal> =>
+      this.#request<Proposal>({
+        method: 'POST',
+        path: `/proposals/${encodeURIComponent(proposalId)}:reject`,
+        body,
+      }),
+  };
+
+  // ── Connection providers (gated on `connections.providerRead`) ───────
+  readonly connectionProviders = {
+    /** `GET /connection-providers` — every definition the host resolves against, and the refused pack registrations. */
+    list: (): Promise<ConnectionProviderRegistry> =>
+      this.#request<ConnectionProviderRegistry>({ method: 'GET', path: '/connection-providers' }),
+
+    /**
+     * `GET /connection-providers/{providerId}` — resolves a bare id, or with `pack` the qualified
+     * form `<packName>#<providerId>`. Not resolvable: `404 connection_provider_unresolved`.
+     */
+    resolve: (providerId: string, opts: { pack?: string } = {}): Promise<ConnectionProvider> => {
+      const qs = opts.pack !== undefined ? `?${new URLSearchParams({ pack: opts.pack }).toString()}` : '';
+      return this.#request<ConnectionProvider>({
+        method: 'GET',
+        path: `/connection-providers/${encodeURIComponent(providerId)}${qs}`,
+      });
+    },
+  };
+
   // ── Internals ────────────────────────────────────────────────────────
   #streamContext(): { baseUrl: string; apiKey: string; protocolVersion: string; fetch: typeof fetch } {
     return {
@@ -1012,6 +1157,7 @@ export class OpenwopClient {
       throw new WopError(res.status, text, env, traceparent);
     }
 
+    if (opts.responseType === 'text') return text as T;
     if (text.length === 0) return undefined as T;
     try {
       return JSON.parse(text) as T;

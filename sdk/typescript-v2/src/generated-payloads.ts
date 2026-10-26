@@ -302,7 +302,7 @@ export type AgentHandoffPayload = {
 /** Tenant-bound: `<tenantId>/<opaque>`. */
 export type IdsSchema_RunId = string;
 
-/** RFC 0077. Emitted by a host advertising `capabilities.agents.liveRuntime.supported: true` as the LAST agent-scoped event of a live manifest invocation (after the terminal `agent.decided`). Content-free: identifiers + outcome metadata only — the result body is served by the run's normal projection. A recorded-fact event per `replay.md` §"Recorded-fact events": re-read from the log on replay, never regenerated. */
+/** RFC 0077. Emitted by a host advertising `agents.liveRuntime` as the LAST agent-scoped event of a live manifest invocation (after the terminal `agent.decided`). Content-free: identifiers + outcome metadata only — the result body is served by the run's normal projection. A recorded-fact event per `replay.md` §"Recorded-fact events": re-read from the log on replay, never regenerated. */
 export type AgentInvocationCompletedPayload = {
   /** Correlates to the `agent.invocation.started` `invocationId`. Recorded-fact: never regenerated on replay. */ "invocationId": string;
   /** The manifest agentId. */ "agentId": IdsSchema_AgentId;
@@ -313,7 +313,7 @@ export type AgentInvocationCompletedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0077. Emitted by a host advertising `capabilities.agents.liveRuntime.supported: true` as the FIRST agent-scoped event of a live manifest invocation, bracketing the existing `agent.*` family with `agent.invocation.completed`. Content-free: identifiers + selection metadata only — prompt/task content is served by the run's normal projection, never on this event. A recorded-fact event per `replay.md` §"Recorded-fact events": on replay it is re-emitted from the log and the host MUST NOT regenerate its `invocationId` (or any identifier). Distinct from the deterministic RFC 0070 sample floor. For one live invocation the agent-scoped events MUST appear in the order `agent.invocation-started` → `agent.prompt-resolved` → (`agent.reasoning-delta`* → `agent.reasoned`)+ → (`agent.tool-called` → `agent.tool-returned`)* → `agent.decided`+ → `agent.handoff`? → `agent.invocation-completed`: this event precedes every other agent-scoped event of the invocation, and `agent.invocation-completed` follows them all and, for a sub-run, precedes the run-scoped `output.harvested`. On replay the host MUST NOT regenerate its timestamps either. */
+/** RFC 0077. Emitted by a host advertising `agents.liveRuntime` as the FIRST agent-scoped event of a live manifest invocation, bracketing the existing `agent.*` family with `agent.invocation.completed`. Content-free: identifiers + selection metadata only — prompt/task content is served by the run's normal projection, never on this event. A recorded-fact event per `replay.md` §"Recorded-fact events": on replay it is re-emitted from the log and the host MUST NOT regenerate its `invocationId` (or any identifier). Distinct from the deterministic RFC 0070 sample floor. For one live invocation the agent-scoped events MUST appear in the order `agent.invocation-started` → `agent.prompt-resolved` → (`agent.reasoning-delta`* → `agent.reasoned`)+ → (`agent.tool-called` → `agent.tool-returned`)* → `agent.decided`+ → `agent.handoff`? → `agent.invocation-completed`: this event precedes every other agent-scoped event of the invocation, and `agent.invocation-completed` follows them all and, for a sub-run, precedes the run-scoped `output.harvested`. On replay the host MUST NOT regenerate its timestamps either. */
 export type AgentInvocationStartedPayload = {
   /** Host-defined id correlating this agent invocation within its run, UNIQUE-WITHIN-RUN (not a mandated global id-space). Distinct from `runId` — one run MAY dispatch several invocations (multiple agent nodes, or a handoff chain) — but a host MAY derive it from an existing per-node-execution receipt id (e.g. `runId:nodeId:seq`) or mint a UUID; a single-invocation run MAY reuse `runId`. Recorded-fact: re-read from the log on replay, never regenerated (`replay.md` §"Recorded-fact events"). Correlates to the matching `agent.invocation.completed`. */ "invocationId": string;
   /** The manifest agentId being invoked (matches `AgentManifest.agentId`). */ "agentId": IdsSchema_AgentId;
@@ -328,7 +328,7 @@ export type AgentInvocationStartedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0068 (`Draft`). Emitted by a host advertising `capabilities.agents.memoryConsolidation.supported: true` after a background consolidation pass over LONG-TERM memory (merge/dedup/supersede/strengthen). Content-free: identifiers + counts only — entry content is served by the SR-1-redacted read-side (`MemoryAdapter.get`). On replay the event is re-read from the log, never regenerated. Distinct from RFC 0062 `memory.compacted` (token-budgeted distillation of transactional memory). SR-1 carry-forward (RFC 0004) + CTI-1 apply to the consolidated entries. */
+/** RFC 0068 (`Draft`). Emitted by a host advertising `agents.memoryConsolidation` after a background consolidation pass over LONG-TERM memory (merge/dedup/supersede/strengthen). Content-free: identifiers + counts only — entry content is served by the SR-1-redacted read-side (`MemoryAdapter.get`). On replay the event is re-read from the log, never regenerated. Distinct from RFC 0062 `memory.compacted` (token-budgeted distillation of transactional memory). SR-1 carry-forward (RFC 0004) + CTI-1 apply to the consolidated entries. */
 export type AgentMemoryConsolidatedPayload = {
   /** Opaque MemoryAdapter handle (RFC 0004 §C) the consolidation pass operated over. Bounds the pass to a single memory scope (CTI-1). */ "memoryRef": string;
   /** Long-term entries considered by the pass. */ "inputCount": number;
@@ -696,7 +696,7 @@ export type ArtifactCreatedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0049 — emitted on a role-based authorization decision (allow or deny). Redaction-safe: `principal` is an opaque RFC 0048 id; `reason` carries no credential material. Every deny SHOULD be emitted and SHOULD feed the audit log (RFC 0009/0010). MUST NOT be emitted unless `capabilities.authorization.supported: true`. */
+/** RFC 0049 — emitted on a role-based authorization decision (allow or deny). Redaction-safe: `principal` is an opaque RFC 0048 id; `reason` carries no credential material. Every deny SHOULD be emitted and SHOULD feed the audit log (RFC 0009/0010). MUST NOT be emitted unless the host advertises `authorization`. */
 export type AuthorizationDecidedPayload = {
   /** Opaque RFC 0048 principal id — never PII. */ "principal": string;
   /** The attempted action, e.g. `runs:cancel`. */ "action": string;
@@ -748,7 +748,7 @@ export type CapBreachedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** Payload of the OPTIONAL `channel.presence` RunEvent (RFC 0110). EPHEMERAL live presence for a `type:'channel'` conversation — who is currently present + (optionally) who is typing. A host MUST NOT persist this event to the replayable event log / transcript, and it MUST NOT affect replay or `:fork` determinism (presence is live state, the load-bearing distinction from the persisted `conversation.exchanged` turn — see replay.md). Membership-gated: every ref MUST be a current channel participant and the event MUST NOT be delivered to a non-member (the same DEFAULT-DENY visibility as the channel's messages; cross-tenant delivery is forbidden, CTI-1). NON-PII: subject refs are the opaque RFC 0041 vocabulary only — no IP/location/device. A host MAY emit; if it advertises `channelPresence.supported` it MUST. Gated on `channelPresence.supported` (capabilities.schema.json). See RFC 0110. */
+/** Payload of the `channel.presence` ephemeral host event (RFC 0110; RFC 0236 §F: a host event, not a run event, so it has no log position). EPHEMERAL live presence for a `type:'channel'` conversation — who is currently present + (optionally) who is typing. A host MUST NOT persist this event to the replayable event log / transcript, and it MUST NOT affect replay or `:fork` determinism (presence is live state, the load-bearing distinction from the persisted `conversation.exchanged` turn — see replay.md). Membership-gated: every ref MUST be a current channel participant and the event MUST NOT be delivered to a non-member (the same DEFAULT-DENY visibility as the channel's messages; cross-tenant delivery is forbidden, CTI-1). NON-PII: subject refs are the opaque RFC 0041 vocabulary only — no IP/location/device. A host MAY emit; if it advertises `channelPresence` it MUST. Gated on the host advertising `channelPresence` (capabilities.schema.json). See RFC 0110. */
 export type ChannelPresencePayloadSchema = {
   /** The `type:'channel'` conversation this presence is for. */ "conversationId": string;
   /** Subject refs (RFC 0041 vocabulary `user:<id>` / `agent:<id>` — opaque, non-PII) of members CURRENTLY present in the channel. MUST be a subset of the channel's current participants; a non-member MUST NOT appear. */ "present": Array<string>;
@@ -777,7 +777,7 @@ export type ClarificationRequestedPayload = InterruptRequestedPayload;
 /** RFC 0171 §A.4 E4 — sub-typing is $ref composition, not duplication: the legacy clarificationResolved shape (deprecation row legacy-interrupt-payloads) is the unified interruptResolved payload; the event type is kept, its payload is not a second shape. */
 export type ClarificationResolvedPayload = InterruptResolvedPayload;
 
-/** RFC 0068 (`Draft`). Emitted by a host advertising `capabilities.agents.commitments.supported: true` when an inferred standing commitment fires. Content-free: identifiers + condition kind only — the intention text lives in SR-1-redacted memory (`MemoryAdapter.get(memoryRef, memoryId)`). The fired arm composes RFC 0052 (time) or RFC 0060 (predicate). On replay the event is re-read from the log, never regenerated (the host MUST NOT re-infer or re-fire a commitment at replay time). CTI-1: the commitment, its memory provenance, and any run it enqueues MUST share the source memory's tenant. */
+/** RFC 0068 (`Draft`). Emitted by a host advertising `agents.commitments` when an inferred standing commitment fires. Content-free: identifiers + condition kind only — the intention text lives in SR-1-redacted memory (`MemoryAdapter.get(memoryRef, memoryId)`). The fired arm composes RFC 0052 (time) or RFC 0060 (predicate). On replay the event is re-read from the log, never regenerated (the host MUST NOT re-infer or re-fire a commitment at replay time). CTI-1: the commitment, its memory provenance, and any run it enqueues MUST share the source memory's tenant. */
 export type CommitmentFiredPayload = {
   /** Host-issued, stable id for the inferred commitment. Correlates repeated observability across re-evaluations of the same commitment. */ "commitmentId": string;
   /** Opaque MemoryAdapter handle of the memory scope the commitment was inferred from (provenance + CTI-1 tenant binding). */ "memoryRef": string;
@@ -846,14 +846,14 @@ export type CompensationStartedPayload = {
   "orderingModel"?: "reverse-completion" | "dependency-graph";
 };
 
-/** RFC 0047 — emitted when a stored OAuth token's refresh fails terminally (revoked/expired refresh token). Redaction-safe: no token material. MUST NOT be emitted unless `capabilities.oauth.supported: true`. */
+/** RFC 0047 — emitted when a stored OAuth token's refresh fails terminally (revoked/expired refresh token). Redaction-safe: no token material. MUST NOT be emitted unless the host advertises `oauth`. */
 export type ConnectorAuthExpiredPayload = {
   /** Provider id, matching an advertised `capabilities.oauth.providers[].id`. */ "provider": string;
   /** Opaque RFC 0046 credential reference for the expired token. */ "credentialRef": string;
   /** Redaction-safe human-readable reason (e.g. `refresh_token_revoked`). */ "reason"?: string;
 };
 
-/** RFC 0047 — emitted when the host acquires (or re-authorizes) a third-party OAuth token on a user's behalf via the `host.oauth` flow. Redaction-safe: carries the credential REFERENCE (RFC 0046), never token material. MUST NOT be emitted unless `capabilities.oauth.supported: true`. */
+/** RFC 0047 — emitted when the host acquires (or re-authorizes) a third-party OAuth token on a user's behalf via the `host.oauth` flow. Redaction-safe: carries the credential REFERENCE (RFC 0046), never token material. MUST NOT be emitted unless the host advertises `oauth`. */
 export type ConnectorAuthorizedPayload = {
   /** Provider id, matching an advertised `capabilities.oauth.providers[].id` (e.g. `slack`, `google`). */ "provider": string;
   /** Opaque RFC 0046 credential reference where the acquired token is stored. NEVER the token itself. */ "credentialRef": string;
@@ -895,6 +895,10 @@ export type ConversationEventSchema_ConversationTurn = ({
     "agentId"?: IdsSchema_AgentId;
     "agentSharing"?: "isolated" | "shared" | "shared:%shared%";
     "memoryRef"?: string;
+    /** RFC 0109 — OPTIONAL provenance: which model produced this `role: 'agent'` turn. NON-SECRET, NON-PII: provider + model identifiers ONLY (`additionalProperties: false` forbids any credential/endpoint/prompt leaking in — the SR-1 secret-redaction guard). Stamped at emit; read VERBATIM on `:fork` (never re-resolved). A host that stamps it MUST advertise `conversationTurnModelProvenance`. Absent ⇒ no advertisement; clients MUST tolerate its absence. */ "model"?: {
+      /** Provider identifier (e.g. `anthropic`, `openai`, `google`). Non-secret. */ "provider": string;
+      /** Model identifier as the provider names it (e.g. `claude-opus-4-8`). Non-secret. */ "model": string;
+    };
   };
   "turnIndex": number;
   /** RFC 0101. Roster INSTANCE id of this turn's speaker (`host:<id>` AgentRef per RFC 0086). REQUIRED when `role: 'agent'` (the `allOf`/`if` conditional below). Mirror of `conversation-turn.schema.json`'s `speakerId`; kept in sync. */ "speakerId": string;
@@ -909,10 +913,34 @@ export type ConversationExchangedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
+/** RFC 0101. Slim wire-shape projection of an agent's identity. Mirror of the relevant subset of `agent-ref.schema.json`; kept in sync (inlined for self-containment under per-file Ajv compile order, same convention as `ConversationTurn`). Used by `ConversationOpenedPayload.participants` — the cohort permitted to speak. `agentId` here is the roster INSTANCE id (`host:<id>` per RFC 0086) for council members, matching a turn's `speakerId`. */
+export type ConversationEventSchema_AgentRef = {
+  "agentId": IdsSchema_AgentId;
+  "name"?: string;
+};
+
+/** RFC 0101. OPTIONAL. The agent cohort permitted to speak in this conversation (multi-party group conversation / advisory council). Each `agentId` is a roster INSTANCE id (`host:<id>` per RFC 0086). When present (and the host advertises `multiPartyConversation`), a turn whose `speakerId` is not a member of this roster MUST be rejected. Disambiguates the singular `agentId` (the owner) from the full speaking cohort. Absent ⇒ no roster enforcement (back-compat: single-agent conversations are unaffected). MVP: declared at open-time only; mid-conversation roster mutation is out of scope (RFC 0101 §Resolved questions). */
+export type ConversationEventSchema_ConversationOpenedPayloadPropertiesParticipants = Array<ConversationEventSchema_AgentRef>;
+
+export type ConversationEventSchema_ConversationOpenedPayloadPropertiesInitialTurn = ConversationEventSchema_ConversationTurn;
+
+/** Optional JSON Schema for resume turn validation. Servers SHOULD validate subsequent `conversation.exchanged` turns against this schema. */
+export type ConversationEventSchema_ConversationOpenedPayloadPropertiesSchema = {
+  [key: string]: unknown;
+};
+
+/** Informative host capability hints. Future RFCs may normate values; current namespace is open. */
+export type ConversationEventSchema_ConversationOpenedPayloadPropertiesCapabilities = Array<"multi-turn" | "streaming">;
+
 /** Multi-Agent Shift Phase 4. Emitted when a `core.conversationGate` (or host-extension equivalent) opens a new multi-turn conversation context. Pairs with the closing `conversation.closed` via shared `conversationId`. */
 export type ConversationOpenedPayload = {
   /** Opaque conversation identifier. Tenant-unique invariant: hosts MUST ensure no two distinct conversations in the same tenant share an id. Cross-host portability not normative. */ "conversationId": string;
   /** Optional `AgentRef.agentId` of the agent that opened the conversation. */ "openedBy"?: string;
+  /** Optional. The agent driving this conversation (RFC 0002 §A1); the owner of a multi-agent conversation. */ "agentId"?: IdsSchema_AgentId;
+  /** Wave 3 widening (the RFC 0186 pattern): this def and `conversation-event.schema.json` `ConversationOpenedPayload` are two closed defs for one event, and this one had no `participants` seat, so a `multiPartyConversation` host could not emit a valid `conversation.opened`. Every field the other def carries is seated here as OPTIONAL, so the union is a strict widening of both prior shapes. */ "participants"?: ConversationEventSchema_ConversationOpenedPayloadPropertiesParticipants;
+  "initialTurn"?: ConversationEventSchema_ConversationOpenedPayloadPropertiesInitialTurn;
+  "schema"?: ConversationEventSchema_ConversationOpenedPayloadPropertiesSchema;
+  "capabilities"?: ConversationEventSchema_ConversationOpenedPayloadPropertiesCapabilities;
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
@@ -970,7 +998,7 @@ export type DispatchJoinPayload = {
   /** `childRunId`s in the parent host's observed wall-clock terminal order — the replay-deterministic tiebreak for colliding `outputMapping` keys. Recorded at terminal-fold time; never recomputed from child timestamps. */ "mergeOrder": Array<string>;
 };
 
-/** RFC 0079 §B. Emitted when a host evaluates a credentialed egress (via `ctx.http.safeFetch` / a tool) against credential provenance + the SSRF guard. Content-free: identifiers + decision only — no credential value, no request/response body (SR-1). On replay re-read from the log, never regenerated (the decision is a recorded fact). Emitted only when `capabilities.httpClient.egressPolicy.supported: true`. */
+/** RFC 0079 §B. Emitted when a host evaluates a credentialed egress (via `ctx.http.safeFetch` / a tool) against credential provenance + the SSRF guard. Content-free: identifiers + decision only — no credential value, no request/response body (SR-1). On replay re-read from the log, never regenerated (the decision is a recorded fact). Emitted only when the host advertises `httpClient.egressPolicy`. */
 export type EgressDecidedPayload = {
   /** `allowed`: egress proceeds with the credential; `denied`: blocked (out-of-audience / expired / SSRF / unevaluable provenance — fail-closed); `downgraded`: proceeds WITHOUT the credential (anonymous egress, when host policy permits); `approval-required`: suspended pending an RFC 0051 approval interrupt. */ "decision": "allowed" | "denied" | "downgraded" | "approval-required";
   /** The egress destination **host/authority ONLY** (`api.stripe.com`) — NOT a path, query, or full URL (SR-1: a path/query can carry secrets; the host MUST strip them for this canonical content-free event). A host whose internal audit retains the path keeps that on its vendor `x-host-*` variant, never here. */ "destination": string;
@@ -1039,25 +1067,29 @@ export type EvalCompletedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0081 §C. Emitted ONCE PER TASK, after that task's terminal `agent.decided`, so a streaming consumer sees results land incrementally. Content-free: the task id + scalars + counts ONLY — NEVER the task output, rubric prose, or model completion (SECURITY invariant `eval-summary-no-content-leak`). A recorded-fact event. */
+/** RFC 0081 §C. Emitted ONCE PER TASK (once per task per trial under RFC 0244 §B), after that task's terminal `agent.decided`, so a streaming consumer sees results land incrementally. Content-free: the task id + scalars + counts ONLY — NEVER the task output, rubric prose, or model completion (SECURITY invariant `eval-summary-no-content-leak`). A recorded-fact event. */
 export type EvalScoredPayload = {
   /** The `agent-eval-suite` task id. */ "taskId": string;
-  /** Task score (0.0–1.0). */ "score": number;
+  /** Task score (0.0–1.0). RFC 0244 §D: a trial that fails closed (a miss under `onMiss: "fail"`) MUST report 0. */ "score": number;
   /** Whether the task met its bar. */ "passed": boolean;
   /** MAY — task cost (scalar; summed from RFC 0026 `provider.usage`). NEVER a pricing breakdown. */ "costUsd"?: number;
   /** MAY — task wall-clock latency. */ "latencyMs"?: number;
   /** MAY — whether the output validated against `handoff.returnSchemaRef`. */ "schemaValid"?: boolean;
   /** MAY — count of safety findings for the task (the redaction-safe descriptors live on `EvalSummary`; the event carries the count only). */ "safetyFindingCount"?: number;
+  /** RFC 0244 §B. The 0-based trial this score is for; contiguous and unique per `(taskId, trialIndex)`. MAY be omitted when the suite runs one trial. */ "trialIndex"?: number;
+  /** RFC 0244 §E. MAY. A low-cardinality label (e.g. `pass`, `fail`, `partial`); maps onto OpenTelemetry `gen_ai.evaluation.score.label`. Pattern-bound so it cannot carry prose. */ "scoreLabel"?: string;
+  /** RFC 0244 §E. MAY. Who produced the score. */ "evaluatorType"?: "deterministic" | "llm_judge" | "human";
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0081 §C. Emitted ONCE at the start of an eval run (a `mode: "eval"` run, RFC 0081 §B) by a host advertising `capabilities.agents.evalSuite.supported: true`. Content-free: suite provenance + counts only. A recorded-fact event per `replay.md` §"Recorded-fact events". */
+/** RFC 0081 §C. Emitted ONCE at the start of an eval run (a `mode: "eval"` run, RFC 0081 §B) by a host advertising `agents.evalSuite`. Content-free: suite provenance + counts only. A recorded-fact event per `replay.md` §"Recorded-fact events". */
 export type EvalStartedPayload = {
   /** The `agent-eval-suite.schema.json#suiteId` being run. */ "suiteId": string;
   /** The pinned suite SemVer. */ "suiteVersion": string;
   /** Number of tasks the run will execute. */ "taskCount": number;
   /** The eval modes this run exercises (RFC 0081 §D). */ "modes": Array<"golden" | "rubric" | "adversarial" | "regression" | "live-shadow">;
   /** MAY — for `regression` mode, the prior eval run this run is scored against. */ "baselineRunId"?: IdsSchema_RunId;
+  /** RFC 0244 §B. Present when the suite runs more than one trial per task: each task then emits `trialCount` `eval.scored` events. */ "trialCount"?: number;
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
@@ -1118,7 +1150,7 @@ export type LogAppendedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0012 (Memory Compaction Profile). Emitted by a host advertising `capabilities.memory.compaction.supported: true` each time a compaction run completes, regardless of trigger. `outputId` MUST be readable via `MemoryAdapter.get(memoryRef, outputId)` until normal TTL eviction. SR-1 carry-forward (RFC 0012 §D) applies: the host MUST route compacted entry content through the same BYOK redaction harness applied to a fresh `put`. */
+/** RFC 0012 (Memory Compaction Profile). Emitted by a host advertising `memory.compaction` each time a compaction run completes, regardless of trigger. `outputId` MUST be readable via `MemoryAdapter.get(memoryRef, outputId)` until normal TTL eviction. SR-1 carry-forward (RFC 0012 §D) applies: the host MUST route compacted entry content through the same BYOK redaction harness applied to a fresh `put`. */
 export type MemoryCompactedPayload = {
   /** Opaque MemoryAdapter handle per RFC 0004 §C. Bounds compaction to a single memory scope. */ "memoryRef": string;
   /** Id of the new MemoryEntry created by compaction. */ "outputId": string;
@@ -1126,7 +1158,7 @@ export type MemoryCompactedPayload = {
   /** Total source entries collapsed, including any not enumerated in `sourceIds`. */ "sourceCount": number;
   /** Matches `capabilities.memory.compaction.trigger`; indicates which trigger path drove this run. v1.x normates only `host-managed`. */ "trigger": "host-managed" | "client-requested" | "both";
   /** Byte size of the resulting MemoryEntry.content. */ "byteSize": number;
-  /** RFC 0062 (when `capabilities.memory.distillation.supported: true`). Present when this compaction is part of a budgeted distillation run (a scheduled or on-demand 'dream'). Absent for a plain RFC 0012 compaction. Carries the token-budget accounting + whether the memory index was refreshed — not a parallel `memory.distilled` event. */ "distillation"?: {
+  /** RFC 0062 (when the host advertises `memory.distillation`). Present when this compaction is part of a budgeted distillation run (a scheduled or on-demand 'dream'). Absent for a plain RFC 0012 compaction. Carries the token-budget accounting + whether the memory index was refreshed — not a parallel `memory.distilled` event. */ "distillation"?: {
     /** Effective per-run budget honored (≤ advertised `maxTokenBudget`), counted against the advertised `tokenizerName`. */ "tokenBudget": number;
     /** Total input+output tokens the distillation consumed, best-effort-honest per the advertised tokenizer (±10% tolerance). MUST be ≤ `tokenBudget` on a successful run. */ "tokensUsed": number;
     /** Whether this run refreshed the memory-index workspace file (`MEMORY-INDEX.json`, RFC 0059). When `true`, a `workspace.updated` event was also emitted for that path. */ "indexUpdated"?: boolean;
@@ -1168,6 +1200,7 @@ export type NegotiationDecidedPayload = {
   "protocol": "a2a" | "mcp";
   "outcome": "accepted" | "refused";
   /** The version or revision decided (absent when refused below the floor). */ "version"?: string;
+  /** RFC 0242 §A — the version or revision the requesting side named: inbound, the caller's (`A2A-Version`, MCP `initialize` `protocolVersion`); outbound, the one the host asked the peer for. MUST be present whenever one was named. A downgrade is an `accepted` record whose `version` differs from it. */ "requested"?: string;
   "floor"?: string;
   /** SHA-256 of the peer origin; never the origin in clear (RFC 0175 §D.3). */ "peerDigest"?: string;
   "reason"?: "below-floor" | "unauthenticated" | "unsupported" | "ok";
@@ -1267,7 +1300,7 @@ export type NodeSuspendedPayload = {
 export type OrchestratorDecisionSchema = ({
   "kind": "next-worker";
   /** Ordered list of worker node-ids OR agent-ids to dispatch. Hosts that interpret entries as node-ids dispatch in DAG order; hosts that interpret as agent-ids resolve to nodes via the run's static DAG. */ "nextWorkerIds": Array<string>;
-  /** RFC 0126 (data-parallel fan-out). OPTIONAL, index-aligned with `nextWorkerIds`: `nextWorkerInputs[i]` is a per-child input object (child input variable names → values) projected into the child dispatched for `nextWorkerIds[i]`, over the RFC 0022 `inputMapping`/`perWorkerInputMappings` projection (per-item value WINS on key collision). Enables fanning ONE `childWorkflowId` over N runtime items with distinct inputs (the map-over-collection pattern). When present, `nextWorkerInputs.length` MUST equal `nextWorkerIds.length` (a host MUST fail the dispatch node with `validation_error` and dispatch NO child otherwise — length is not JSON-Schema-enforceable, so this is a runtime MUST). Gated on `capabilities.dispatch.perItemInput`: a host NOT advertising it, upon receiving a non-empty `nextWorkerInputs`, MUST fail closed with `validation_error` and MUST NOT silently drop-and-dispatch N identical children (the correctness/spend hazard this closes). Replay-safe: rides the recorded `runOrchestrator.decided` event, re-read verbatim on `:fork`, never recomputed (frozen at decision time). A `sensitive`/secret per-item value MUST NOT appear here in plaintext (use the secret channel). See `node-packs.md` §core.dispatch. */ "nextWorkerInputs"?: Array<{
+  /** RFC 0126 (data-parallel fan-out). OPTIONAL, index-aligned with `nextWorkerIds`: `nextWorkerInputs[i]` is a per-child input object (child input variable names → values) projected into the child dispatched for `nextWorkerIds[i]`, over the RFC 0022 `inputMapping`/`perWorkerInputMappings` projection (per-item value WINS on key collision). Enables fanning ONE `childWorkflowId` over N runtime items with distinct inputs (the map-over-collection pattern). When present, `nextWorkerInputs.length` MUST equal `nextWorkerIds.length` (a host MUST fail the dispatch node with `validation_error` and dispatch NO child otherwise — length is not JSON-Schema-enforceable, so this is a runtime MUST). Gated on `agents.fanOut.perItemInput` (RFC 0243): a host that does not advertise it as `true`, upon receiving a non-empty `nextWorkerInputs`, MUST fail closed with `validation_error` and MUST NOT silently drop-and-dispatch N identical children (the correctness/spend hazard this closes). Replay-safe: rides the recorded `runOrchestrator.decided` event, re-read verbatim on `:fork`, never recomputed (frozen at decision time). A `sensitive`/secret per-item value MUST NOT appear here in plaintext (use the secret channel). See `node-packs.md` §core.dispatch. */ "nextWorkerInputs"?: Array<{
     [key: string]: unknown;
   }>;
   /** RFC 0039 §A — supervisor's stated confidence in this decision, in [0, 1]. Optional; absent means 'no opinion stated' (NOT low confidence). Hosts advertising `capabilities.multiAgent.executionModel.version >= 2` MUST honor a confidence floor (spec floor 0.5; operator-stricter via `confidenceEscalationFloor`): a decision with `confidence` below the floor MUST escalate via clarify-or-escalate interrupt instead of executing. Pre-Phase-2 hosts ignore the field per forward-compat. */ "confidence"?: number;
@@ -1423,7 +1456,7 @@ export type RunCompletedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0053 — emitted when a run/node exhausts its retry policy (RFC 0009) and is routed to the durable dead-letter sink. The run remains fork-eligible (RFC 0011) for `capabilities.deadLetter.retentionDays`. Redaction-safe: `reason` carries no credential material. MUST NOT be emitted unless `capabilities.deadLetter.supported: true`. */
+/** RFC 0053 — emitted when a run/node exhausts its retry policy (RFC 0009) and is routed to the durable dead-letter sink. The run remains fork-eligible (RFC 0011) for `capabilities.deadLetter.retentionDays`. Redaction-safe: `reason` carries no credential material. MUST NOT be emitted unless the host advertises `deadLetter`. */
 export type RunDeadLetteredPayload = {
   "runId": IdsSchema_RunId;
   /** The node whose retry exhaustion dead-lettered the run; absent for run-level failures. */ "nodeId"?: IdsSchema_NodeId;
@@ -1516,7 +1549,7 @@ export type TriggerDeliveryAttemptedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0083 §C. Emitted when a trigger subscription changes state (the §B four-state machine). Content-free: identifiers + states only — no inbound payload, headers, or credential material (SR-1). Emitted only when `capabilities.triggerBridge.supported: true`. */
+/** RFC 0083 §C. Emitted when a trigger subscription changes state (the §B four-state machine). Content-free: identifiers + states only — no inbound payload, headers, or credential material (SR-1). Emitted only when the host advertises `triggerBridge`. */
 export type TriggerSubscriptionStateChangedPayload = {
   /** The TriggerSubscription this state change is for. */ "subscriptionId": IdsSchema_SubscriptionId;
   /** The subscription source. */ "source": "webhook" | "schedule" | "queue" | "email" | "form" | "stream" | "change";
@@ -1604,7 +1637,7 @@ export type CoreWorkflowChainConfidenceEscalatedPayload = {
   /** RFC 0040 §A — optional cross-host causation pointer. Present + non-empty when this event's `causationId` points at an event on a DIFFERENT host; absent when same-host (existing semantics). Value MUST equal the originating host's `crossHostCausation.hostId` advertisement. */ "causationHostId"?: string;
 };
 
-/** RFC 0037 — emitted on every planner→worker handoff state-machine transition. Required when `capabilities.multiAgent.executionModel.supported: true`; MUST NOT be emitted otherwise. RFC 0040 §A extends with optional `causationHostId` (when `crossHostCausation.supported: true`): present + non-empty when the `causationId` points at an event on a different host; absent when the chained-event is on the same host (existing semantics). */
+/** RFC 0037 — emitted on every planner→worker handoff state-machine transition. Required when the host advertises `multiAgent.executionModel`; MUST NOT be emitted otherwise. RFC 0040 §A extends with optional `causationHostId` (when the host advertises `multiAgent.executionModel.crossHostCausation`): present + non-empty when the `causationId` points at an event on a different host; absent when the chained-event is on the same host (existing semantics). */
 export type CoreWorkflowChainEventPayload = {
   "phase": "dispatch.began" | "dispatch.succeeded" | "dispatch.failed" | "child.completed" | "child.failed" | "child.cancelled" | "output.harvested";
   /** The dispatched worker's workflowId — matches the entry in the supervisor's OrchestratorDecision.nextWorkerIds[]. */ "workerId": string;

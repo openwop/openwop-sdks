@@ -15,18 +15,18 @@
 > `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`
 > (`scripts/sdks-check.sh` step 7).
 
-The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against the corpus tag in `CORPUS_TAG` — `@openwop/openwop@2.6.0`, `openwop-client==2.6.0`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2.6.0`; tags `go/v2.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **56 operations** (the two SSE channels among them). Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. `sdks-check` also fails on any `/v1` path literal in a v2 source tree.
+The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against the corpus tag in `CORPUS_TAG` — `@openwop/openwop@2.6.0`, `openwop-client==2.6.0`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2.6.0`; tags `go/v2.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **68 operations** (the two SSE channels among them). Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. `sdks-check` also fails on any `/v1` path literal in a v2 source tree.
 
 | SDK | typed | of manifest ops |
 |---|---:|---:|
-| TypeScript (`@openwop/openwop` 2.6.0) | 56 | 56 |
-| Python (`openwop-client` 2.6.0) | 56 | 56 |
-| Go (`github.com/openwop/openwop-sdks/go/v2` v2.6.0) | 56 | 56 |
+| TypeScript (`@openwop/openwop` 2.6.0) | 68 | 68 |
+| Python (`openwop-client` 2.6.0) | 68 | 68 |
+| Go (`github.com/openwop/openwop-sdks/go/v2` v2.6.0) | 68 | 68 |
 
-**What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 53 of the 58 v1 OpenAPI operations; the v2 manifest has 56. 49 are common to both:
+**What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 53 of the 58 v1 OpenAPI operations; the v2 manifest has 68. 49 are common to both:
 
 - Only in 1.x: the 4 `workspace` file operations (`/v1/host/workspace/files*`). The 5 seams the 1.x SDKs exclude (`packs-test` ×4, `getA2ATaskState`) are not v2 operations at all. Also dropped from the SDKs though never OpenAPI operations: `runs.debugBundle`, the host-sample `userAgents.*` wrappers (TS), and `RegistryClient` (v2 resolves registry paths through `.well-known/openwop-registry.json` `endpoints`, packs.md).
-- Only in 2.x: `getRunCompensation`, `getRunEffects`, `getEffectSeamManifest` (RFC 0173), `streamHostEvents` (the `hostEvents` AsyncAPI channel), `listRuns` (RFC 0182) and `listWebhookDeadLetters` (RFC 0188).
+- Only in 2.x: `getRunCompensation`, `getRunEffects`, `getEffectSeamManifest` (RFC 0173), `streamHostEvents` (the `hostEvents` AsyncAPI channel), `listRuns` (RFC 0182), `listWebhookDeadLetters` (RFC 0188), `listTriggerDeadLetters` (RFC 0232), the seven proposal operations (RFC 0249: `listProposals`, `submitProposal`, `getProposal`, `reviseProposal`, `archiveProposal`, `applyProposal`, `rejectProposal`), `listConnectionProviders` / `resolveConnectionProvider`, `emitTestHostEvent` (RFC 0250) and the front-end plugin `getUiPluginFrame` / `dispatchUiPluginRequest`.
 
 | Surface (v2) | TS | Python | Go |
 |---|---|---|---|
@@ -40,6 +40,11 @@ The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against t
 | `GET /runs/{id}/effects` (RFC 0173 §C.2) | `runs.effects(id)` | `runs_effects(id)` | `GetRunEffects(ctx, id)` |
 | `GET /host/effect-seams` (RFC 0173 §C) | `host.effectSeams()` | `host_effect_seams()` | `GetEffectSeamManifest(ctx)` |
 | `GET /host/events` (SSE, `hostEvents` channel) | `host.events(opts)` / `streamHostEvents` | `host_events()` / `stream_host_events` | `StreamHostEvents(ctx, opts)` |
+| `POST /runs` eval selection: `evalModes`, `baselineRunId` (RFC 0251; only to a host advertising `agents.evalSuite.baselineSelection`) | `CreateRunRequest.evalModes` / `.baselineRunId`, `EvalMode` | `CreateRunRequest.evalModes` / `.baselineRunId`, `EvalMode` | `CreateRunRequest.EvalModes` / `.BaselineRunID`, `EvalMode*` constants |
+| Proposals (RFC 0249; gated on `agents.proposals`) | `proposals.list / submit / get / revise / archive / apply / reject` | `proposals_list / _submit / _get / _revise / _archive / _apply / _reject` | `ListProposals`, `SubmitProposal`, `GetProposal`, `ReviseProposal`, `ArchiveProposal`, `ApplyProposal`, `RejectProposal` |
+| `GET /connection-providers[/{providerId}]` (gated on `connections.providerRead`) | `connectionProviders.list()` / `.resolve(id, { pack? })` | `connection_providers_list()` / `connection_providers_resolve(id, pack=)` | `ListConnectionProviders(ctx)` / `ResolveConnectionProvider(ctx, id, pack)` |
+| `POST /host/events/test` (RFC 0250) | `host.emitTestEvent(body, opts?)` | `host_emit_test_event(delivery, workspace_id=, idempotency_key=)` | `EmitTestHostEvent(ctx, body, opts)` |
+| Front-end plugin frame + RPC (gated on `uiPlugins.served`) | `host.uiPluginFrame(pack, id)` → HTML; `host.dispatchUiPluginRequest(pack, id, message)` | `host_ui_plugin_frame` → `str`; `host_dispatch_ui_plugin_request` | `GetUiPluginFrame` → `string`; `DispatchUiPluginRequest` |
 | Error registry (`spec/v2/errors.json`, 108 codes) | generated `ERROR_CODES` / `ErrorCode` union, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES`; `ErrorEnvelope.error: ErrorCode \| VendorErrorCode` | generated `ERROR_CODES` / `ErrorCode` Literal, `ERROR_CODE_HTTP_STATUS`, `RETRIABLE_ERROR_CODES` | generated `ErrorCodes`, `ErrorCodeHTTPStatus`, `RetriableErrorCodes`, `IsErrorCode` |
 | Tenant-bound path ids (identity.md §5 "Wire form") | projected (`acme/r-9f3c` → `acme~2Fr-9f3c`); `projectId` / `unprojectId` | same; `project_id` / `unproject_id` | same; `ProjectID` / `UnprojectID` |
 | Capability keys (`schemas/v2/capabilities.schema.json`) | generated `CAPABILITY_FAMILY_KEYS` / `CAPABILITY_METADATA_KEYS` | generated `CAPABILITY_FAMILY_KEYS` / `CAPABILITY_METADATA_KEYS` | generated `CapabilityFamilyKeys` / `CapabilityMetadataKeys` |

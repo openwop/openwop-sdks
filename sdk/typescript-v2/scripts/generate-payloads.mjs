@@ -79,7 +79,9 @@ function ensure(file, def) {
   if (!emitted.has(name)) {
     emitted.set(name, null);
     const doc = loadDoc(file);
-    const node = def ? doc.$defs?.[def] : doc;
+    // A fragment may point below a definition (`$defs/X/properties/y`, the
+    // corpus 2.46 `conversation.opened` participants seat): walk the pointer.
+    const node = def ? def.split('/').reduce((n, k) => n?.[k], doc.$defs) : doc;
     if (!node) throw new Error(`generate-payloads: ${file}#/$defs/${def} not found`);
     const desc = carryDesc(node.description) ? `/** ${carryDesc(node.description)} */\n` : '';
     emitted.set(name, `${desc}export type ${name} = ${toTs(node, file, 1)};`);

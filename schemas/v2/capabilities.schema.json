@@ -561,6 +561,11 @@
           "type": "integer",
           "minimum": 1,
           "description": "RFC 0094 §H. Maximum REST request body size (bytes) the host accepts. Optional v1 field per `capabilities.md` §3 (previously documented as reserved — the closed `limits` object made advertising it a schema-validation failure). Hosts that advertise it MUST enforce it."
+        },
+        "maxStreamAgeSec": {
+          "type": "integer",
+          "minimum": 15,
+          "description": "RFC 0247. The longest, in seconds, this host holds a live `streamRunEvents` or `streamHostEvents` stream that the consumer opened with `resumable=true`. Only for such a stream, a host advertising this facet MAY end it before the run's terminal event (a bounded close) once it has been open 15 seconds, and MUST end it by this age. It MUST end at a frame boundary, MUST flush any pending batch first, and SHOULD first send an SSE `retry:` field (milliseconds). A host MUST NOT end an opted-in stream early unless it advertises this facet, and MUST NOT end a stream opened without `resumable=true` early whatever it advertises (events.md §Resuming with `Last-Event-ID`). A bounded close is never a terminal signal; only the terminal event is. A consumer that sent `resumable=true` MUST treat any close without the terminal event (a bounded close, a network drop, an intermediary's timeout) as non-terminal, and MUST reconnect with `resumable=true` and `Last-Event-ID` set to the last `id:` it received (no header if it received none). It SHOULD wait the `retry:` delay, or its own default of about one second, and SHOULD back off when reconnects fail or close without a frame. A consumer MUST handle such a close whether or not this facet is advertised. On `hostEvents` the consumer resumes from the last durable event's `id:`; ephemeral events missed in the gap are not redelivered (events.md §Host events)."
         }
       },
       "allOf": [
@@ -599,7 +604,7 @@
         }
       ],
       "description": "core/capabilities.md#limits — witness: witnessable-gated; maturity stable/none",
-      "x-openwop-seeded-from": "v1"
+      "x-openwop-facets-from": "spec/v2/facets/limits.schema.json"
     },
     "envelopeStrictness": {
       "type": "object",
@@ -1350,6 +1355,10 @@
         "packsSupported": {
           "type": "boolean",
           "description": "RFC 0095 §C. When `true`, the host installs `kind: \"connection\"` registry packs and MUST implement the §B.6 resolution contract: an RFC 0045 connector's `auth.provider` (or an RFC 0047 `host.oauth` provider string) resolves against the installed connection pack whose `provider.id` matches, with installed-vs-built-in precedence per SemVer §11 and `connection_provider_unresolved` / `connection_provider_conflict` diagnostics. When `false` or absent, connection packs are not loaded and provider resolution stays implementation-defined."
+        },
+        "providerRead": {
+          "type": "boolean",
+          "description": "RFC 0233 §A — `true` means the host serves `GET /connection-providers` and `GET /connection-providers/{providerId}`: its provider registry, the registrations it refused, and resolution of one reference (`connection-packs.md` §Observation). Advertised only with `packsSupported: true`."
         }
       },
       "allOf": [
@@ -1388,7 +1397,7 @@
         }
       ],
       "description": "core/capabilities.md#connections — witness: witnessable-gated; maturity experimental/none; RFC 0095",
-      "x-openwop-seeded-from": "v1"
+      "x-openwop-facets-from": "spec/v2/facets/connections.schema.json"
     },
     "selfHostedRunner": {
       "type": "object",
@@ -2608,7 +2617,7 @@
                   "pattern": "^x-host-[a-z][a-z0-9-]*-[a-z][a-z0-9-]*$"
                 }
               ],
-              "description": "RFC 0044 — the literal `interrupt.kind` the host emits when escalating a below-floor confidence decision per RFC 0039 §A. `clarification` and `approval` are the canonical values matching the clarify-OR-approval choice in RFC 0039 §A; vendor-extension kinds use the canonical host-extension namespace `^x-host-<host>-<kind>$` per `spec/v1/host-extensions.md` §\"Canonical prefixes\". When advertised, hosts MUST emit an interrupt of the advertised kind on every confidence-escalation event AND the host's downstream `interrupt.md` mapping determines the `waiting-*` terminal status. Absent: conformance assumes the host uses one of the two canonical kinds (the relaxed assertion accepts either). Hosts using vendor kinds MUST also publish a non-normative kind-mapping document per RFC 0044 §C."
+              "description": "RFC 0044 — the literal `interrupt.kind` the host emits when escalating a below-floor confidence decision per RFC 0039 §A. `clarification` and `approval` are the canonical values matching the clarify-OR-approval choice in RFC 0039 §A; at v2 the value MUST be one of them (`execution.md` §multiAgent, level 2). The v2 interrupt `kind` is closed, so an `x-host-` value promises an interrupt the payload schema rejects; the pattern remains only so a v1-era document validates, and is removed at 3.0. When advertised, hosts MUST emit an interrupt of the advertised kind on every confidence-escalation event AND the host's downstream `interrupt.md` mapping determines the `waiting-*` terminal status. Absent: conformance assumes the host uses one of the two canonical kinds (the relaxed assertion accepts either)."
             },
             "crossChildMemoryConcurrency": {
               "type": "string",
@@ -2620,7 +2629,7 @@
             },
             "crossHostCausation": {
               "type": "object",
-              "description": "RFC 0040 §D — Phase 3 cross-host causation linking. When advertised, the host honors the cross-host `causationId` extension (a `causationHostId` field on event payloads pointing at the originating host), W3C `traceparent` propagation across MCP + A2A composition boundaries, and (when `ancestryEndpointSupported: true`) the `GET /runs/{runId}/ancestry` cross-host parent-chain endpoint. Hosts advertising `version: 3` MUST advertise this sub-block with a stable `hostId`.",
+              "description": "RFC 0040 §D — Phase 3 cross-host causation linking. When advertised, the host honors the cross-host `causationId` extension (a `causationHostId` field on event payloads pointing at the originating host), W3C `traceparent` propagation across MCP + A2A composition boundaries, and (when `ancestryEndpointSupported: true`) the `GET /runs/{runId}/ancestry` cross-host parent-chain endpoint. Hosts advertising `version` 3 or higher MUST advertise this sub-block with a non-empty, stable `hostId`.",
               "additionalProperties": false,
               "properties": {
                 "hostId": {
@@ -2636,7 +2645,7 @@
             },
             "replayDeterminism": {
               "type": "object",
-              "description": "RFC 0041 §D — Phase 4 replay determinism. When advertised, the host honors the LLM cache-key recipe in `replay.md` §\"LLM cache-key recipe\" as NORMATIVE (graduated from informative for version >= 4), emits `replay.divergedAtRefusal` events + fails with `replay_diverged_at_refusal` on refusal-divergence (RFC 0041 §B), and guarantees observable-output-sequence determinism per RFC 0041 §C. Hosts advertising `version: 4` MUST advertise this sub-block.",
+              "description": "RFC 0041 §D — Phase 4 replay determinism. When advertised, the host honors the LLM cache-key recipe in `replay.md` §\"LLM cache-key recipe\" as NORMATIVE (graduated from informative for version >= 4), emits `replay.divergedAtRefusal` events + fails with `replay_diverged_at_refusal` on refusal-divergence (RFC 0041 §B), and guarantees observable-output-sequence determinism per RFC 0041 §C. Hosts advertising `version` 4 or higher MUST advertise this sub-block.",
               "additionalProperties": false,
               "properties": {
                 "llmCacheKeyRecipe": {
@@ -2653,7 +2662,7 @@
                 },
                 "refusalDivergenceEmission": {
                   "type": "boolean",
-                  "description": "Host emits `replay.divergedAtRefusal` events + fails replay with `error.code: replay_diverged_at_refusal` per RFC 0041 §B. Hosts advertising `version: 4` MUST set this to `true`."
+                  "description": "Host emits `replay.divergedAtRefusal` events + fails replay with `error.code: replay_diverged_at_refusal` per RFC 0041 §B. Hosts advertising `version` 4 or higher MUST set this to `true`."
                 }
               }
             },
@@ -3067,6 +3076,21 @@
               "description": "Optional host cap on a single inline (`data`) or `mediaRef` part."
             }
           }
+        },
+        "callAccounting": {
+          "type": "object",
+          "description": "RFC 0248. Each flag is independent; a pack MUST NOT rely on `attempts` or `retry` unless its flag is `true`.",
+          "properties": {
+            "attempts": {
+              "type": "boolean",
+              "description": "RFC 0248 §A — every `ctx.callAI` result carries `attempts { count, outputTokens?, usageComplete, structuredOutput? }`. `count` MUST equal the provider requests the call made, retries and a natural-language fallback included (a request refused before reaching the provider is not one). `outputTokens` MUST be the sum each attempt's provider reported; when any attempt reported none, `usageComplete` MUST be `false`. `structuredOutput` is present only when `responseSchema` was supplied: `native` when the final attempt used the provider's own structured-output mechanism, `prompt` when it used a prompt-embedded schema. `usage` keeps describing the attempt whose output the result carries. On replay `attempts` MUST equal the recorded value. A call that throws carries no result."
+            },
+            "retryPolicy": {
+              "type": "boolean",
+              "description": "RFC 0248 §B — `ctx.callAI` honours an optional request `retry { maxAttempts?: 1..16, growMaxTokens?: boolean (default true) }`. The host MUST NOT send more than `maxAttempts` provider requests for the call (above its own ceiling it clamps, never refuses). With `growMaxTokens: false` no attempt's `maxTokens` MAY exceed the request's (or the host default when the request names none). RFC 0032 events still fire, and a refusal is still never retried. A malformed `retry` (a non-integer, or out of range) MUST be refused with `validation_error` and `details.field` naming the key, never ignored."
+            }
+          },
+          "additionalProperties": false
         }
       },
       "allOf": [
@@ -3273,7 +3297,7 @@
         },
         "evalSuite": {
           "type": "object",
-          "description": "RFC 0081. The host runs portable `agent-eval-suite.schema.json` suites as eval runs (`mode: eval` on `createRun`, runs.md) and terminates each with an `eval-summary.schema.json` scorecard as the run's output. Hosts that omit this block reject `mode: eval` (runs.md). A host advertising this MUST execute each task as a child agent invocation, reusing the `agent.invocation-*` bracket and the `agent.*` and `provider.usage` events, score it, and MUST emit exactly one `eval.started`, one `eval.scored` per task after that task's terminal `agent.decided`, and one `eval.completed` before `run.completed`. When a task carries `fixtures`, the host MUST inject `fixtures.toolResponses` in place of live tool calls and seed `fixtures.memorySeed` into the agent's read snapshot before the invocation; `live-shadow` alone ignores fixtures. Seeded memory is tenant-scoped and redacted like any memory write. The `eval.*` events and the summary are content-free (SECURITY invariant `eval-summary-no-content-leak`) and are recorded facts: a replay re-reads a score, never re-judges. An eval run, its suite, fixtures and summary are scoped to the caller's owner triple; a suite or summary MUST NOT be readable across tenants. A human MAY override an auto-score with an annotation on its `eval.scored` event. Composes per-task cost (`provider.usage`) and the regression baseline diff.",
+          "description": "RFC 0081. The host runs portable `agent-eval-suite.schema.json` suites as eval runs (`mode: eval` on `createRun`, runs.md) and terminates each with an `eval-summary.schema.json` scorecard as the run's output. Hosts that omit this block reject `mode: eval` (runs.md). A host advertising this MUST execute each task as a child agent invocation, reusing the `agent.invocation-*` bracket and the `agent.*` and `provider.usage` events, score it, and MUST emit exactly one `eval.started`, one `eval.scored` per task after that task's terminal `agent.decided`, and one `eval.completed` before `run.completed`. When a task carries `fixtures`, the host MUST inject `fixtures.toolResponses` in place of live tool calls and seed `fixtures.memorySeed` into the agent's read snapshot before the invocation; `live-shadow` alone ignores fixtures. Seeded memory is tenant-scoped and redacted like any memory write. The `eval.*` events and the summary are content-free (SECURITY invariant `eval-summary-no-content-leak`) and are recorded facts: a replay re-reads a score, never re-judges. An eval run, its suite, fixtures and summary are scoped to the caller's owner triple; a suite or summary MUST NOT be readable across tenants. A human MAY override an auto-score with an annotation on its `eval.scored` event. Composes per-task cost (`provider.usage`) and the regression baseline diff. RFC 0244: a suite that uses `expected.trajectory` or `kind: \"trajectory\"`, `trials.count` > 1 (or above `trials.maxTrials`), `fixtures.onMiss` or `toolResponses[].args` on a host that does not advertise the matching member (`trajectory`, `trials`, `fixtureMatching`) MUST be refused at run-create with `400 validation_error` naming the field; the host MUST NOT grade it as if the field were absent. Each trial is a recorded fact; per-task efficiency counts (`toolCallCount`, `modelCallCount`, tokens) are reported, never gated.",
           "additionalProperties": false,
           "properties": {
             "modes": {
@@ -3300,6 +3324,41 @@
               "type": "number",
               "minimum": 0,
               "description": "MAY. Host ceiling on total eval-run cost; composes RFC 0084 budget enforcement when advertised."
+            },
+            "trajectory": {
+              "type": "boolean",
+              "description": "RFC 0244 §A. `true`: the host grades `expected.trajectory` and `kind: \"trajectory\"` with the four match modes, `forbidden`, `argsMatch` and `includeDelegates`, and reports the per-task `trajectory` counts."
+            },
+            "trials": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "maxTrials"
+              ],
+              "description": "RFC 0244 §B. Presence: the host runs `trials.count` > 1, emits `eval.scored` once per task per trial with `trialIndex` and `eval.started.trialCount`, and computes the per-task `trials` block and `trialStats` by the normative formulas. A host value agrees with a formula when |host − formula| ≤ 1e-9 · max(1, |formula|); hosts MUST agree to within that tolerance, and need not reproduce any particular float evaluation order.",
+              "properties": {
+                "maxTrials": {
+                  "type": "integer",
+                  "minimum": 2,
+                  "description": "The largest `trials.count` the host runs; a suite above it is refused at run-create with `400 validation_error`."
+                }
+              }
+            },
+            "fixtureMatching": {
+              "type": "boolean",
+              "description": "RFC 0244 §D. `true`: the host honours `toolResponses[].args` / `argsMatch` (first unconsumed match) and `fixtures.onMiss`, and reports `fixtureMissCount`."
+            },
+            "fixtureErrors": {
+              "type": "boolean",
+              "description": "RFC 0245 §B/§C. `true`: a `toolResponses[]` entry with `isError: true` is returned to the agent as a tool error and recorded as `agent.tool-returned` with `error` and no `outcome` (plus `status: \"error\"` under tool hooks); it is not a fixture miss and is never retried live. A suite carrying `isError: true` on a host that does not advertise this MUST be refused with `400 validation_error`."
+            },
+            "regressionVerdict": {
+              "type": "boolean",
+              "description": "RFC 0244 §F. `true`: in `regression` mode the host reports `regression.verdict`, `method`, `alpha` and `pairedTaskCount`, pairing tasks by `taskId`."
+            },
+            "baselineSelection": {
+              "type": "boolean",
+              "description": "RFC 0251. `true`: the host accepts `evalModes` and `baselineRunId` on an eval `createRun`; a client MUST NOT send either to a host without it. The host MUST refuse with `400 validation_error`, before the run starts: either property without `mode: \"eval\"`; `evalModes` outside the suite's or the host's `modes`; `baselineRunId` without `regression` in `evalModes`, or `regression` without `baselineRunId`; an unusable baseline. A usable baseline is an eval run the caller's owner triple can read, of a suite with the same `suiteId` (any version), completed with a served `EvalSummary`. Every unusable baseline (unknown, another tenant's, not an eval run, another suite, not completed) gets the same status and code, and the refusal MUST NOT echo the id. For an accepted baseline the host MUST put the same id on `eval.started.baselineRunId` and `EvalSummary.regression.baselineRunId`, and `regression.scoreDelta` MUST be this run's `aggregateScore` minus the baseline's."
             }
           }
         },
@@ -3396,6 +3455,54 @@
           "default": false,
           "description": "RFC 0022. When `true`, the host honors `inputMapping` / `outputMapping` / `perWorkerInputMappings` / `perWorkerOutputMappings` on `DispatchConfig` — building child inputs from parent variables before dispatch and harvesting child variables into parent variables on completion. Implies (but does NOT require) `agents.dispatch: true`. Hosts that set `agents.dispatch: true` but omit / `false` this flag MUST refuse workflows that carry non-empty mapping fields at registration with `validation_error` + `details.requiredCapability: 'agents.dispatchMapping'`."
         },
+        "fanOut": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "joinModes",
+            "onChildFailureModes"
+          ],
+          "description": "RFC 0243. OPTIONAL. Present, the host accepts `fanOutPolicy: 'parallel'` on a `core.dispatch` node (`dispatch-config.schema.json`) and joins its children per `joinPolicy`. Absent, it accepts `sequential` and `reject` only. A host MUST NOT advertise `fanOut` without `agents.dispatch: true`. `joinModes` lists the `joinPolicy.mode` values it implements and `onChildFailureModes` the `joinPolicy.onChildFailure` values. `maxFanOut` is its breadth ceiling: the effective concurrency is `min(config.maxConcurrency ?? ∞, maxFanOut ?? ∞)`, children beyond it are dispatched in waves and none is dropped, and absent means no stated ceiling. `perItemInput: true` means it honors `NextWorkerDecision.nextWorkerInputs` (`orchestrator-decision.schema.json`); without it, a non-empty `nextWorkerInputs` MUST fail the dispatch node with `validation_error` and dispatch no child. A host MUST refuse a workflow whose `core.dispatch` node pins what this facet does not admit (`parallel` with `fanOut` absent, a `joinPolicy.mode` outside `joinModes`, a `joinPolicy.onChildFailure` outside `onChildFailureModes`) with `validation_error`, and `details.requiredCapability` names the seat it lacks: `agents.fanOut`, `agents.fanOut.joinModes` or `agents.fanOut.onChildFailureModes`. It MUST refuse when it loads the workflow. If such a workflow is nonetheless readable (`getWorkflow` returns it), `createRun` naming it MUST return `400 validation_error` with that `details.requiredCapability` and create no run.",
+          "properties": {
+            "joinModes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "wait-all",
+                  "quorum",
+                  "first",
+                  "race"
+                ]
+              },
+              "description": "The `joinPolicy.mode` values the host implements."
+            },
+            "onChildFailureModes": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "collect",
+                  "fail-fast",
+                  "absorb"
+                ]
+              },
+              "description": "The `joinPolicy.onChildFailure` values the host implements."
+            },
+            "maxFanOut": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "The host's ceiling on children in flight at once for one dispatch node."
+            },
+            "perItemInput": {
+              "type": "boolean",
+              "default": false,
+              "description": "When `true`, the host honors `NextWorkerDecision.nextWorkerInputs`."
+            }
+          }
+        },
         "reasoning": {
           "type": "object",
           "description": "Reasoning-event verbosity configuration.",
@@ -3429,7 +3536,7 @@
         },
         "proposals": {
           "type": "object",
-          "description": "RFC 0096 (`Active`). Reviewable learning — the host synthesizes reusable artifacts (skills/packs/templates/automations) from run/tool traces as INERT, reviewable drafts that MUST NOT influence the resolution, planning, or execution of any run until an authorized principal activates them. v2 defines no protocol path for the proposal surface. A host advertising this emits the content-free `proposal.created` / `proposal.activated` events. Activation is delegated to RFC 0051 approval-gate or RFC 0049 RBAC — no new authorization path. On `apply` the installed artifact MUST byte-match the last-persisted `artifact` (no silent re-synthesis). Hosts that omit this block do not synthesize proposals; the conformance scenarios skip cleanly. The redaction-safety of `rationale` and `provenance.sourceRunIds` and the lifecycle are in `proposal.schema.json`.",
+          "description": "RFC 0096 (`Active`), operations by RFC 0249. Reviewable learning — the host synthesizes reusable artifacts (skills/packs/templates/automations) from run/tool traces as INERT, reviewable drafts that MUST NOT influence the resolution, planning, or execution of any run until an authorized principal activates them. The surface is the seven `proposals` operations (`listProposals`, `getProposal`, `submitProposal`, `reviseProposal`, `applyProposal`, `rejectProposal`, `archiveProposal`; scopes `proposals:read`, `proposals:write`, `proposals:apply`); a host that omits this block answers each as `errors.md` §Unadvertised operations requires. A proposal another tenant owns MUST be answered exactly as an unknown id. `applied`, `rejected` and `archived` are terminal: revise, apply or reject on one, and archive on `applied` or `archived`, is refused `409 proposal_state_conflict`. A host advertising this emits the content-free `proposal.created` / `proposal.activated` events. Activation is delegated to RFC 0051 approval-gate (apply opens a gate run that suspends on an `approval` interrupt) or RFC 0049 RBAC (`proposals:apply`) — no new authorization path. On `apply` the installed artifact MUST byte-match the last-persisted `artifact` (no silent re-synthesis); `activation.installedArtifact` names the read that shows it. The redaction-safety of `rationale` and `provenance.sourceRunIds` and the lifecycle are in `proposal.schema.json`.",
           "additionalProperties": false,
           "required": [
             "artifactKinds",
@@ -3462,6 +3569,25 @@
                 "direct-rbac"
               ],
               "description": "`approval-gate`: `apply` MUST drive an RFC 0051 gate (role/scope/quorum, audited override) and MUST NOT install unless granted/overridden. `direct-rbac`: `apply` requires only the RFC 0049 scope the host advertises for activation. An `overridden` gate MUST be audited."
+            },
+            "clientDrafts": {
+              "type": "boolean",
+              "default": false,
+              "description": "RFC 0249 §B. When `true`, `submitProposal` accepts a client-authored draft. A submitted draft MUST be held to every rule a synthesized one is, inertness first, with `provenance.sourceRunIds: []`. Absent or `false`, `submitProposal` answers `404 not_found`."
+            },
+            "readback": {
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "type": "string",
+                "enum": [
+                  "agent-pack",
+                  "workflow-chain-pack",
+                  "prompt-template",
+                  "automation"
+                ]
+              },
+              "description": "RFC 0249 §D. The kinds whose installed artifact resolves through `activation.installedArtifact`; a subset of `artifactKinds`. For `prompt-template` the read is `getPromptTemplate`, only `meta` is host-owned, and while a proposal is unapplied `getPromptTemplate` / `listPromptTemplates` MUST NOT serve a template carrying its `(templateId, version)` and `POST /prompts:render` naming it MUST fail as for an unknown template. Install follows the prompts write in the applying tenant, and a refused install is `409 proposal_install_conflict`. A kind proposed but absent here has no outside read-back: its RFC 0096 rules bind but are not checkable from the wire (`workflow-chain-pack`, `agent-pack` and `automation` have no read-back at v2 today)."
             }
           }
         },
@@ -4480,6 +4606,120 @@
       ],
       "description": "core/capabilities.md#heartbeat — witness: witnessable-gated; maturity experimental/none; RFC 0060",
       "x-openwop-facets-from": "spec/v2/facets/heartbeat.schema.json"
+    },
+    "hostEvents": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "since",
+        "witness",
+        "types"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "stable",
+            "experimental",
+            "deprecated"
+          ]
+        },
+        "since": {
+          "type": "string",
+          "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$",
+          "description": "The minor of THIS HOST's own contract at which it began serving the family — a point on its protocolVersions[] timeline, not the corpus minor that introduced the family. The corpus states no per-family since (spec/v2/declaration.json carries witness and maturity and no since), and `status`/`until` are the host's stability claim absorbed from v1 tier/experimentalUntil, so all three describe the host's offering and `witness` is the record's one corpus-derived field. A since naming a minor absent from protocolVersions[] puts adjacent same-grammar fields on two different timelines and is a defect. Ruled 2026-09-11."
+        },
+        "until": {
+          "type": "string",
+          "pattern": "^((0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)|\\d{4}-\\d{2}-\\d{2})$"
+        },
+        "witness": {
+          "enum": [
+            "witnessable-unaided",
+            "witnessable-gated",
+            "seam-gated",
+            "claims-check",
+            "negative-existence"
+          ]
+        },
+        "types": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "type",
+              "delivery"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*\\.[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+              },
+              "delivery": {
+                "type": "string",
+                "enum": [
+                  "durable",
+                  "ephemeral"
+                ]
+              }
+            }
+          }
+        },
+        "replay": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minRetentionSeconds"
+          ],
+          "description": "RFC 0250. Strict replay on `streamHostEvents`, opted into per request with `replay=required` and a `Last-Event-ID` naming a durable event. A host advertising it MUST, for a cursor naming a durable event the caller can see that was emitted less than `minRetentionSeconds` ago, replay every durable event visible to the caller committed after it, each once and in the order the host committed them (events whose commits were concurrent have no defined order), never the cursor event itself and never an ephemeral event, then continue live with no gap. With `replay=required` and an absent or empty `Last-Event-ID`, the stream opens live and replays nothing. A cursor older than `minRetentionSeconds` MAY be resumed or refused. For any cursor it does not resume (unknown, another tenant's, an ephemeral event's, older than the bound, or one whose event was removed) it MUST answer `409 host_event_resync_required` before any SSE byte, with a status and body byte-identical across those cases. An event removed by lawful deletion, tenant removal or revoked visibility is left out of replay. Without `replay=required` behaviour is unchanged; a host that omits this member MAY ignore the parameter, and a client MUST NOT send it unless the host advertises the member.",
+          "properties": {
+            "minRetentionSeconds": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "How long after emission a durable event stays resumable as a cursor, across ordinary process replacement and whatever the volume of newer events."
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "const": "stable"
+              }
+            }
+          },
+          "then": {
+            "not": {
+              "required": [
+                "until"
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "status": {
+                "enum": [
+                  "experimental",
+                  "deprecated"
+                ]
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "until"
+            ]
+          }
+        }
+      ],
+      "description": "core/capabilities.md#hostEvents — witness: witnessable-gated; maturity experimental/none; RFC 0236",
+      "x-openwop-facets-from": "spec/v2/facets/hostEvents.schema.json"
     },
     "toolHooks": {
       "type": "object",
@@ -5941,6 +6181,16 @@
         "declared": {
           "type": "boolean",
           "description": "When `true`, the host documents its nondeterminism (it does not guarantee deterministic replay). A bare flag for v1.x (RFC 0085 §UQ2); a structured per-source policy is a future refinement."
+        },
+        "sources": {
+          "type": "array",
+          "uniqueItems": true,
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "pattern": "^(clock|random|id|env|x-[a-z0-9][a-z0-9-]*)$"
+          },
+          "description": "RFC 0237 §A. The nondeterministic sources the host declares rather than suppresses: `clock`, `random`, `id` (identifiers minted during a run), `env` (host configuration read during a run), or a vendor `x-*`. Each value drawn from a listed source is recorded where it is read, and a `replay` fork reproduces it (replay.md §Declared nondeterminism)."
         }
       },
       "allOf": [
@@ -5978,8 +6228,8 @@
           }
         }
       ],
-      "description": "core/capabilities.md#nondeterminismPolicy — witness: claims-check; maturity experimental/none; RFC 0085",
-      "x-openwop-seeded-from": "v1"
+      "description": "core/capabilities.md#nondeterminismPolicy — witness: witnessable-gated; maturity experimental/none; RFC 0085",
+      "x-openwop-facets-from": "spec/v2/facets/nondeterminismPolicy.schema.json"
     },
     "workspace": {
       "type": "object",
@@ -6159,6 +6409,10 @@
           "type": "integer",
           "minimum": 1,
           "description": "Per-plugin entry-bundle byte ceiling the host will load."
+        },
+        "served": {
+          "type": "boolean",
+          "description": "RFC 0238 §A — `true` means the host serves `GET /host/ui-plugins/{packName}/{pluginId}/frame` (the frame document, isolation and egress in its `Content-Security-Policy`) and `POST /host/ui-plugins/{packName}/{pluginId}/rpc` (the `ui-plugin/1` dispatch) for every plugin it has installed (`packs.md` §Front-end plugin packs). A host advertising `uiPlugins` SHOULD advertise it."
         }
       },
       "allOf": [
@@ -6197,7 +6451,7 @@
         }
       ],
       "description": "core/capabilities.md#uiPlugins — witness: witnessable-gated; maturity experimental/none; RFC 0117",
-      "x-openwop-seeded-from": "v1"
+      "x-openwop-facets-from": "spec/v2/facets/uiPlugins.schema.json"
     },
     "sql": {
       "type": "object",

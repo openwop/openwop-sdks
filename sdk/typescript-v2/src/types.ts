@@ -204,7 +204,26 @@ export interface CreateRunRequest {
   evalSuiteRef?: string;
   /** RFC 0081. The manifest agent the eval suite targets. Required when `mode === 'eval'`. */
   agentId?: string;
+  /**
+   * RFC 0251 §B. The RFC 0081 §D modes this eval run exercises: a non-empty subset of the
+   * suite's and the host's `modes` (absent ⇒ the host's default). Only with `mode: 'eval'`, and
+   * only to a host advertising `agents.evalSuite.baselineSelection` (§A: a client MUST NOT send it
+   * otherwise).
+   */
+  evalModes?: readonly EvalMode[];
+  /**
+   * RFC 0251 §B. The prior eval run a `regression` run is compared against; requires `regression`
+   * in `evalModes`. Only to a host advertising `agents.evalSuite.baselineSelection`. An unusable
+   * baseline is refused `400 validation_error`, identically whatever the reason (§C).
+   */
+  baselineRunId?: string;
 }
+
+/**
+ * An RFC 0081 §D eval mode.
+ * Mirror of `schemas/v2/agent-eval-suite.schema.json#/properties/modes/items`
+ */
+export type EvalMode = 'golden' | 'rubric' | 'adversarial' | 'regression' | 'live-shadow';
 
 export interface CreateRunResponse {
   runId: string;
@@ -1927,4 +1946,171 @@ export interface DeadLetteredTriggerDelivery {
 export interface TriggerDeadLetterPage {
   deliveries: readonly DeadLetteredTriggerDelivery[];
   nextCursor?: string;
+}
+
+// ── RFC 0249 — proposal operations (gated on `agents.proposals`) ─────────
+
+/**
+ * The reusable artifact kind a proposal carries.
+ * Mirror of `schemas/v2/proposal.schema.json#/properties/kind`
+ */
+export type ProposalKind = 'agent-pack' | 'workflow-chain-pack' | 'prompt-template' | 'automation';
+
+/**
+ * A proposal's lifecycle state; only `applied` may influence a run.
+ * Mirror of `schemas/v2/proposal.schema.json#/properties/state`
+ */
+export type ProposalState = 'draft' | 'revised' | 'applied' | 'rejected' | 'archived';
+
+/** `schemas/v2/proposal.schema.json` — a host-held proposal. `artifact` is the kind's own shape. */
+export interface Proposal {
+  id: string;
+  kind: ProposalKind;
+  state: ProposalState;
+  title?: string;
+  rationale?: string;
+  artifact: Record<string, unknown>;
+  /** The value `proposals.apply` binds to (RFC 0249 §B). */
+  artifactDigest?: string;
+  provenance: { sourceRunIds: readonly string[]; synthesizerModel?: string };
+  duplicateOf?: string | null;
+  owner: { tenant: string; workspace?: string; principal?: string };
+  /** Populated only when `state: 'applied'`. */
+  activation?: ProposalActivation | null;
+  createdAt: string;
+  updatedAt?: string;
+}
+
+/** `Proposal.activation` (RFC 0249 §C). */
+export interface ProposalActivation {
+  approvalId?: string | null;
+  /** Opaque; a client MUST NOT treat it as resolvable. `installedArtifact` is the resolvable form. */
+  installedArtifactRef?: string;
+  /** The v2 GET operation (in the applying tenant's scope) that serves the installed artifact. */
+  installedArtifact?: { kind: ProposalKind; operationId: string; id: string; version?: string };
+}
+
+/** `GET /proposals` query. */
+export interface ListProposalsRequest {
+  state?: ProposalState;
+  kind?: ProposalKind;
+  limit?: number;
+  cursor?: string;
+}
+
+/** `schemas/v2/proposal-list-response.schema.json` — one page, caller's tenant and workspace only. */
+export interface ProposalListResponse {
+  items: readonly Proposal[];
+  nextCursor?: string;
+}
+
+/** `schemas/v2/proposal-submit.schema.json` — served only when `agents.proposals.clientDrafts` is `true`. */
+export interface SubmitProposalRequest {
+  kind: ProposalKind;
+  artifact: Record<string, unknown>;
+  title?: string;
+  rationale?: string;
+}
+
+/** `schemas/v2/proposal-revise.schema.json` — sets `state: 'revised'`; never activates. */
+export interface ReviseProposalRequest {
+  artifact?: Record<string, unknown>;
+  title?: string;
+  rationale?: string;
+}
+
+/** `schemas/v2/proposal-apply.schema.json` — `artifactDigest` binds the apply to the read it follows. */
+export interface ApplyProposalRequest {
+  artifactDigest?: string;
+}
+
+/** `POST /proposals/{proposalId}:reject` body; `reason` is SR-1 redaction-safe. */
+export interface RejectProposalRequest {
+  reason?: string;
+}
+
+/**
+ * `POST /proposals/{proposalId}:apply` answers `200` with the applied proposal under
+ * `direct-rbac`, or `202 {runId}` for an `approval-gate` run that suspends on an approval.
+ */
+export type ApplyProposalResponse = Proposal | { runId: string };
+
+// ── Connection-provider registry (gated on `connections.providerRead`) ──
+
+/**
+ * `connection-provider-registry.schema.json#/$defs/provider` — also the answer to `resolve`.
+ * Mirror of `source` at `schemas/v2/connection-provider-registry.schema.json#/$defs/provider/properties/source`
+ */
+export interface ConnectionProvider {
+  id: string;
+  source: 'builtin' | 'pack';
+  /** Present exactly when `source` is `pack`. */
+  packName?: string;
+}
+
+/**
+ * `connection-provider-registry.schema.json#/$defs/refusal` — one refused pack registration.
+ * Mirror of `code` at `schemas/v2/connection-provider-registry.schema.json#/$defs/refusal/properties/code`
+ */
+export interface ConnectionProviderRefusal {
+  packName: string;
+  providerId: string;
+  code: 'connection_provider_conflict' | 'connection_provider_unresolved';
+  /** For a conflict: the `packName` that holds the id. */
+  heldBy?: string;
+}
+
+/** `schemas/v2/connection-provider-registry.schema.json` — host-global, no tenant data. */
+export interface ConnectionProviderRegistry {
+  providers: readonly ConnectionProvider[];
+  refusals: readonly ConnectionProviderRefusal[];
+}
+
+// ── Host test events (bound when `hostEvents.types[]` lists a `host-test.*` type) ──
+
+/** `POST /host/events/test` body. */
+export interface EmitTestHostEventRequest {
+  /** The delivery class whose reserved `host-test.*` type is emitted. */
+  delivery: 'durable' | 'ephemeral';
+  workspaceId?: string;
+}
+
+/**
+ * `POST /host/events/test` `202` body; `eventId` is the emitted envelope's.
+ * Authority `api/v2/openapi.yaml emitTestHostEvent — the 202 body is inline there, with no schemas/v2 file`
+ */
+export interface EmitTestHostEventResponse {
+  eventId: string;
+  type: 'host-test.durable-triggered' | 'host-test.ephemeral-triggered';
+}
+
+// ── Front-end plugin frame and RPC (gated on `uiPlugins.served`) ─────────
+
+/**
+ * `ui-plugin-message.schema.json#/$defs/request` — one `ui-plugin/1` call.
+ * Mirror of `method` at `schemas/v2/ui-plugin-message.schema.json#/$defs/request/properties/method`
+ */
+export interface UiPluginRequest {
+  openwop: 'ui-plugin/1';
+  type: 'request';
+  id: number;
+  method: 'artifact.read' | 'artifact.write' | 'host.toast' | 'host.navigate' | 'host.announce';
+  params?: Record<string, unknown>;
+}
+
+/**
+ * `ui-plugin-message.schema.json#/$defs/response` — a refused call is `ok: false` inside a `200`.
+ * Mirror of `code` at `schemas/v2/ui-plugin-message.schema.json#/$defs/error/properties/code`
+ */
+export interface UiPluginResponse {
+  openwop: 'ui-plugin/1';
+  type: 'response';
+  id: number;
+  ok: boolean;
+  result?: Record<string, unknown>;
+  error?: {
+    code: 'method_not_allowed' | 'artifact_conflict' | 'artifact_not_found' | 'unauthorized' | 'internal';
+    message?: string;
+    currentVersion?: string;
+  };
 }
