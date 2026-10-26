@@ -86,7 +86,9 @@ class ClientWireTests(unittest.TestCase):
     def test_content_delete_page(self) -> None:
         seen, urlopen = _stub(204)
         with mock.patch.object(client_module, "urlopen", urlopen):
-            self.assertIsNone(OpenwopClient("https://h.example", "k").content_delete_page("page 1"))
+            self.assertIsNone(
+                OpenwopClient("https://h.example", "k").content_delete_page("page 1")
+            )
         self.assertEqual(seen[0].get_method(), "DELETE")
         self.assertEqual(seen[0].full_url, "https://h.example/content/pages/page%201")
         self.assertEqual(seen[0].get_header("Authorization"), "Bearer k")

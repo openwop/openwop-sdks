@@ -2,6 +2,10 @@
 
 The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
+## [Unreleased]
+
+- **Formatting is gated (tooling only, no behaviour change).** Every hand-written `.py` file is `ruff format`ted and `sdks-check` step 5 now runs `ruff format --check` (generated `_generated.py` and Markdown code blocks excluded). Local runs and CI pin `ruff==0.16.3`. The step also now fails on a `ruff check` finding: it used to run `ruff check . && echo ok` under `set -e`, which ignores a failure on the left of `&&`.
+
 ## [2.7.0] — 2026-10-26 — corpus `v2.46.32`: eval fixtures from a recorded run (RFC 0252), eval baseline selection (RFC 0251), proposals, connection providers, plugin frame + RPC
 
 - **`runs_create` recorded fixtures (RFC 0252).** `CreateRunRequest` gains `fixtureRuns: dict[str, str] | None` (`taskId` → source run id), sent at the body root and omitted when `None`. Only with `mode="eval"`, and only to a host advertising `agents.evalSuite.recordedFixtures` (a client MUST NOT send it otherwise); an unusable source run is refused `400 validation_error`, identically whatever the reason. The host echoes the accepted map on `eval.started` `fixtureRuns`.

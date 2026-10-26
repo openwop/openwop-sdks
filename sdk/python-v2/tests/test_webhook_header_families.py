@@ -28,29 +28,49 @@ HEX = hmac.new(SECRET.encode(), f"{TS}.".encode() + BODY, hashlib.sha256).hexdig
 
 class VerifyTests(unittest.TestCase):
     def test_sha256_form_verifies(self) -> None:
-        out = verify_webhook_signature(SECRET, f"sha256={HEX}", str(TS), BODY, now_seconds=TS)
+        out = verify_webhook_signature(
+            SECRET, f"sha256={HEX}", str(TS), BODY, now_seconds=TS
+        )
         self.assertEqual(out, VerifyValid())
 
     def test_removed_v1_form_bare_hex_and_unknown_prefix_are_malformed(self) -> None:
         for value in (f"v1={HEX}", HEX, f"md5={HEX}"):
             with self.subTest(value=value):
-                out = verify_webhook_signature(SECRET, value, str(TS), BODY, now_seconds=TS)
-                self.assertEqual(out, VerifyInvalid(reason="malformed_signature_header"))
+                out = verify_webhook_signature(
+                    SECRET, value, str(TS), BODY, now_seconds=TS
+                )
+                self.assertEqual(
+                    out, VerifyInvalid(reason="malformed_signature_header")
+                )
 
     def test_unrecognized_algorithm_rejected_v1_accepted(self) -> None:
         bad = verify_webhook_signature(
-            SECRET, f"sha256={HEX}", str(TS), BODY, now_seconds=TS, algorithm_header="v2"
+            SECRET,
+            f"sha256={HEX}",
+            str(TS),
+            BODY,
+            now_seconds=TS,
+            algorithm_header="v2",
         )
         self.assertEqual(bad, VerifyInvalid(reason="unsupported_signature_algorithm"))
         ok = verify_webhook_signature(
-            SECRET, f"sha256={HEX}", str(TS), BODY, now_seconds=TS, algorithm_header="v1"
+            SECRET,
+            f"sha256={HEX}",
+            str(TS),
+            BODY,
+            now_seconds=TS,
+            algorithm_header="v1",
         )
         self.assertEqual(ok, VerifyValid())
 
     def test_freshness_window(self) -> None:
-        late = verify_webhook_signature(SECRET, f"sha256={HEX}", str(TS), BODY, now_seconds=TS + 301)
+        late = verify_webhook_signature(
+            SECRET, f"sha256={HEX}", str(TS), BODY, now_seconds=TS + 301
+        )
         self.assertEqual(late, VerifyInvalid(reason="timestamp_expired"))
-        early = verify_webhook_signature(SECRET, f"sha256={HEX}", str(TS), BODY, now_seconds=TS - 301)
+        early = verify_webhook_signature(
+            SECRET, f"sha256={HEX}", str(TS), BODY, now_seconds=TS - 301
+        )
         self.assertEqual(early, VerifyInvalid(reason="timestamp_too_far_in_future"))
 
     def test_parse_signature_value(self) -> None:
@@ -65,7 +85,10 @@ class SignTests(unittest.TestCase):
         sig, ts = sign_webhook_delivery(SECRET, TS, BODY)
         self.assertEqual(sig, f"sha256={HEX}")
         self.assertEqual(ts, str(TS))
-        self.assertEqual(verify_webhook_signature(SECRET, sig, ts, BODY, now_seconds=TS), VerifyValid())
+        self.assertEqual(
+            verify_webhook_signature(SECRET, sig, ts, BODY, now_seconds=TS),
+            VerifyValid(),
+        )
 
     def test_delivery_headers_carry_openwop_family_and_overlap_twins_only(self) -> None:
         headers = webhook_delivery_headers(SECRET, TS, BODY)
@@ -79,7 +102,9 @@ class SignTests(unittest.TestCase):
 
 class ReadTests(unittest.TestCase):
     def test_exactly_two_families_in_spec_order(self) -> None:
-        self.assertEqual([f[3] for f in WEBHOOK_HEADER_FAMILIES], ["openwop", "x-openwop"])
+        self.assertEqual(
+            [f[3] for f in WEBHOOK_HEADER_FAMILIES], ["openwop", "x-openwop"]
+        )
 
     def test_openwop_wins_case_insensitively_with_algorithm(self) -> None:
         read = read_webhook_headers(
@@ -91,20 +116,37 @@ class ReadTests(unittest.TestCase):
                 "OPENWOP-SIGNATURE-ALGORITHM": "v1",
             }
         )
-        self.assertEqual(read, WebhookHeaderRead(signature="b", timestamp="2", family="openwop", algorithm="v1"))
+        self.assertEqual(
+            read,
+            WebhookHeaderRead(
+                signature="b", timestamp="2", family="openwop", algorithm="v1"
+            ),
+        )
 
     def test_x_openwop_accepted_through_the_overlap(self) -> None:
-        read = read_webhook_headers({"X-OPENWOP-SIGNATURE": "a", "X-openwop-Timestamp": "1"})
-        self.assertEqual(read, WebhookHeaderRead(signature="a", timestamp="1", family="x-openwop"))
+        read = read_webhook_headers(
+            {"X-OPENWOP-SIGNATURE": "a", "X-openwop-Timestamp": "1"}
+        )
+        self.assertEqual(
+            read, WebhookHeaderRead(signature="a", timestamp="1", family="x-openwop")
+        )
 
     def test_legacy_family_not_read_and_incomplete_skipped(self) -> None:
         self.assertIsNone(
-            read_webhook_headers({"openwop-webhook-signature": "c", "openwop-webhook-timestamp": "3"})
+            read_webhook_headers(
+                {"openwop-webhook-signature": "c", "openwop-webhook-timestamp": "3"}
+            )
         )
         read = read_webhook_headers(
-            {"OpenWOP-Signature": "b", "X-openwop-Signature": "a", "X-openwop-Timestamp": "1"}
+            {
+                "OpenWOP-Signature": "b",
+                "X-openwop-Signature": "a",
+                "X-openwop-Timestamp": "1",
+            }
         )
-        self.assertEqual(read, WebhookHeaderRead(signature="a", timestamp="1", family="x-openwop"))
+        self.assertEqual(
+            read, WebhookHeaderRead(signature="a", timestamp="1", family="x-openwop")
+        )
         self.assertIsNone(read_webhook_headers({"Content-Type": "application/json"}))
 
 

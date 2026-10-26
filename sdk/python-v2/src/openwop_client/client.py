@@ -205,7 +205,9 @@ _CAPABILITY_METADATA_FIELDS = (
 
 
 def _capability_record_from_dict(d: dict[str, Any]) -> CapabilityRecord:
-    facets = {k: v for k, v in d.items() if k not in ("status", "since", "until", "witness")}
+    facets = {
+        k: v for k, v in d.items() if k not in ("status", "since", "until", "witness")
+    }
     return CapabilityRecord(
         status=cast(CapabilityStatus, str(d["status"])),
         since=str(d["since"]),
@@ -221,7 +223,11 @@ def _capabilities_from_dict(d: dict[str, Any]) -> Capabilities:
     root key is metadata (typed below) and the document is kept in ``raw``."""
     families: dict[str, CapabilityRecord] = {}
     for key, value in d.items():
-        if key in _CAPABILITY_FAMILY_KEY_SET and isinstance(value, dict) and "status" in value:
+        if (
+            key in _CAPABILITY_FAMILY_KEY_SET
+            and isinstance(value, dict)
+            and "status" in value
+        ):
             families[key] = _capability_record_from_dict(value)
     meta: dict[str, Any] = {k: d.get(k) for k in _CAPABILITY_METADATA_FIELDS}
     return Capabilities(
@@ -484,7 +490,9 @@ def _eval_summary_from_dict(d: dict[str, Any]) -> EvalSummary:
             schemaValid=t.get("schemaValid"),
             safetyFindings=(
                 [
-                    EvalSafetyFinding(kind=str(f["kind"]), severity=cast(Any, f["severity"]))
+                    EvalSafetyFinding(
+                        kind=str(f["kind"]), severity=cast(Any, f["severity"])
+                    )
                     for f in t["safetyFindings"]
                 ]
                 if t.get("safetyFindings") is not None
@@ -551,7 +559,9 @@ def _proposal_from_dict(d: dict[str, Any]) -> Proposal:
 
 
 def _connection_provider_from_dict(d: dict[str, Any]) -> ConnectionProvider:
-    return ConnectionProvider(id=str(d["id"]), source=d["source"], packName=d.get("packName"))
+    return ConnectionProvider(
+        id=str(d["id"]), source=d["source"], packName=d.get("packName")
+    )
 
 
 def _run_diff_from_dict(d: dict[str, Any]) -> RunDiffResponse:
@@ -582,7 +592,9 @@ def protocol_version_header(major: int) -> str:
     """Render the ``OpenWOP-Version`` request value for a major: ``<major>.0``
     (the OpenAPI grammar is ``<major>.<minor>``)."""
     if not isinstance(major, int) or isinstance(major, bool) or major < 0:
-        raise ValueError(f"OpenwopClient: major must be a non-negative integer (got {major!r})")
+        raise ValueError(
+            f"OpenwopClient: major must be a non-negative integer (got {major!r})"
+        )
     return f"{major}.0"
 
 
@@ -655,7 +667,9 @@ class OpenwopClient:
         dedup: bool = False,
     ) -> CreateRunResponse:
         headers = self._mutation_headers(idempotency_key=idempotency_key, dedup=dedup)
-        d = self._request_json("POST", "/runs", body=_to_jsonable(body), headers=headers)
+        d = self._request_json(
+            "POST", "/runs", body=_to_jsonable(body), headers=headers
+        )
         return CreateRunResponse(
             runId=str(d["runId"]),
             status=cast(RunStatus, d["status"]),
@@ -893,7 +907,9 @@ class OpenwopClient:
                     deadLetteredAt=str(x["deadLetteredAt"]),
                     expiresAt=str(x["expiresAt"]),
                     reason=x["reason"],
-                    lastStatus=int(x["lastStatus"]) if x.get("lastStatus") is not None else None,
+                    lastStatus=int(x["lastStatus"])
+                    if x.get("lastStatus") is not None
+                    else None,
                 )
                 for x in d.get("deliveries", [])
             ],
@@ -1002,9 +1018,7 @@ class OpenwopClient:
             raise
         return _content_page_response_from_dict(d)
 
-    def content_create_page(
-        self, page: LocalizedContentPage
-    ) -> LocalizedContentPage:
+    def content_create_page(self, page: LocalizedContentPage) -> LocalizedContentPage:
         """`POST /content/pages` — create a page record (admin). Raises
         ``WopError`` on non-2xx (400/401/403)."""
         d = self._request_json("POST", "/content/pages", body=_to_jsonable(page))
@@ -1045,9 +1059,7 @@ class OpenwopClient:
         self, settings: LocalizedContentLanguageSettings
     ) -> LocalizedContentLanguageSettings:
         """`PUT /content/settings` — replace language settings (admin)."""
-        d = self._request_json(
-            "PUT", "/content/settings", body=_to_jsonable(settings)
-        )
+        d = self._request_json("PUT", "/content/settings", body=_to_jsonable(settings))
         return _content_settings_from_dict(d)
 
     # ── RFC 0099 Trigger subscriptions (capabilities.triggerBridge) ────────
@@ -1099,7 +1111,9 @@ class OpenwopClient:
                     reason=x["reason"],
                     deadLetteredAt=str(x["deadLetteredAt"]),
                     expiresAt=str(x["expiresAt"]),
-                    stateChange=dict(x["stateChange"]) if x.get("stateChange") is not None else None,
+                    stateChange=dict(x["stateChange"])
+                    if x.get("stateChange") is not None
+                    else None,
                 )
                 for x in d.get("deliveries", [])
             ],
@@ -1141,24 +1155,36 @@ class OpenwopClient:
         when ``agents.proposals.clientDrafts`` is ``true``."""
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         return _proposal_from_dict(
-            self._request_json("POST", "/proposals", body=_to_jsonable(body), headers=headers)
+            self._request_json(
+                "POST", "/proposals", body=_to_jsonable(body), headers=headers
+            )
         )
 
     def proposals_get(self, proposal_id: str) -> Proposal:
         """``GET /proposals/{proposalId}`` — carries ``artifactDigest``, the value
         ``proposals_apply`` binds to."""
-        return _proposal_from_dict(self._request_json("GET", f"/proposals/{quote(proposal_id, safe='')}"))
+        return _proposal_from_dict(
+            self._request_json("GET", f"/proposals/{quote(proposal_id, safe='')}")
+        )
 
-    def proposals_revise(self, proposal_id: str, body: ReviseProposalRequest) -> Proposal:
+    def proposals_revise(
+        self, proposal_id: str, body: ReviseProposalRequest
+    ) -> Proposal:
         """``PATCH /proposals/{proposalId}`` — sets ``state: revised`` and never
         activates; ``409`` on a terminal or stale proposal."""
         return _proposal_from_dict(
-            self._request_json("PATCH", f"/proposals/{quote(proposal_id, safe='')}", body=_to_jsonable(body))
+            self._request_json(
+                "PATCH",
+                f"/proposals/{quote(proposal_id, safe='')}",
+                body=_to_jsonable(body),
+            )
         )
 
     def proposals_archive(self, proposal_id: str) -> Proposal:
         """``DELETE /proposals/{proposalId}`` — sets ``state: archived``; archiving uninstalls nothing."""
-        return _proposal_from_dict(self._request_json("DELETE", f"/proposals/{quote(proposal_id, safe='')}"))
+        return _proposal_from_dict(
+            self._request_json("DELETE", f"/proposals/{quote(proposal_id, safe='')}")
+        )
 
     def proposals_apply(
         self,
@@ -1171,19 +1197,28 @@ class OpenwopClient:
         ``agents.proposals.activation``: the applied proposal (``direct-rbac``),
         or the approval-gate run (``approval-gate``, a ``202 {runId}``)."""
         headers = self._mutation_headers(idempotency_key=idempotency_key)
-        body = {"artifactDigest": artifact_digest} if artifact_digest is not None else {}
+        body = (
+            {"artifactDigest": artifact_digest} if artifact_digest is not None else {}
+        )
         d = self._request_json(
-            "POST", f"/proposals/{quote(proposal_id, safe='')}:apply", body=body, headers=headers
+            "POST",
+            f"/proposals/{quote(proposal_id, safe='')}:apply",
+            body=body,
+            headers=headers,
         )
         if "id" not in d and "runId" in d:
             return ApplyProposalGateResponse(runId=str(d["runId"]))
         return _proposal_from_dict(d)
 
-    def proposals_reject(self, proposal_id: str, *, reason: str | None = None) -> Proposal:
+    def proposals_reject(
+        self, proposal_id: str, *, reason: str | None = None
+    ) -> Proposal:
         """``POST /proposals/{proposalId}:reject`` — sets ``state: rejected``."""
         body = {"reason": reason} if reason is not None else {}
         return _proposal_from_dict(
-            self._request_json("POST", f"/proposals/{quote(proposal_id, safe='')}:reject", body=body)
+            self._request_json(
+                "POST", f"/proposals/{quote(proposal_id, safe='')}:reject", body=body
+            )
         )
 
     # ── Connection providers (gated on ``connections.providerRead``) ────
@@ -1192,7 +1227,9 @@ class OpenwopClient:
         against, and the pack registrations it refused."""
         d = self._request_json("GET", "/connection-providers")
         return ConnectionProviderRegistry(
-            providers=[_connection_provider_from_dict(x) for x in d.get("providers", [])],
+            providers=[
+                _connection_provider_from_dict(x) for x in d.get("providers", [])
+            ],
             refusals=[
                 ConnectionProviderRefusal(
                     packName=str(x["packName"]),
@@ -1212,7 +1249,9 @@ class OpenwopClient:
         ``404 connection_provider_unresolved``."""
         qs = "?" + urlencode({"pack": pack}) if pack is not None else ""
         return _connection_provider_from_dict(
-            self._request_json("GET", f"/connection-providers/{quote(provider_id, safe='')}{qs}")
+            self._request_json(
+                "GET", f"/connection-providers/{quote(provider_id, safe='')}{qs}"
+            )
         )
 
     def agents_list(self) -> list[AgentInventoryEntry] | None:
@@ -1240,14 +1279,14 @@ class OpenwopClient:
             raise
         return _agent_inventory_entry_from_dict(d)
 
-    def agents_list_deployments(
-        self, agent_id: str
-    ) -> list[AgentDeployment] | None:
+    def agents_list_deployments(self, agent_id: str) -> list[AgentDeployment] | None:
         """RFC 0082 §C/§E — list a manifest agent's deployment records
         (``GET /agents/{agentId}/deployments``). Returns ``None`` when the host
         doesn't advertise ``capabilities.agents.deployment`` (the endpoint 404s)."""
         try:
-            d = self._request_json_any("GET", f"/agents/{quote(agent_id, safe='')}/deployments")
+            d = self._request_json_any(
+                "GET", f"/agents/{quote(agent_id, safe='')}/deployments"
+            )
         except WopError as err:
             if err.status == 404:
                 return None
@@ -1319,7 +1358,9 @@ class OpenwopClient:
             raise
         return AgentOrgChart(
             owner=dict(d.get("owner", {})),
-            departments=[_org_department_from_dict(x) for x in d.get("departments", [])],
+            departments=[
+                _org_department_from_dict(x) for x in d.get("departments", [])
+            ],
             members=[_org_member_from_dict(x) for x in d.get("members", [])],
         )
 
@@ -1433,9 +1474,7 @@ class OpenwopClient:
             params["libraryId"] = library_id
         qs = "?" + urlencode(params) if params else ""
         try:
-            d = self._request_json(
-                "GET", f"/prompts/{quote(template_id, safe='')}{qs}"
-            )
+            d = self._request_json("GET", f"/prompts/{quote(template_id, safe='')}{qs}")
         except WopError as err:
             if err.status == 404:
                 return None
@@ -1551,10 +1590,7 @@ class OpenwopClient:
         on BOTH ``run_id`` and ``against``. Returns ``None`` when the host
         doesn't implement the endpoint (404). ``divergedAtSeq`` is ``None`` and
         ``eventDiffs`` is empty when the two logs are identical."""
-        path = (
-            f"/runs/{project_id(run_id)}:diff"
-            f"?against={project_id(against)}"
-        )
+        path = f"/runs/{project_id(run_id)}:diff?against={project_id(against)}"
         try:
             d = self._request_json("GET", path)
         except WopError as err:
@@ -1577,17 +1613,12 @@ class OpenwopClient:
             raise
         return _eval_summary_from_dict(d)
 
-    def runs_get_artifact(
-        self, run_id: str, artifact_id: str
-    ) -> dict[str, Any] | None:
+    def runs_get_artifact(self, run_id: str, artifact_id: str) -> dict[str, Any] | None:
         """Read a run-produced artifact by id
         (``GET /runs/{runId}/artifacts/{artifactId}``). The artifact body is
         implementation-defined per the host. Returns ``None`` on 404 (no such
         artifact, or the host doesn't store artifacts)."""
-        path = (
-            f"/runs/{project_id(run_id)}"
-            f"/artifacts/{quote(artifact_id, safe='')}"
-        )
+        path = f"/runs/{project_id(run_id)}/artifacts/{quote(artifact_id, safe='')}"
         try:
             return self._request_json("GET", path)
         except WopError as err:
@@ -1810,7 +1841,9 @@ class OpenwopClient:
         )
 
     def interrupts_inspect_by_token(self, token: str) -> InterruptByTokenInspection:
-        d = self._request_json("GET", f"/interrupts/{quote(token, safe='')}", authenticated=False)
+        d = self._request_json(
+            "GET", f"/interrupts/{quote(token, safe='')}", authenticated=False
+        )
         return InterruptByTokenInspection(
             kind=d["kind"],
             key=str(d["key"]),
@@ -1897,7 +1930,9 @@ class OpenwopClient:
             raise WopError(
                 200,
                 text,
-                ErrorEnvelope(error="invalid_json", message="Expected JSON object or array"),
+                ErrorEnvelope(
+                    error="invalid_json", message="Expected JSON object or array"
+                ),
                 traceparent,
             )
         return decoded
@@ -1944,7 +1979,9 @@ class OpenwopClient:
                 traceparent = resp.headers.get("traceparent")
         except HTTPError as http_err:
             raw_text = http_err.read().decode("utf-8", errors="replace")
-            traceparent = http_err.headers.get("traceparent") if http_err.headers else None
+            traceparent = (
+                http_err.headers.get("traceparent") if http_err.headers else None
+            )
             envelope = self._parse_envelope(raw_text)
             raise WopError(http_err.code, raw_text, envelope, traceparent) from http_err
         except URLError as url_err:

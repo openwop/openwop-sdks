@@ -31,7 +31,7 @@ RUFF=""
 if command -v ruff >/dev/null 2>&1; then
   RUFF="ruff"
 elif command -v uvx >/dev/null 2>&1; then
-  RUFF="uvx ruff@0.6.9"
+  RUFF="uvx ruff@0.16.3"
 fi
 
 echo "[1/8] TypeScript SDK 1.x (build + emit dist/)..."
@@ -91,7 +91,11 @@ echo "[5/8] Python SDK 2.x (generated registries --check + ruff + unit tests)...
     for f in src/openwop_client/*.py; do "$PY" -c "import ast; ast.parse(open('$f').read())" || exit 1; done
     "$PY" -c "import sys; sys.path.insert(0, 'src'); import openwop_client; print('  openwop_client', openwop_client.__version__, 'imports clean')"
     if [[ -n "$RUFF" ]]; then
-      $RUFF check . >/dev/null && echo "  ok: ruff clean"
+      # Bare commands, not `cmd && echo ok`: set -e ignores a failure on the left of &&.
+      $RUFF check .
+      echo "  ok: ruff clean"
+      $RUFF format --check .
+      echo "  ok: ruff format clean"
     else
       echo "  WARN: ruff not found (install ruff or uv); skipping the lint gate for sdk/python-v2."
     fi

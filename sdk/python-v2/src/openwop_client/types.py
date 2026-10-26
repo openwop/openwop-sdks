@@ -105,6 +105,7 @@ class Capabilities:
 
 # ── RunSnapshot ─────────────────────────────────────────────────────────
 
+
 @dataclass(frozen=True)
 class RunSnapshotError:
     code: str
@@ -184,6 +185,7 @@ class RunSnapshot:
 
 
 # ── RunOptions / configurable ───────────────────────────────────────────
+
 
 @dataclass
 class RunConfigurable:
@@ -488,6 +490,7 @@ class RunAncestryResponse:
 
 # ── HITL ────────────────────────────────────────────────────────────────
 
+
 @dataclass
 class ResolveInterruptRequest:
     resumeValue: Any
@@ -524,6 +527,7 @@ class InterruptByTokenInspection:
 
 
 # ── Events / poll ───────────────────────────────────────────────────────
+
 
 @dataclass(frozen=True)
 class RunEventDoc:
@@ -607,7 +611,13 @@ class CompensationProjection:
 
     runId: str
     status: Literal[
-        "none", "pending", "running", "completed", "partial", "failed", "manual-intervention"
+        "none",
+        "pending",
+        "running",
+        "completed",
+        "partial",
+        "failed",
+        "manual-intervention",
     ]
     plan: list[CompensationPlanEntry]
     attempts: list[CompensationAttempt]
@@ -682,7 +692,10 @@ def is_vendor_error_code(value: object) -> bool:
     """True for a well-formed vendor code (``<org>.<name>``, ``openwop.``
     reserved); does not check org registration."""
 
-    return isinstance(value, str) and VENDOR_ERROR_CODE_PATTERN.fullmatch(value) is not None
+    return (
+        isinstance(value, str)
+        and VENDOR_ERROR_CODE_PATTERN.fullmatch(value) is not None
+    )
 
     return isinstance(value, str) and value in HTTP_ERROR_CODES
 
@@ -868,9 +881,9 @@ class ToolDescriptor:
     auth: dict[str, Any] | None = None
     egress: Literal["none", "safe-fetch", "host-mediated", "host-owned"] | None = None
     approval: Literal["never", "conditional", "always"] | None = None
-    replayPolicy: (
-        Literal["deterministic", "idempotent", "non-deterministic"] | None
-    ) = None
+    replayPolicy: Literal["deterministic", "idempotent", "non-deterministic"] | None = (
+        None
+    )
     costHint: str | None = None
     latencyHint: str | None = None
 
@@ -1479,7 +1492,9 @@ class A2uiSurfaceDeltaFrame(TypedDict, total=False):
 
 
 # ── RFC 0249 — proposal operations (gated on ``agents.proposals``) ─────────
-ProposalKind = Literal["agent-pack", "workflow-chain-pack", "prompt-template", "automation"]
+ProposalKind = Literal[
+    "agent-pack", "workflow-chain-pack", "prompt-template", "automation"
+]
 ProposalState = Literal["draft", "revised", "applied", "rejected", "archived"]
 
 
@@ -1581,7 +1596,13 @@ class UiPluginRequest:
     """``ui-plugin-message.schema.json#/$defs/request`` — one ``ui-plugin/1`` call."""
 
     id: int
-    method: Literal["artifact.read", "artifact.write", "host.toast", "host.navigate", "host.announce"]
+    method: Literal[
+        "artifact.read",
+        "artifact.write",
+        "host.toast",
+        "host.navigate",
+        "host.announce",
+    ]
     params: dict[str, Any] | None = None
     openwop: Literal["ui-plugin/1"] = "ui-plugin/1"
     type: Literal["request"] = "request"

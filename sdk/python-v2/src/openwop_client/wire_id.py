@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import re
 
-_PASSTHROUGH = frozenset(b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-")
+_PASSTHROUGH = frozenset(
+    b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-"
+)
 _ESCAPE = re.compile(r"[~%]([0-9A-Fa-f]{2})")
 _ESCAPED_SLASH = re.compile(r"[~%]2F", re.IGNORECASE)
 
@@ -36,4 +38,6 @@ def project_id(id_: str) -> str:
     already a wire form (no ``/``, but an escaped ``/`` in either form) is
     decoded first, so passing a link's segment back in never double-escapes."""
     bound = unproject_id(id_) if "/" not in id_ and _ESCAPED_SLASH.search(id_) else id_
-    return "".join(chr(b) if b in _PASSTHROUGH else f"~{b:02X}" for b in bound.encode("utf-8"))
+    return "".join(
+        chr(b) if b in _PASSTHROUGH else f"~{b:02X}" for b in bound.encode("utf-8")
+    )

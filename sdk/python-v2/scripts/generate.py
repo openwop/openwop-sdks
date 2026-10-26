@@ -60,7 +60,9 @@ def main() -> int:
     for key, schema in caps.get("properties", {}).items():
         req = schema.get("required") if isinstance(schema, dict) else None
         req = req if isinstance(req, list) else []
-        (family_keys if "status" in req and "witness" in req else metadata_keys).append(key)
+        (family_keys if "status" in req and "witness" in req else metadata_keys).append(
+            key
+        )
     family_keys.sort()
     metadata_keys.sort()
     if caps.get("additionalProperties") is not False:
@@ -86,7 +88,9 @@ def main() -> int:
         '"""A registered protocol error code (``spec/v2/errors.json``). A vendor code is\n'
         '``<org>.<name>`` — see :data:`VENDOR_ERROR_CODE_PATTERN`."""\n'
         "\n"
-        "ERROR_CODES: frozenset[str] = frozenset(\n    {\n" + literal(codes) + "    }\n)\n"
+        "ERROR_CODES: frozenset[str] = frozenset(\n    {\n"
+        + literal(codes)
+        + "    }\n)\n"
         '"""Every registered v2 error code."""\n'
         "\n"
         "ERROR_CODE_HTTP_STATUS: dict[str, int] = {\n"
@@ -94,13 +98,17 @@ def main() -> int:
         + "}\n"
         '"""The registered HTTP status for each code (RFC 0171 §B.1)."""\n'
         "\n"
-        "RETRIABLE_ERROR_CODES: frozenset[str] = frozenset(\n    {\n" + literal(retriable) + "    }\n)\n"
+        "RETRIABLE_ERROR_CODES: frozenset[str] = frozenset(\n    {\n"
+        + literal(retriable)
+        + "    }\n)\n"
         '"""The codes registered ``retriable: true``; retry timing lives in ``Retry-After`` only."""\n'
         "\n"
         f'VENDOR_ERROR_CODE_PATTERN = re.compile(r"{errors["vendorCodePattern"]}")\n'
         '"""Grammar of a vendor error code: ``<org>.<name>``, ``openwop.`` reserved."""\n'
         "\n"
-        "CAPABILITY_METADATA_KEYS: tuple[str, ...] = (\n" + literal(metadata_keys) + ")\n"
+        "CAPABILITY_METADATA_KEYS: tuple[str, ...] = (\n"
+        + literal(metadata_keys)
+        + ")\n"
         '"""Root metadata keys of the closed v2 discovery document (capabilities.md §3.1)."""\n'
         "\n"
         "CAPABILITY_FAMILY_KEYS: tuple[str, ...] = (\n" + literal(family_keys) + ")\n"
@@ -108,13 +116,16 @@ def main() -> int:
         "\n"
         f'CORPUS_VERSION = "{corpus}"\n'
         f'"""The corpus release this SDK is built against (``CORPUS_TAG`` {corpus_tag}), sent as\n'
-        "``OpenWOP-Client-Version`` on every request (RFC 0219). Not the package version.\"\"\"\n"
+        '``OpenWOP-Client-Version`` on every request (RFC 0219). Not the package version."""\n'
     )
 
     if "--check" in sys.argv:
         current = OUT.read_text() if OUT.exists() else ""
         if current != out:
-            print(f"  FAIL: {OUT} is stale — run `python3 scripts/generate.py` in sdk/python-v2", file=sys.stderr)
+            print(
+                f"  FAIL: {OUT} is stale — run `python3 scripts/generate.py` in sdk/python-v2",
+                file=sys.stderr,
+            )
             return 1
         print(
             f"  ok: _generated.py matches spec/v2/errors.json ({len(codes)} codes) + "
@@ -122,7 +133,9 @@ def main() -> int:
         )
         return 0
     OUT.write_text(out)
-    print(f"wrote {OUT}: {len(codes)} error codes, {len(family_keys)} families, {len(metadata_keys)} metadata keys")
+    print(
+        f"wrote {OUT}: {len(codes)} error codes, {len(family_keys)} families, {len(metadata_keys)} metadata keys"
+    )
     return 0
 
 

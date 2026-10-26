@@ -116,7 +116,12 @@ def stream_events(
         last_event_id=last_event_id,
         timeout_seconds=timeout_seconds,
         run_stream=True,
-        policy=_policy(reconnect, reconnect_delay_seconds, max_reconnect_delay_seconds, max_reconnect_attempts),
+        policy=_policy(
+            reconnect,
+            reconnect_delay_seconds,
+            max_reconnect_delay_seconds,
+            max_reconnect_attempts,
+        ),
     )
 
 
@@ -152,11 +157,18 @@ def stream_host_events(
         last_event_id=last_event_id,
         timeout_seconds=timeout_seconds,
         run_stream=False,
-        policy=_policy(reconnect, reconnect_delay_seconds, max_reconnect_delay_seconds, max_reconnect_attempts),
+        policy=_policy(
+            reconnect,
+            reconnect_delay_seconds,
+            max_reconnect_delay_seconds,
+            max_reconnect_attempts,
+        ),
     )
 
 
-def _policy(enabled: bool, delay: float, max_delay: float, attempts: int) -> tuple[float, float, int] | None:
+def _policy(
+    enabled: bool, delay: float, max_delay: float, attempts: int
+) -> tuple[float, float, int] | None:
     return (delay, max_delay, attempts) if enabled else None
 
 
@@ -166,7 +178,11 @@ def _is_terminal_frame(event: str, raw: Any) -> bool:
     if raw.get("type") in _TERMINAL_EVENT_TYPES:
         return True
     status = raw.get("status")
-    return event == "state.snapshot" and isinstance(status, str) and is_terminal_run_status(status)
+    return (
+        event == "state.snapshot"
+        and isinstance(status, str)
+        and is_terminal_run_status(status)
+    )
 
 
 def _retry_after_seconds(err: HTTPError) -> float | None:
@@ -218,7 +234,9 @@ def _stream_sse(
         failure: BaseException | None = None
         retry_after: float | None = None
         try:
-            resp = urlopen(Request(url, headers=headers, method="GET"), timeout=timeout_seconds)
+            resp = urlopen(
+                Request(url, headers=headers, method="GET"), timeout=timeout_seconds
+            )
         except HTTPError as err:
             if policy is None or not established or err.code not in _RETRYABLE_STATUSES:
                 raise
@@ -244,20 +262,32 @@ def _stream_sse(
                             if pending_id is not None:
                                 cursor = pending_id
                             terminal = False
-                            for raw, ev in _flush_event(pending_event, pending_data, decode):
+                            for raw, ev in _flush_event(
+                                pending_event, pending_data, decode
+                            ):
                                 frames += 1
-                                seq = raw.get("sequence") if isinstance(raw, dict) else None
+                                seq = (
+                                    raw.get("sequence")
+                                    if isinstance(raw, dict)
+                                    else None
+                                )
                                 if run_stream and isinstance(seq, int):
                                     if seq <= max_sequence:
                                         continue  # already yielded on an earlier connection
                                     max_sequence = seq
-                                if run_stream and _is_terminal_frame(pending_event, raw):
+                                if run_stream and _is_terminal_frame(
+                                    pending_event, raw
+                                ):
                                     terminal = True
                                 if ev is not None:
                                     yield ev
                             if terminal:
                                 return
-                            pending_event, pending_data, pending_id = "message", [], None
+                            pending_event, pending_data, pending_id = (
+                                "message",
+                                [],
+                                None,
+                            )
                             continue
 
                         if line.startswith(":"):
@@ -361,7 +391,9 @@ def _decode_event_doc(parsed: Any) -> RunEventDoc | None:
             schemaVersion=int(parsed["schemaVersion"]),
             nodeId=parsed.get("nodeId"),
             engineVersion=(
-                int(parsed["engineVersion"]) if parsed.get("engineVersion") is not None else None
+                int(parsed["engineVersion"])
+                if parsed.get("engineVersion") is not None
+                else None
             ),
             causationId=parsed.get("causationId"),
         )
