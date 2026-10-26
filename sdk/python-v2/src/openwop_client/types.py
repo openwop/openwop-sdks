@@ -241,6 +241,14 @@ class CreateRunRequest:
     # whatever the reason (§C).
     evalModes: list[EvalMode] | None = None
     baselineRunId: str | None = None
+    # RFC 0252 — ``taskId`` → a prior run whose recorded tool calls become that
+    # task's fixtures, served under ``onMiss`` ``fail``; at least one entry.
+    # Only with ``mode == "eval"``, and only to a host advertising
+    # ``agents.evalSuite.recordedFixtures`` (a client MUST NOT send it
+    # otherwise). An unusable source run is refused ``400 validation_error``,
+    # identically whatever the reason; the accepted map is echoed on
+    # ``eval.started`` ``fixtureRuns``.
+    fixtureRuns: dict[str, str] | None = None
     configurable: RunConfigurable | dict[str, Any] | None = None
     tags: list[str] | None = None
     metadata: dict[str, Any] | None = None

@@ -73,6 +73,26 @@ func TestCreateRunEvalBaselineSelection(t *testing.T) {
 	}
 }
 
+func TestCreateRunEvalFixtureRuns(t *testing.T) {
+	c, captured := newBodyServer(t, jsonReply(`{"runId":"t/r3","status":"pending","eventsUrl":""}`))
+	ctx := context.Background()
+	if _, err := c.CreateRun(ctx, CreateRunRequest{
+		Mode: "eval", EvalSuiteRef: "suite://s", AgentID: "a",
+		FixtureRuns: map[string]string{"record": "t/r1"},
+	}, MutationOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := c.CreateRun(ctx, CreateRunRequest{Mode: "eval", EvalSuiteRef: "suite://s", AgentID: "a"}, MutationOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	if got := (*captured)[0].Body["fixtureRuns"]; !reflect.DeepEqual(got, map[string]any{"record": "t/r1"}) {
+		t.Fatalf("fixtureRuns body = %v", got)
+	}
+	if _, ok := (*captured)[1].Body["fixtureRuns"]; ok {
+		t.Fatal("fixtureRuns sent when absent")
+	}
+}
+
 func TestProposalOperations(t *testing.T) {
 	proposal := `{"id":"p1","kind":"prompt-template","state":"draft","artifact":{},"provenance":{"sourceRunIds":[]},"owner":{"tenant":"t"},"createdAt":"2026-10-26T00:00:00Z"}`
 	c, captured := newBodyServer(t, func(r *http.Request) (int, string, string) {

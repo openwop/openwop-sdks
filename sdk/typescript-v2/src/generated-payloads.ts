@@ -1089,6 +1089,9 @@ export type EvalStartedPayload = {
   /** Number of tasks the run will execute. */ "taskCount": number;
   /** The eval modes this run exercises (RFC 0081 §D). */ "modes": Array<"golden" | "rubric" | "adversarial" | "regression" | "live-shadow">;
   /** MAY — for `regression` mode, the prior eval run this run is scored against. */ "baselineRunId"?: IdsSchema_RunId;
+  /** RFC 0252 §E. The accepted `createRun` `fixtureRuns` map verbatim: each named `taskId` took its fixtures from that source run's recorded tool calls. MUST be present when the request carried `fixtureRuns`, and absent otherwise. A replay or fork re-reads it and MUST NOT resolve the source run again. */ "fixtureRuns"?: {
+    [key: string]: IdsSchema_RunId;
+  };
   /** RFC 0244 §B. Present when the suite runs more than one trial per task: each task then emits `trialCount` `eval.scored` events. */ "trialCount"?: number;
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
