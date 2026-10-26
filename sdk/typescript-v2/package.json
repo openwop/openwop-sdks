@@ -1,6 +1,6 @@
 {
   "name": "@openwop/openwop",
-  "version": "2.6.0",
+  "version": "2.7.0",
   "description": "TypeScript SDK for OpenWOP, the open-source protocol for multi-agent workflow orchestration: run AI agents as workflows you can watch, pause for human approval and replay, on any host that implements it.",
   "keywords": [
     "openwop",
