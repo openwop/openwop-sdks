@@ -2,7 +2,7 @@
 
 The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
-## [Unreleased] — corpus `v2.46.32`: eval fixtures from a recorded run (RFC 0252), eval baseline selection (RFC 0251), proposals, connection providers, plugin frame + RPC
+## [2.7.0] — 2026-10-26 — corpus `v2.46.32`: eval fixtures from a recorded run (RFC 0252), eval baseline selection (RFC 0251), proposals, connection providers, plugin frame + RPC
 
 - **`runs_create` recorded fixtures (RFC 0252).** `CreateRunRequest` gains `fixtureRuns: dict[str, str] | None` (`taskId` → source run id), sent at the body root and omitted when `None`. Only with `mode="eval"`, and only to a host advertising `agents.evalSuite.recordedFixtures` (a client MUST NOT send it otherwise); an unusable source run is refused `400 validation_error`, identically whatever the reason. The host echoes the accepted map on `eval.started` `fixtureRuns`.
 - **Re-vendored on corpus `v2.46.32`** (was `v2.46.28`): `api/v2/openapi.yaml` (createRun `fixtureRuns`), `api/v2/asyncapi.yaml`, `schemas/v2/capabilities.schema.json` (`agents.evalSuite.recordedFixtures`), `schemas/v2/run-event-payloads.schema.json` (`eval.started` `fixtureRuns`). No error code or capability family changes. `_generated.py` regenerated. `CORPUS_VERSION` becomes `2.46.32`, so `OpenWOP-Client-Version` now sends `2.46.32`.

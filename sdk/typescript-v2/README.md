@@ -21,7 +21,7 @@ for await (const event of client.runs.events(runId)) console.log(event.sequence,
 This package is the reference TypeScript client for the **v2 major** (`spec/v2/`, RFC 0168 §D): one typed method per operation in `spec/v2/path-manifest.json` (55 operations), an async-iterable SSE consumer for the run and host event channels, and zero runtime dependencies.
 
 ```bash
-npm install @openwop/openwop@2   # 2.6.0 — v2-only; the 1.x client stays on `@openwop/openwop@1`
+npm install @openwop/openwop@2   # 2.7.0 — v2-only; the 1.x client stays on `@openwop/openwop@1`
 ```
 
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Corpus tag:** see [`CORPUS_TAG`](../../CORPUS_TAG) · **Mirrors:** [`api/v2/openapi.yaml`](../../api/v2/openapi.yaml), [`api/v2/asyncapi.yaml`](../../api/v2/asyncapi.yaml), [`schemas/v2/`](../../schemas/v2/), [`spec/v2/errors.json`](../../spec/v2/errors.json)

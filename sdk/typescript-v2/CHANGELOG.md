@@ -2,7 +2,7 @@
 
 The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop/v2.Y.Z` tracking a published corpus tag) published from `sdk/typescript-v2/`.
 
-## [Unreleased] — corpus `v2.46.32`: eval fixtures from a recorded run (RFC 0252), eval baseline selection (RFC 0251), proposals, connection providers, plugin frame + RPC
+## [2.7.0] — 2026-10-26 — corpus `v2.46.32`: eval fixtures from a recorded run (RFC 0252), eval baseline selection (RFC 0251), proposals, connection providers, plugin frame + RPC
 
 - **`runs.create` recorded fixtures (RFC 0252).** `CreateRunRequest` gains `fixtureRuns?: Readonly<Record<string, string>>` (`taskId` → source run id), sent at the body root. Only with `mode: 'eval'`, and only to a host advertising `agents.evalSuite.recordedFixtures` (a client MUST NOT send it otherwise); an unusable source run is refused `400 validation_error`, identically whatever the reason. `EvalStartedPayload` gains `fixtureRuns` (generated), the accepted map echoed verbatim.
 - **Re-vendored on corpus `v2.46.32`** (was `v2.46.28`): `api/v2/openapi.yaml` (createRun `fixtureRuns`), `api/v2/asyncapi.yaml`, `schemas/v2/capabilities.schema.json` (`agents.evalSuite.recordedFixtures`), `schemas/v2/run-event-payloads.schema.json` (`eval.started` `fixtureRuns`). No error code or capability family changes. `generated.ts` and `generated-payloads.ts` regenerated. `CORPUS_VERSION` becomes `2.46.32`, so `OpenWOP-Client-Version` now sends `2.46.32`.
