@@ -31,6 +31,7 @@ export type {
   CancelRunRequest,
   CancelRunResponse,
   CreateRunRequest,
+  EvalMode,
   CreateRunResponse,
   ErrorEnvelope,
   VendorErrorCode,
@@ -254,6 +255,28 @@ export type {
   ListTriggerDeadLettersRequest,
   DeadLetteredTriggerDelivery,
   TriggerDeadLetterPage,
+  // RFC 0249 — proposal operations
+  Proposal,
+  ProposalKind,
+  ProposalState,
+  ProposalActivation,
+  ListProposalsRequest,
+  ProposalListResponse,
+  SubmitProposalRequest,
+  ReviseProposalRequest,
+  ApplyProposalRequest,
+  RejectProposalRequest,
+  ApplyProposalResponse,
+  // connection-provider registry
+  ConnectionProvider,
+  ConnectionProviderRefusal,
+  ConnectionProviderRegistry,
+  // host test events
+  EmitTestHostEventRequest,
+  EmitTestHostEventResponse,
+  // front-end plugin frame + RPC
+  UiPluginRequest,
+  UiPluginResponse,
 } from './types.js';
 
 // RFC 0030 §A `reasoning` field prompt-directive helper.

@@ -120,6 +120,28 @@
     },
     {
       "method": "GET",
+      "path": "/connection-providers",
+      "operationId": "listConnectionProviders",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/connection-providers/{providerId}",
+      "operationId": "resolveConnectionProvider",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": false
+    },
+    {
+      "method": "GET",
       "path": "/content/pages",
       "operationId": "listContentPages",
       "requestHeaders": [
@@ -219,6 +241,40 @@
       "requestBody": false
     },
     {
+      "method": "POST",
+      "path": "/host/events/test",
+      "operationId": "emitTestHostEvent",
+      "requestHeaders": [
+        "Idempotency-Key",
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/host/ui-plugins/{packName}/{pluginId}/frame",
+      "operationId": "getUiPluginFrame",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/host/ui-plugins/{packName}/{pluginId}/rpc",
+      "operationId": "dispatchUiPluginRequest",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": true
+    },
+    {
       "method": "GET",
       "path": "/interrupts/{token}",
       "operationId": "inspectInterruptByToken",
@@ -313,6 +369,85 @@
       "method": "POST",
       "path": "/prompts:render",
       "operationId": "renderPromptTemplate",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": true
+    },
+    {
+      "method": "GET",
+      "path": "/proposals",
+      "operationId": "listProposals",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": false
+    },
+    {
+      "method": "POST",
+      "path": "/proposals",
+      "operationId": "submitProposal",
+      "requestHeaders": [
+        "Idempotency-Key",
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": true
+    },
+    {
+      "method": "DELETE",
+      "path": "/proposals/{proposalId}",
+      "operationId": "archiveProposal",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": false
+    },
+    {
+      "method": "GET",
+      "path": "/proposals/{proposalId}",
+      "operationId": "getProposal",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": false
+    },
+    {
+      "method": "PATCH",
+      "path": "/proposals/{proposalId}",
+      "operationId": "reviseProposal",
+      "requestHeaders": [
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/proposals/{proposalId}:apply",
+      "operationId": "applyProposal",
+      "requestHeaders": [
+        "Idempotency-Key",
+        "OpenWOP-Client-Version",
+        "OpenWOP-Version"
+      ],
+      "authenticated": true,
+      "requestBody": true
+    },
+    {
+      "method": "POST",
+      "path": "/proposals/{proposalId}:reject",
+      "operationId": "rejectProposal",
       "requestHeaders": [
         "OpenWOP-Client-Version",
         "OpenWOP-Version"
@@ -655,7 +790,7 @@
     }
   ],
   "counts": {
-    "operations": 56,
+    "operations": 68,
     "channels": 2
   }
 }

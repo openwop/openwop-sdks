@@ -826,6 +826,11 @@ func (c *OpenwopClient) requestJSON(
 		return newWopError(resp.StatusCode, string(rawBody), parseEnvelope(rawBody), traceparent)
 	}
 
+	// A text/html 2xx (the plugin frame) is returned verbatim.
+	if tb, ok := out.(*textBody); ok {
+		tb.text = string(rawBody)
+		return nil
+	}
 	// A 2xx with no body, or a call that expects none (DELETE → 204, or a
 	// host that answers `{}`), decodes nothing.
 	if len(rawBody) == 0 || out == nil {
@@ -841,6 +846,9 @@ func (c *OpenwopClient) requestJSON(
 	}
 	return nil
 }
+
+// textBody receives a non-JSON 2xx body verbatim from requestJSON.
+type textBody struct{ text string }
 
 // parseEnvelope best-effort decodes a non-2xx body into ErrorEnvelope.
 // Returns nil for unparseable / non-conforming bodies.
@@ -1316,6 +1324,227 @@ func (c *OpenwopClient) RenderPromptTemplate(
 		ctx, http.MethodPost,
 		"/prompts:render",
 		body, nil, true, &out,
+	); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ── RFC 0249 — proposals (gated on agents.proposals) ─────────────────────
+// A host that does not advertise agents.proposals answers 404, and a proposal
+// another tenant owns is answered exactly as an unknown id.
+
+// ListProposals calls GET /proposals: one page, scoped to the caller's tenant
+// and workspace.
+func (c *OpenwopClient) ListProposals(ctx context.Context, opts ListProposalsOptions) (*ProposalListResponse, error) {
+	q := url.Values{}
+	if opts.State != "" {
+		q.Set("state", opts.State)
+	}
+	if opts.Kind != "" {
+		q.Set("kind", opts.Kind)
+	}
+	if opts.Limit > 0 {
+		q.Set("limit", strconv.Itoa(opts.Limit))
+	}
+	if opts.Cursor != "" {
+		q.Set("cursor", opts.Cursor)
+	}
+	path := "/proposals"
+	if enc := q.Encode(); enc != "" {
+		path += "?" + enc
+	}
+	var out ProposalListResponse
+	if err := c.requestJSON(ctx, http.MethodGet, path, nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// SubmitProposal calls POST /proposals: a client draft in state "draft",
+// served only when agents.proposals.clientDrafts is true.
+func (c *OpenwopClient) SubmitProposal(
+	ctx context.Context,
+	body SubmitProposalRequest,
+	opts MutationOptions,
+) (*Proposal, error) {
+	var out Proposal
+	if err := c.requestJSON(ctx, http.MethodPost, "/proposals", body, opts.headers(), true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// GetProposal calls GET /proposals/{proposalID}; it carries artifactDigest,
+// the value ApplyProposal binds to.
+func (c *OpenwopClient) GetProposal(ctx context.Context, proposalID string) (*Proposal, error) {
+	var out Proposal
+	if err := c.requestJSON(ctx, http.MethodGet, "/proposals/"+url.PathEscape(proposalID), nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ReviseProposal calls PATCH /proposals/{proposalID}: state "revised", never
+// activated; 409 on a terminal or stale proposal.
+func (c *OpenwopClient) ReviseProposal(
+	ctx context.Context,
+	proposalID string,
+	body ReviseProposalRequest,
+) (*Proposal, error) {
+	var out Proposal
+	if err := c.requestJSON(ctx, http.MethodPatch, "/proposals/"+url.PathEscape(proposalID), body, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ArchiveProposal calls DELETE /proposals/{proposalID}: state "archived";
+// archiving uninstalls nothing.
+func (c *OpenwopClient) ArchiveProposal(ctx context.Context, proposalID string) (*Proposal, error) {
+	var out Proposal
+	if err := c.requestJSON(ctx, http.MethodDelete, "/proposals/"+url.PathEscape(proposalID), nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ApplyProposal calls POST /proposals/{proposalID}:apply through
+// agents.proposals.activation. An empty artifactDigest is omitted.
+func (c *OpenwopClient) ApplyProposal(
+	ctx context.Context,
+	proposalID string,
+	artifactDigest string,
+	opts MutationOptions,
+) (*ApplyProposalResult, error) {
+	body := map[string]any{}
+	if artifactDigest != "" {
+		body["artifactDigest"] = artifactDigest
+	}
+	var raw map[string]any
+	if err := c.requestJSON(
+		ctx, http.MethodPost,
+		"/proposals/"+url.PathEscape(proposalID)+":apply",
+		body, opts.headers(), true, &raw,
+	); err != nil {
+		return nil, err
+	}
+	if _, isProposal := raw["id"]; !isProposal {
+		if runID, ok := raw["runId"].(string); ok {
+			return &ApplyProposalResult{GateRunID: runID}, nil
+		}
+	}
+	enc, err := json.Marshal(raw)
+	if err != nil {
+		return nil, err
+	}
+	var p Proposal
+	if err := json.Unmarshal(enc, &p); err != nil {
+		return nil, err
+	}
+	return &ApplyProposalResult{Proposal: &p}, nil
+}
+
+// RejectProposal calls POST /proposals/{proposalID}:reject: state
+// "rejected". An empty reason is omitted.
+func (c *OpenwopClient) RejectProposal(ctx context.Context, proposalID, reason string) (*Proposal, error) {
+	body := map[string]any{}
+	if reason != "" {
+		body["reason"] = reason
+	}
+	var out Proposal
+	if err := c.requestJSON(
+		ctx, http.MethodPost,
+		"/proposals/"+url.PathEscape(proposalID)+":reject",
+		body, nil, true, &out,
+	); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ── Connection providers (gated on connections.providerRead) ────────────
+
+// ListConnectionProviders calls GET /connection-providers: every definition
+// the host resolves against, and the pack registrations it refused.
+func (c *OpenwopClient) ListConnectionProviders(ctx context.Context) (*ConnectionProviderRegistry, error) {
+	var out ConnectionProviderRegistry
+	if err := c.requestJSON(ctx, http.MethodGet, "/connection-providers", nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ResolveConnectionProvider calls GET /connection-providers/{providerID}: a
+// bare id, or with a non-empty pack the qualified form
+// <packName>#<providerID>. Not resolvable: 404 connection_provider_unresolved.
+func (c *OpenwopClient) ResolveConnectionProvider(
+	ctx context.Context,
+	providerID string,
+	pack string,
+) (*ConnectionProvider, error) {
+	path := "/connection-providers/" + url.PathEscape(providerID)
+	if pack != "" {
+		path += "?" + url.Values{"pack": {pack}}.Encode()
+	}
+	var out ConnectionProvider
+	if err := c.requestJSON(ctx, http.MethodGet, path, nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// ── Host test events and front-end plugins ───────────────────────────────
+
+// EmitTestHostEvent calls POST /host/events/test (RFC 0250): one empty-payload
+// event of the delivery class's reserved host-test.* type, through the
+// ordinary host-event path. Bound only for a class whose type
+// hostEvents.types[] lists; otherwise 404.
+func (c *OpenwopClient) EmitTestHostEvent(
+	ctx context.Context,
+	body EmitTestHostEventRequest,
+	opts MutationOptions,
+) (*EmitTestHostEventResponse, error) {
+	var out EmitTestHostEventResponse
+	if err := c.requestJSON(ctx, http.MethodPost, "/host/events/test", body, opts.headers(), true, &out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
+// GetUiPluginFrame calls GET /host/ui-plugins/{packName}/{pluginID}/frame and
+// returns the HTML document verbatim. Gated on uiPlugins.served; an
+// uninstalled plugin answers 404.
+func (c *OpenwopClient) GetUiPluginFrame(ctx context.Context, packName, pluginID string) (string, error) {
+	var out textBody
+	if err := c.requestJSON(
+		ctx, http.MethodGet,
+		"/host/ui-plugins/"+url.PathEscape(packName)+"/"+url.PathEscape(pluginID)+"/frame",
+		nil, map[string]string{"Accept": "text/html"}, true, &out,
+	); err != nil {
+		return "", err
+	}
+	return out.text, nil
+}
+
+// DispatchUiPluginRequest calls POST /host/ui-plugins/{packName}/{pluginID}/rpc:
+// one ui-plugin/1 request, as the caller and as the named plugin.
+func (c *OpenwopClient) DispatchUiPluginRequest(
+	ctx context.Context,
+	packName, pluginID string,
+	message UiPluginRequest,
+) (*UiPluginResponse, error) {
+	if message.Openwop == "" {
+		message.Openwop = "ui-plugin/1"
+	}
+	if message.Type == "" {
+		message.Type = "request"
+	}
+	var out UiPluginResponse
+	if err := c.requestJSON(
+		ctx, http.MethodPost,
+		"/host/ui-plugins/"+url.PathEscape(packName)+"/"+url.PathEscape(pluginID)+"/rpc",
+		map[string]any{"message": message}, nil, true, &out,
 	); err != nil {
 		return nil, err
 	}
