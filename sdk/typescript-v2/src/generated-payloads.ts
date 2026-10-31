@@ -1011,7 +1011,7 @@ export type BudgetThresholdCrossedPayload = {
   /** The percent-of-limit threshold crossed. */ "percent": number;
 };
 
-/** Emitted when a CapabilityLimit is exceeded. Protocol-level limits use the engine kinds (clarificationRounds / schemaRounds / envelopesPerTurn / maxNodeExecutions). RFC 0008 §K WASM-runtime caps use the wasm-* kinds (memory ceiling, fuel exhaustion, execution-time wall-clock). RFC 0058 run-execution bounds use the run-scoped run-duration (wall-clock timeout; limit=resolvedMs, observed=elapsedMs) and loop-iterations (agent-loop ceiling; limit=resolvedMax, observed=iterationCount) kinds. */
+/** Emitted when a CapabilityLimit is exceeded. Protocol-level limits use the engine kinds (`clarification`, `node-executions`); `schema` and `envelopes` stay readable in stored logs from before RFC 0255. RFC 0008 §K WASM-runtime caps use the wasm-* kinds (memory ceiling, fuel exhaustion, execution-time wall-clock). RFC 0058 run-execution bounds use the run-scoped run-duration (wall-clock timeout; limit=resolvedMs, observed=elapsedMs) and loop-iterations (agent-loop ceiling; limit=resolvedMax, observed=iterationCount) kinds. */
 export type CapBreachedPayload = {
   "kind": "clarification" | "schema" | "envelopes" | "node-executions" | "wasm-memory" | "wasm-fuel" | "wasm-execution-time" | "run-duration" | "loop-iterations" | "budget-tokens" | "budget-cost" | "budget-tool-calls" | "budget-retries";
   /** The effective ceiling. A whole number for the engine/WASM/RFC 0058 integer kinds; a fractional value for budget-cost (dollars, matching budget.exhausted + maxCostUsd — RFC 0084 §D). */ "limit": number;
@@ -1150,7 +1150,7 @@ export type ConversationClosedPayload = {
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 
-/** RFC 0205 §D. An A2A v1.0.1 `Part`, transcribed from `specification/a2a.proto` `message Part` at tag v1.0.1 with the JSON member names A2A spec §5.5 requires (camelCase). Exactly one of `text`, `raw`, `url`, `data` is present: member presence is the discriminator (A2A spec §14 "Current Pattern (v1.0)"), and the v0.3 `kind` member is not part of the shape. A2A commits no JSON Schema of its own (`specification/json/README.md`: `a2a.json` is a non-normative build artifact), so this file is the corpus's transcription. `oneOf` is deliberate: this schema describes a host-emitted wire object, not an LLM-emitted envelope payload (ai-envelope.md §"Schema discipline" scopes its `oneOf` ban to the latter). */
+/** RFC 0205 §D. An A2A v1.0.1 `Part`, transcribed from `specification/a2a.proto` `message Part` at tag v1.0.1 with the JSON member names A2A spec §5.5 requires (camelCase). Exactly one of `text`, `raw`, `url`, `data` is present: member presence is the discriminator (A2A spec §14 "Current Pattern (v1.0)"), and the v0.3 `kind` member is not part of the shape. A2A commits no JSON Schema of its own (`specification/json/README.md`: `a2a.json` is a non-normative build artifact), so this file is the corpus's transcription. `oneOf` is deliberate: this schema describes a host-emitted wire object, not model output. */
 export type PartSchema = (unknown | unknown | unknown | unknown);
 
 /** One turn in a multi-turn conversation. Mirror of `conversation-turn.schema.json`; kept in sync. Structural superset of `ConversationMessage` (RFC 0002 §G). */
@@ -1308,7 +1308,7 @@ export type EnvelopeRetryAttemptedPayload = {
   /** The node whose envelope emission is being retried. */ "nodeId": IdsSchema_NodeId;
   /** 1-indexed attempt counter. The first attempt does NOT emit this event; the second attempt emits with `attempt: 2`, etc. */ "attempt": number;
   /** Why the prior attempt failed. Spec-reserved values: `schema-violation` (model emitted wrong-shape JSON; corrective fragment + retry per RFC 0033 §C), `truncation` (stop_reason: max_tokens; budget-double + retry per RFC 0033 §B), `type-drift` (envelope `type` discriminator drifted from what was advertised mid-run), `type-mismatch` (a typed payload field was emitted with the wrong runtime type — e.g., string where number was declared), `refusal` (provider safety-stop; NO retry per RFC 0032 §B.3), `parse-error` (response was not extractable as JSON even after lenient parsing), `unknown` (host could not classify). Host-private extensions MUST prefix with `x-host-<host>-` per `host-extensions.md` §"Canonical-prefix table"; matches the RFC 0031 §B `requiredModelCapabilities` precedent. */ "reason": ("schema-violation" | "truncation" | "type-drift" | "type-mismatch" | "refusal" | "parse-error" | "unknown" | unknown);
-  /** Diagnostic text from the failing attempt. MUST NOT contain prompt or response substring excerpts; hosts SHOULD limit to validator output (e.g., "required field 'steps' missing"). Subject to SR-1 redaction per `ai-envelope.md` §"Redaction (SR-1 carry-forward)". */ "previousError"?: string | null;
+  /** Diagnostic text from the failing attempt. MUST NOT contain prompt or response substring excerpts; hosts SHOULD limit to validator output (e.g., "required field 'steps' missing"). Subject to the host's secret redaction (`host-services.md` §Structured output). */ "previousError"?: string | null;
 };
 
 /** RFC 0032 §B.2. Emitted when a host has exhausted its retry budget and is about to surface a terminal envelope failure to the node. MUST-tier — alternative is silent terminal failure with no event surface, leaving conformance suites unable to assert correct give-up behavior. Hosts that don't retry MUST still emit this event when an envelope attempt terminally fails (with `totalAttempts: 1`). Pairs with `cap.breached` when the failure mode is schema-violation or truncation per RFC 0033 §B + §C. */
@@ -1642,7 +1642,7 @@ export type PromptComposedPayload = {
   /** Variable-name → sha256(value) map. Always present (under both `hashed` and `full`). Enables replay-determinism checks without exposing values. */ "variableHashes"?: {
     [key: string]: string;
   };
-  /** Aggregate trust marker. `untrusted` iff ANY contributing input was tagged untrusted per RFC 0020 §D / AIEnvelope.meta.contentTrust propagation. When `untrusted`, the composed bodies MUST contain `<UNTRUSTED>...</UNTRUSTED>` markers around the untrusted segments. */ "contentTrust"?: "trusted" | "untrusted";
+  /** Aggregate trust marker. `untrusted` iff ANY contributing input was tagged untrusted per RFC 0020 §D. When `untrusted`, the composed bodies MUST contain `<UNTRUSTED>...</UNTRUSTED>` markers around the untrusted segments. */ "contentTrust"?: "trusted" | "untrusted";
   /** RFC 0040 §A — optional cross-host causation pointer. Present + non-empty when this event's `causationId` points at an event on a DIFFERENT host; absent when same-host. MUST equal the originating host's `crossHostCausation.hostId`. */ "causationHostId"?: string;
 };
 

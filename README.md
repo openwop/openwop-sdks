@@ -19,7 +19,7 @@ stays a lean spec + conformance contract.
 **v2 is the current protocol major, and the 2.x packages are the ones a new integration uses.** They
 are v2-ONLY (`spec/v2/`: bare-origin unversioned paths, `OpenWOP-Version` negotiation, the closed
 discovery root, the generated error registry — RFC 0172 / 0171 / 0173, RFC 0168 §D), cover all
-68 operations of `spec/v2/path-manifest.json` at corpus **`v2.46.37`**
+68 operations of `spec/v2/path-manifest.json` at corpus **`v2.46.38`**
 ([`CORPUS_TAG`](./CORPUS_TAG)). The latest published release is **2.7.0**, on corpus `v2.46.32`.
 
 The 1.x packages target v1 hosts (`/v1/…`) and are the maintained parallel line through the v1
