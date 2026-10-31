@@ -222,24 +222,7 @@ export {
 } from './webhook-header-families.js';
 export type { WebhookHeaderRead, WebhookSignatureAlgorithm } from './webhook-header-families.js';
 
-// AI Envelope types (events.md §AI envelopes). Inbound LLM-emission
-// envelope, distinct from RunEventDoc (outbound) and ErrorEnvelope (host HTTP).
 export type {
-  A2UISurfacePayload,
-  A2uiSurfaceDeltaFrame,
-  A2uiSurfacePatchOp,
-  AIEnvelope,
-  AIEnvelopeErrorPayload,
-  ClarificationRequestPayload,
-  EnvelopeContract,
-  EnvelopeContractRefusal,
-  EnvelopeMeta,
-  EnvelopeOutcome,
-  EnvelopeStrictness,
-  PartialInfo,
-  SchemaRequestPayload,
-  SchemaResponsePayload,
-  ValidationDetail,
   // RFC 0103 — localized content surface
   LocalizedContentStatus,
   LocalizedContentPage,

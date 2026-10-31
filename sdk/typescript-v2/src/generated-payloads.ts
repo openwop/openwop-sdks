@@ -535,6 +535,277 @@ export type SuspendRequestSchema_ApprovalData = {
   };
 };
 
+export type InterruptFormSchema_Heading = {
+  "component": "heading";
+  "text": string;
+  "level"?: number;
+};
+
+export type InterruptFormSchema_Text = {
+  "component": "text";
+  "text": string;
+};
+
+export type InterruptFormSchema_FieldText = {
+  "component": "field.text";
+  /** Binding key; the collected value is keyed by `id` in the resume value. */ "id": string;
+  "label": string;
+  "placeholder"?: string;
+  "required"?: boolean;
+};
+
+export type InterruptFormSchema_FieldDate = {
+  "component": "field.date";
+  "id": string;
+  "label": string;
+  "required"?: boolean;
+};
+
+export type InterruptFormSchema_FieldSelect = {
+  "component": "field.select";
+  "id": string;
+  "label": string;
+  "required"?: boolean;
+  "options": Array<{
+    "value": string;
+    "label": string;
+  }>;
+};
+
+export type InterruptFormSchema_FieldCheckbox = {
+  "component": "field.checkbox";
+  "id": string;
+  "label": string;
+  "default"?: boolean;
+};
+
+export type InterruptFormSchema_ActionButton = {
+  "component": "action.button";
+  "id": string;
+  "label": string;
+  /** Confined action: it resolves only the interrupt carrying the form. No URL, endpoint or network target exists (invariant interrupt-form-action-confinement). */ "action": {
+    /** `resume`: the collected field values become the resume value of the interrupt that carries this form, and of no other (interrupt.md §Forms). */ "target": "resume";
+  };
+};
+
+/** A single A2UI component. Closed set (day-1 catalog 0.9.1); the `component` discriminator is a single-string-enum per branch. */
+export type InterruptFormSchema_ComponentV1 = (InterruptFormSchema_Heading | InterruptFormSchema_Text | InterruptFormSchema_FieldText | InterruptFormSchema_FieldDate | InterruptFormSchema_FieldSelect | InterruptFormSchema_FieldCheckbox | InterruptFormSchema_ActionButton);
+
+export type InterruptFormSchema_Surface = {
+  /** OPTIONAL display title for the surface. */ "title"?: string;
+  "components": Array<InterruptFormSchema_ComponentV1>;
+};
+
+/** The RFC 0102 component tree, pinned by `catalogVersion`. */
+export type InterruptFormSchema_FormV1 = {
+  /** OPTIONAL per RFC 0030 §A — the model's reasoning, conventionally the first property of a kind whose payload benefits from multi-step composition. */ "reasoning"?: string;
+  /** The catalog version the surface targets. A consumer MUST refuse a version it does not render. */ "catalogVersion": "0.9.1";
+  /** A closed component tree, renderable from the form alone. */ "surface": InterruptFormSchema_Surface;
+};
+
+/** The host-pinned catalog set (RFC 0209 §B.1). Never a free string. */
+export type InterruptFormSchema_CatalogId = "https://a2ui.org/specification/v0_9/catalogs/basic/catalog.json";
+
+export type InterruptFormSchema_SurfaceId = string;
+
+export type InterruptFormSchema_CreateSurface = {
+  "version": "v0.9";
+  "createSurface": {
+    "surfaceId": InterruptFormSchema_SurfaceId;
+    "catalogId": InterruptFormSchema_CatalogId;
+    /** Profiled: `iconUrl` is excluded (network egress, RFC 0209 §B.3). */ "theme"?: {
+      "primaryColor"?: string;
+      "agentDisplayName"?: string;
+    };
+  };
+};
+
+export type InterruptFormSchema_ComponentId = string;
+
+export type InterruptFormSchema_Binding = {
+  /** A JSON Pointer into the surface's data model (A2UI v0.9 DataBinding). */ "path": string;
+};
+
+/** A2UI DynamicString, profiled: a literal or a data binding. FunctionCall values are excluded (RFC 0209 §B.4). */
+export type InterruptFormSchema_DynString = (string | InterruptFormSchema_Binding);
+
+export type InterruptFormSchema_Accessibility = {
+  "label"?: InterruptFormSchema_DynString;
+  "description"?: InterruptFormSchema_DynString;
+};
+
+/** A2UI CheckRule, profiled to the pure `required` function only (RFC 0209 §B.4). */
+export type InterruptFormSchema_Check = {
+  "message": string;
+  "condition": {
+    "call": "required";
+    "args": {
+      "value": InterruptFormSchema_Binding;
+    };
+    "returnType"?: "boolean";
+  };
+};
+
+export type InterruptFormSchema_TextField = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "TextField";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "checks"?: Array<InterruptFormSchema_Check>;
+  "label": InterruptFormSchema_DynString;
+  "value"?: InterruptFormSchema_DynString;
+  /** `obscured` is excluded: a form MUST NOT solicit a secret (invariant interrupt-form-no-secret-input). */ "variant"?: "longText" | "number" | "shortText";
+  "validationRegexp"?: string;
+};
+
+export type InterruptFormSchema_DynBool = (boolean | InterruptFormSchema_Binding);
+
+export type InterruptFormSchema_CheckBox = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "CheckBox";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "checks"?: Array<InterruptFormSchema_Check>;
+  "label": InterruptFormSchema_DynString;
+  "value": InterruptFormSchema_DynBool;
+};
+
+export type InterruptFormSchema_DynStringList = (Array<string> | InterruptFormSchema_Binding);
+
+export type InterruptFormSchema_ChoicePicker = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "ChoicePicker";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "checks"?: Array<InterruptFormSchema_Check>;
+  "label"?: InterruptFormSchema_DynString;
+  "variant"?: "multipleSelection" | "mutuallyExclusive";
+  "options": Array<{
+    "label": InterruptFormSchema_DynString;
+    "value": string;
+  }>;
+  "value": InterruptFormSchema_DynStringList;
+  "displayStyle"?: "checkbox" | "chips";
+  "filterable"?: boolean;
+};
+
+export type InterruptFormSchema_DateTimeInput = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "DateTimeInput";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "checks"?: Array<InterruptFormSchema_Check>;
+  "label"?: InterruptFormSchema_DynString;
+  "value": InterruptFormSchema_DynString;
+  "enableDate"?: boolean;
+  "enableTime"?: boolean;
+};
+
+/** A2UI DynamicValue, profiled: literal string/number/boolean/array or a binding; no FunctionCall. */
+export type InterruptFormSchema_DynValue = (string | number | boolean | Array<unknown> | InterruptFormSchema_Binding);
+
+/** A2UI Action, profiled to the server-event arm only. `functionCall` (client-side functions, including `openUrl`) is excluded (invariant interrupt-form-action-confinement). */
+export type InterruptFormSchema_Action = {
+  "event": {
+    /** The only allowlisted target: resolving the interrupt that carries this form. */ "name": "resume";
+    "context"?: {
+      [key: string]: InterruptFormSchema_DynValue;
+    };
+  };
+};
+
+export type InterruptFormSchema_Button = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "Button";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "child": InterruptFormSchema_ComponentId;
+  "variant"?: "default" | "primary" | "borderless";
+  "action": InterruptFormSchema_Action;
+};
+
+export type InterruptFormSchema_Column = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "Column";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "children": Array<InterruptFormSchema_ComponentId>;
+  "justify"?: "start" | "center" | "end" | "spaceBetween" | "spaceAround" | "spaceEvenly" | "stretch";
+  "align"?: "center" | "end" | "start" | "stretch";
+};
+
+export type InterruptFormSchema_Row = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "Row";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "children": Array<InterruptFormSchema_ComponentId>;
+  "justify"?: "center" | "end" | "spaceAround" | "spaceBetween" | "spaceEvenly" | "start" | "stretch";
+  "align"?: "start" | "center" | "end" | "stretch";
+};
+
+export type InterruptFormSchema_Card = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "Card";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "child": InterruptFormSchema_ComponentId;
+};
+
+export type InterruptFormSchema_Divider = {
+  "id": InterruptFormSchema_ComponentId;
+  "component": "Divider";
+  "accessibility"?: InterruptFormSchema_Accessibility;
+  "weight"?: number;
+  "axis"?: "horizontal" | "vertical";
+};
+
+/** One component of the OpenWOP profile of the A2UI v0.9 basic catalog (RFC 0209 §B.2). anyOf with a single-string-enum `component` discriminator, every object closed. */
+export type InterruptFormSchema_Component = (InterruptFormSchema_Text | InterruptFormSchema_TextField | InterruptFormSchema_CheckBox | InterruptFormSchema_ChoicePicker | InterruptFormSchema_DateTimeInput | InterruptFormSchema_Button | InterruptFormSchema_Column | InterruptFormSchema_Row | InterruptFormSchema_Card | InterruptFormSchema_Divider);
+
+export type InterruptFormSchema_UpdateComponents = {
+  "version": "v0.9";
+  "updateComponents": {
+    "surfaceId": InterruptFormSchema_SurfaceId;
+    "components": Array<InterruptFormSchema_Component>;
+  };
+};
+
+export type InterruptFormSchema_UpdateDataModel = {
+  "version": "v0.9";
+  "updateDataModel": {
+    "surfaceId": InterruptFormSchema_SurfaceId;
+    "path"?: string;
+    "value"?: unknown;
+  };
+};
+
+export type InterruptFormSchema_DeleteSurface = {
+  "version": "v0.9";
+  "deleteSurface": {
+    "surfaceId": InterruptFormSchema_SurfaceId;
+  };
+};
+
+export type InterruptFormSchema_Message = (InterruptFormSchema_CreateSurface | InterruptFormSchema_UpdateComponents | InterruptFormSchema_UpdateDataModel | InterruptFormSchema_DeleteSurface);
+
+/** An ordered run of A2UI v0.9 server-to-client messages for one surface, restricted to the OpenWOP profile of the basic catalog. Every message's `surfaceId` MUST equal the form's `surfaceId`, and a `createSurface.catalogId` MUST equal its `catalogId`. */
+export type InterruptFormSchema_FormV2 = {
+  "reasoning"?: string;
+  "version": "v0.9";
+  "catalogId": InterruptFormSchema_CatalogId;
+  "surfaceId": InterruptFormSchema_SurfaceId;
+  "messages": Array<InterruptFormSchema_Message>;
+};
+
+/** Several v0.9 forms for one interrupt, folded in order. */
+export type InterruptFormSchema_Surfaces = {
+  "surfaces": Array<InterruptFormSchema_FormV2>;
+};
+
+/** A declarative form on a `clarification` interrupt: `ClarificationData.form` (suspend-request.schema.json). A closed catalog of components that a consumer renders with native widgets and never executes. Its only action resolves the interrupt that carries it. The rules are in interrupt.md §Forms. */
+export type InterruptFormSchema = (InterruptFormSchema_FormV1 | InterruptFormSchema_FormV2 | InterruptFormSchema_Surfaces);
+
 /** Payload for kind='clarification'. AI/system asks the user for missing context before continuing. */
 export type SuspendRequestSchema_ClarificationData = {
   "questions": Array<{
@@ -545,6 +816,7 @@ export type SuspendRequestSchema_ClarificationData = {
     };
   }>;
   "contextType"?: string;
+  /** OPTIONAL declarative form (RFC 0255 §E; interrupt.md §Forms). `questions` stays the fallback for a consumer that does not render it. A host MUST NOT raise an interrupt whose form fails this schema. */ "form"?: InterruptFormSchema;
 };
 
 export type SuspendRequestSchema_ExternalEventData = {

@@ -1206,218 +1206,6 @@ export interface TypedRunEvent<T> extends RunEventDoc {
   payload: T;
 }
 
-// ---------------------------------------------------------------------------
-// AI Envelope (`spec/v2/core/events.md` §AI envelopes)
-//
-// Inbound LLM-emission envelope. Distinct from `RunEventDoc` (outbound event
-// log) and `ErrorEnvelope` (host HTTP error response). Top-level shape is
-// closed; payload shape is selected by `type` and validated against a
-// per-kind JSON Schema advertised via `Capabilities.supportedEnvelopes` +
-// `Capabilities.schemaVersions`. See spec doc for full normative prose.
-// ---------------------------------------------------------------------------
-
-/** Wire metadata on every AI Envelope.
- *
- * Mirror of `schemas/ai-envelope.schema.json` — the closed enums below are that file's,
- * verified member-for-member by `check-narrow-union-drift`.
- */
-export interface EnvelopeMeta {
-  /** Provenance of this emission. */
-  source: 'ai-generation' | 'user' | 'system';
-  /** Mirrors `RunEventDoc.contentTrust`. Hosts MUST set 'untrusted' for MCP / A2A origin. */
-  contentTrust?: 'trusted' | 'untrusted';
-  /** ISO 8601 UTC timestamp. */
-  ts: string;
-  /** Optional W3C trace-context for distributed tracing. */
-  traceparent?: string;
-  /** Optional human-readable label for ops dashboards. */
-  label?: string;
-}
-
-/** Chunking info for streamed emissions. (in-flight) */
-export interface PartialInfo {
-  isPartial: boolean;
-  index: number;
-  /** -1 when total is unknown (streaming without precount). */
-  total: number;
-}
-
-/** Canonical inbound LLM-emission wire shape per `spec/v2/core/ai-envelope.md`. */
-export interface AIEnvelope<TPayload = unknown> {
-  /** Discriminator for payload shape, kind routing, and Envelope Contract gate. */
-  type: string;
-  /** Per-kind schema version. Absent → treat as 0. */
-  schemaVersion?: number;
-  /** Globally unique envelope id. Engine-assigned if absent on receipt. */
-  envelopeId: string;
-  /** Caller-stable id for dedup, replay short-circuit, and causal chaining. */
-  correlationId: string;
-  /** Set when the emitting node is identifiable. */
-  nodeId?: string;
-  /** Discriminated payload. Shape selected by `type`. */
-  payload: TPayload;
-  /** Wire metadata. */
-  meta: EnvelopeMeta;
-  /** Present when this is one fragment of a streamed emission. */
-  partial?: PartialInfo;
-}
-
-/** Per-typeId envelope-kind permission set per `ai-envelope.md` §"Envelope Contract". *
- * Authority `host engine interface, not a wire shape — EnvelopeOutcome is returned by the
- * engine's acceptEnvelope path, so it crosses no endpoint and no client method. The set is
- * described in the v1 spec's ai-envelope.md §refusalMode. There is deliberately no JSON
- * Schema: schemas/v2 describes what goes on the wire, and this does not`.
- */
-export interface EnvelopeContract {
-  /** Kinds the engine will accept from this node. */
-  accepts: string[];
-  /** Refusal behavior for non-`accepts`, non-universal kinds. */
-  refusalMode: 'fail-node' | 'discard-and-warn';
-}
-
-/** Returned by the engine's `acceptEnvelope` path. */
-export type EnvelopeOutcome =
-  | { status: 'accepted'; recordedEventIds: string[] }
-  | { status: 'gated'; reason: string; gate: EnvelopeContractRefusal }
-  | { status: 'invalid'; reason: string; details: ValidationDetail[] }
-  | { status: 'breached'; reason: string; capKind: 'envelopes' | 'schema' | 'clarification' };
-
-/**
- * Authority `host engine interface, not a wire shape — EnvelopeOutcome is returned by the
- * engine's acceptEnvelope path, so it crosses no endpoint and no client method. The set is
- * described in the v1 spec's ai-envelope.md §refusalMode. There is deliberately no JSON
- * Schema: schemas/v2 describes what goes on the wire, and this does not`.
- */
-export interface EnvelopeContractRefusal {
-  refusedType: string;
-  acceptedTypes: string[];
-  refusalMode: 'fail-node' | 'discard-and-warn';
-}
-
-export interface ValidationDetail {
-  path: string;
-  message: string;
-}
-
-/** Optional capability advertisement. Default when absent: 'warn'. */
-export type EnvelopeStrictness = 'warn' | 'strict';
-
-// Universal-kind payloads. Per-kind schemas at `schemas/envelopes/<kind>.schema.json`.
-
-/** Payload of the universal `clarification.request` envelope kind. */
-export interface ClarificationRequestPayload {
-  questions: Array<{
-    id: string;
-    question: string;
-    schema?: Record<string, unknown>;
-  }>;
-  contextType?: string;
-}
-
-/** Payload of the universal `schema.request` envelope kind. */
-export interface SchemaRequestPayload {
-  envelopeType: string;
-  reason?: string;
-}
-
-/** Payload of the universal `schema.response` envelope kind (LLM ack). */
-export interface SchemaResponsePayload {
-  envelopeType: string;
-  ack: true;
-}
-
-/**
- * Payload of the universal `error` envelope kind (the LLM's deliberate error
- * report). Distinct from `ErrorEnvelope` (the host's HTTP error response).
- */
-export interface AIEnvelopeErrorPayload {
-  code: string;
-  message: string;
-  details?: Record<string, unknown>;
-}
-
-/**
- * Payload of the core `ui.a2ui-surface` envelope kind (RFC 0102 — A2UI
- * agent-authored interface surfaces, `schemas/envelopes/ui.a2ui-surface.schema.json`).
- * An advertised, optional core kind beside the `media.*` family: a declarative
- * interactive UI a consumer renders with native widgets, routing user actions
- * back **without executing agent-supplied code**.
- *
- * `surface` is the closed component tree, kept loose here (`Record<string,
- * unknown>`) — it is rendered by a dedicated A2UI renderer the SDK does not
- * provide, and matches the SDK convention of keeping complex nested shapes
- * structural (cf. `ClarificationRequestPayload.questions[].schema`).
- *
- * NOTE: the broader AI-envelope surface (`AIEnvelope`, `EnvelopeMeta`, the
- * universal payloads) is currently modeled only in this TypeScript SDK; the
- * Python and Go SDKs do not yet model AI envelopes. `A2UISurfacePayload`
- * therefore lands here only; cross-SDK AI-envelope modeling is a separate
- * follow-on (tracked in PARITY.md), not part of RFC 0102.
- */
-export interface A2UISurfacePayload {
-  /** The A2UI catalog version the surface targets. A host-enumerated,
-   *  growing set (currently `'0.9.1'`); a consumer MUST refuse an unknown /
-   *  higher version with `unknown_schema_version`. Typed as `string` (not a
-   *  pinned literal) so the read-type stays forward-compatible as the host's
-   *  supported set grows; the consumer enforces refuse-unknown at runtime. */
-  catalogVersion: string;
-  /** The A2UI surface document — a closed component tree, self-contained and
-   *  renderable from the payload alone (never a live reference into an
-   *  external catalog). Kept structural; rendered by an A2UI renderer. */
-  surface: Record<string, unknown>;
-  /** OPTIONAL model reasoning (RFC 0030 §A), conventionally first. */
-  reasoning?: string;
-}
-
-/**
- * RFC 0114 — a single RFC 6902 (JSON-Patch) operation inside an
- * {@link A2uiSurfaceDeltaFrame}. The `test` op is deliberately EXCLUDED (a
- * fire-and-forget transport frame cannot act on a failed conditional);
- * `move`/`copy` are permitted but OPTIONAL for a host to emit.
- *
- * Mirror of `schemas/a2ui-surface-delta-frame.schema.json` — the closed enums below are that file's,
- * verified member-for-member by `check-narrow-union-drift`.
- *
- * Mirror of `schemas/v2/a2ui-surface-delta-frame.schema.json`.
- */
-export interface A2uiSurfacePatchOp {
-  /** RFC 6902 operation. `test` is excluded by RFC 0114. */
-  op: 'add' | 'remove' | 'replace' | 'move' | 'copy';
-  /** RFC 6901 JSON-Pointer into the target surface. */
-  path: string;
-  /** RFC 6901 JSON-Pointer source for `move`/`copy`. */
-  from?: string;
-  /** The value for `add`/`replace`. Walked by the SR-1 redaction harness
-   *  exactly like a full-surface value. */
-  value?: unknown;
-}
-
-/**
- * RFC 0114 — a HOST-SIDE TRANSPORT frame carrying an RFC 6902 delta over a
- * recorded `ui.a2ui-surface` envelope ({@link A2UISurfacePayload}). Delivered
- * ONLY over the run event stream (`GET /runs/{runId}/events`) to a subscriber
- * that negotiated `?a2uiDelta=1`; every other consumer (the event-log read,
- * replay, `:fork`, any non-negotiating subscriber) receives the materialized
- * FULL surface. This is NOT a recorded-envelope shape — the recorded
- * `ui.a2ui-surface` payload is unchanged and always full. The consumer applies
- * `patch` to the surface last delivered under `surfaceRef`, then re-validates
- * the result against the closed `catalogVersion` catalog before render; on any
- * apply/validation failure it falls back fail-closed and the host
- * re-materializes the full surface. Per
- * `schemas/a2ui-surface-delta-frame.schema.json`. A host advertises support via
- * the `a2uiSurface.deltaTransport` capability flag.
- */
-export interface A2uiSurfaceDeltaFrame {
-  /** The recorded `ui.a2ui-surface` envelope id this delta patches. */
-  surfaceRef: string;
-  /** MUST equal the referenced full surface's `catalogVersion`; a
-   *  catalog-version change MUST start from a fresh full surface. */
-  catalogVersion: string;
-  /** A non-empty RFC 6902 document applied over the surface last delivered
-   *  under `surfaceRef`. */
-  patch: A2uiSurfacePatchOp[];
-}
-
 // ── RFC 0027 + RFC 0028 — Prompt library (spec/v2/core/prompts.md) ──
 
 /**
@@ -1465,7 +1253,6 @@ export interface PromptTemplate {
     modelClass?: string;
     temperature?: number;
     maxTokens?: number;
-    envelopeType?: string;
   };
   tags?: string[];
   meta?: {
@@ -1524,8 +1311,8 @@ export interface GetPromptRequest {
 
 /** Request shape for `client.prompts.render(...)` per RFC 0028 §A.
  *
- * Mirror of `schemas/ai-envelope.schema.json` — the closed enums below are that file's,
- * verified member-for-member by `check-narrow-union-drift`.
+ * Mirror of `contentTrust` at `schemas/v2/run-event-payloads.schema.json#/$defs/promptComposed/properties/contentTrust`
+ * (the `prompt.composed` trust marker), verified member-for-member by `check-narrow-union-drift`.
  */
 export interface RenderPromptRequest {
   ref: PromptRef;
@@ -1542,8 +1329,8 @@ export interface RenderPromptRequest {
  *  `capabilities.prompts.observability: "full"`. Same deterministic-hash
  *  invariant as `prompt.composed` events (RFC 0027 §F).
  *
- * Mirror of `schemas/ai-envelope.schema.json` — the closed enums below are that file's,
- * verified member-for-member by `check-narrow-union-drift`.
+ * Mirror of `contentTrust` at `schemas/v2/run-event-payloads.schema.json#/$defs/promptComposed/properties/contentTrust`
+ * (the `prompt.composed` trust marker), verified member-for-member by `check-narrow-union-drift`.
  */
 export interface RenderPromptResponse {
   hash: string;
