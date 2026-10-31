@@ -2,7 +2,7 @@
 
 The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop/v2.Y.Z` tracking a published corpus tag) published from `sdk/typescript-v2/`.
 
-## [Unreleased] — corpus `v2.46.38`: the AI Envelope is deleted from v2 (RFC 0255)
+## [2.8.0] — 2026-10-31 — corpus `v2.46.38`: the AI Envelope is deleted from v2 (RFC 0255)
 
 - **BREAKING (type surface): the AI Envelope types are removed (RFC 0255).** RFC 0255 deleted the AI Envelope from the v2 protocol, so this v2-only package no longer exports `AIEnvelope`, `EnvelopeMeta`, `PartialInfo`, `EnvelopeContract`, `EnvelopeContractRefusal`, `EnvelopeOutcome`, `EnvelopeStrictness`, `ValidationDetail`, `ClarificationRequestPayload`, `SchemaRequestPayload`, `SchemaResponsePayload`, `AIEnvelopeErrorPayload`, `A2UISurfacePayload`, `A2uiSurfacePatchOp` or `A2uiSurfaceDeltaFrame`. None of them crossed a client method. `PromptTemplate.modelHints.envelopeType` is removed (deleted from `prompt-template.schema.json`). The members of the generated `ErrorCode` and `CapabilityFamilyKey` unions shrink as listed below. A clarification interrupt's form is `SuspendRequestSchema_ClarificationData.form` (generated, `InterruptFormSchema`).
 - **`buildReasoningDirective`** is unchanged in behaviour except its prompt text now says the host accepts "output" (was "envelopes") without `reasoning`. Its docs point at `capabilities.aiProviders.reasoning.promptDirective`, where RFC 0255 moved the facet from the deleted `envelopes` family.
