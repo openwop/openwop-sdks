@@ -74,7 +74,7 @@ describe('buildReasoningDirective: strength="advisory" wording', () => {
     expect(directive).toContain('2408.02442');
   });
 
-  it('advisory wording explicitly notes the host accepts envelopes where reasoning is absent (RFC 0030 §A MUST NOT)', () => {
+  it('advisory wording explicitly notes the host accepts output where reasoning is absent (RFC 0030 §A MUST NOT)', () => {
     const schema = { properties: { reasoning: { type: 'string' } } };
     const directive = buildReasoningDirective(schema, 'advisory');
     expect(directive).toContain('absent');

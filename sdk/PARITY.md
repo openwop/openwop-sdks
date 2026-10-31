@@ -209,6 +209,8 @@ These landed during Track 1 / T1.1 / T1.2 / T1.4 / T1.7 work. Audit-log verifica
 
 ### AI-envelope surface — at full parity (resolved 2026-06-24, SDK 1.4.1)
 
+> **1.x only.** RFC 0255 deleted the AI Envelope from v2 (corpus `v2.46.36`), so the 2.x SDKs no longer carry any of the types below; the 1.x SDKs keep them, since v1 is frozen.
+
 The inbound AI-envelope surface from `ai-envelope.md` (`AIEnvelope`, `EnvelopeMeta`, `PartialInfo`, `EnvelopeContract`, `EnvelopeContractRefusal`, `ValidationDetail`, `EnvelopeOutcome`, `EnvelopeContractsCapability`, `EnvelopeStrictness`, and the per-kind payload types — the universal `clarification.request` / `schema.request` / `schema.response` / `error` kinds, plus **`A2UISurfacePayload`** for the RFC 0102 `ui.a2ui-surface` core kind) is now modeled in **all three SDKs**. This closed the prior TypeScript-only gap (the AI-envelope types predated the 2026-06 split; Python + Go landed them in 1.4.1).
 
 Two language adaptations: TypeScript's generic `AIEnvelope<TPayload>` is `payload: Any` in Python / `Payload any` in Go (the consumer narrows by `type`); TypeScript's `EnvelopeOutcome` discriminated union is a status-tagged dataclass/struct in Python/Go (neither has native sum types). These are *type-surface* parity, not OpenAPI operations, so they sit outside the operation-parity count above.

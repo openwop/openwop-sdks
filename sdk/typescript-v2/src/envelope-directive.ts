@@ -1,23 +1,24 @@
 /**
- * envelopeDirective — RFC 0030 §A `reasoning`-field prompt directive synthesis.
+ * RFC 0030 §A `reasoning`-field prompt directive synthesis.
  *
- * Hosts that advertise `capabilities.envelopes.reasoning.supported: true`
- * with `promptDirective: "advisory"` or `"mandatory"` inject a system-prompt
- * directive instructing the model to populate the OPTIONAL `reasoning` field
- * on envelope payload schemas that carry it. The directive is informational
- * — hosts MUST NOT reject envelopes where `reasoning` is absent regardless
- * of `promptDirective` strength (RFC 0030 §A).
+ * Hosts that advertise `capabilities.aiProviders.reasoning.promptDirective`
+ * as `"advisory"` or `"mandatory"` inject a system-prompt directive
+ * instructing the model to populate an OPTIONAL `reasoning` property in a
+ * structured-output `responseSchema` that carries one (host-services.md
+ * §Structured output). The directive is informational — hosts MUST NOT
+ * reject output where `reasoning` is absent regardless of `promptDirective`
+ * strength (RFC 0030 §A). RFC 0255 moved this facet from the deleted
+ * `envelopes` family to `aiProviders`; the semantics are unchanged.
  *
- * The directive fires only when the envelope's `responseSchema` declares a
- * top-level `reasoning` property. Schemas without `reasoning` (e.g.,
- * `schema.response` per RFC 0030 §A) do NOT receive the directive.
+ * The directive fires only when the `responseSchema` declares a top-level
+ * `reasoning` property. Schemas without `reasoning` do NOT receive it.
  *
  * Honest separation of concerns:
  *   - This module decides WHEN to inject (schema has `reasoning`).
  *   - The caller decides WHETHER to inject (read `promptDirective` from
  *     the host's discovery advertisement).
  *   - The model decides whether to ACTUALLY populate the field (the spec
- *     forbids rejecting envelopes where `reasoning` is absent).
+ *     forbids rejecting output where `reasoning` is absent).
  *
  * **Operational note on `"mandatory"`** (per RFC 0030 §A 2026-05-21
  * amendment). Strict-output models may honor the mandatory wording
@@ -26,7 +27,7 @@
  * active model class confirms `"mandatory"` doesn't trigger refusals.
  *
  * @see RFCS/0030-envelope-reasoning-and-tier-one-subset.md §A
- * @see spec/v2/core/ai-envelope.md §"Reasoning field (normative)"
+ * @see spec/v2/core/host-services.md §"Structured output"
  */
 
 /**
@@ -42,7 +43,7 @@
  *                 `"mandatory"` is safe.
  *
  * Both `"advisory"` and `"mandatory"` are prompt-injection postures, NOT
- * wire-level refusal contracts — the host accepts envelopes regardless of
+ * wire-level refusal contracts — the host accepts output regardless of
  * whether `reasoning` is populated (RFC 0030 §A normative MUST NOT).
  */
 export type ReasoningDirectiveStrength = 'off' | 'advisory' | 'mandatory';
@@ -94,7 +95,7 @@ export function buildReasoningDirective(
       'BEFORE emitting the structured fields, populate the `reasoning` property with your analytical',
       'process — explain how you derived each structured field, what assumptions you made, and what',
       'risks or alternative interpretations you considered. The `reasoning` field is REQUIRED in your',
-      'output; do not skip it. (Note: the host accepts envelopes where `reasoning` is absent per',
+      'output; do not skip it. (Note: the host accepts output where `reasoning` is absent per',
       'RFC 0030 §A, but for this dispatch the host expects it populated.)',
     ].join(' ');
   }
@@ -105,6 +106,6 @@ export function buildReasoningDirective(
     'your analytical process — explain how you derived each structured field. Per Tam et al. (arXiv',
     "2408.02442), models constrained to strict JSON output suffer reasoning-quality collapse when",
     'no reasoning slot exists; use this field to think before emitting the structured payload. The',
-    'host accepts envelopes where `reasoning` is absent — populate it when it improves clarity.',
+    'host accepts output where `reasoning` is absent — populate it when it improves clarity.',
   ].join(' ');
 }
