@@ -2,6 +2,11 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2.Y.Z`).
 
+## [2.9.0] — 2026-10-31 — corpus `v2.46.38`: deployment transitions typed (RFC 0254)
+
+- **`AgentDeployment.TransitionRunID`** (RFC 0254 §D, optional): the deployment-management run that applied, or is applying, the record's last transition. It carries the transition's `authorization.decided`, any approval interrupt and the `deployment.*` event.
+- **`TransitionAgentDeployment` documents the RFC 0254 answers.** A `202` (gated by an approval) returns the unchanged record whose `transitionRunId` names the run suspended on that approval; it is returned like a `200`, so follow `transitionRunId` to tell them apart. Errors are now named as the corpus has them: `400 validation_error` for an unadvertised state or canary share, `403` without `deploy:*`, `409 deployment_state_conflict` for an illegal edge, a skipped step or nothing to roll back to, and `422 eval_gate_unmet`. The old text named `400 no_active_deployment` and a `403` for `eval_gate_unmet`, which the corpus no longer uses.
+
 ## [2.8.0] — 2026-10-31 — corpus `v2.46.38`: the AI Envelope is deleted from v2 (RFC 0255)
 
 - **BREAKING (type surface): the AI Envelope types are removed (RFC 0255).** RFC 0255 deleted the AI Envelope from the v2 protocol, so this v2-only module no longer declares `AIEnvelope`, `EnvelopeMeta`, `PartialInfo`, `EnvelopeContract`, `EnvelopeContractRefusal`, `EnvelopeOutcome`, `EnvelopeContractsCapability`, `ValidationDetail`, `ClarificationRequestQuestion`, `ClarificationRequestPayload`, `SchemaRequestPayload`, `SchemaResponsePayload`, `AIEnvelopeErrorPayload`, `A2UISurfacePayload`, `A2UISurfacePatchOp` or `A2UISurfaceDeltaFrame`. None of them crossed a client method. `PromptModelHints.EnvelopeType` is removed (deleted from `prompt-template.schema.json`). `ErrorCodes` and `CapabilityFamilyKeys` shrink as listed below.

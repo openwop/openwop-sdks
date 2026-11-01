@@ -3,6 +3,7 @@ package openwopclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -213,5 +214,35 @@ func TestHostTestEventAndUiPlugins(t *testing.T) {
 	msg, _ := (*captured)[2].Body["message"].(map[string]any)
 	if msg["openwop"] != "ui-plugin/1" || msg["type"] != "request" || msg["method"] != "host.toast" {
 		t.Errorf("rpc message = %v", msg)
+	}
+}
+
+// RFC 0254: a gated transition answers 202 with the unchanged record and the
+// management run's id; an illegal edge answers 409 deployment_state_conflict.
+func TestTransitionAgentDeploymentRFC0254(t *testing.T) {
+	c, captured := newBodyServer(t, func(r *http.Request) (int, string, string) {
+		if r.Header.Get("Idempotency-Key") == "skip" {
+			return 409, "application/json", `{"error":"deployment_state_conflict","message":"promote skips a step","details":{"state":"draft"}}`
+		}
+		return 202, "application/json", `{"agentId":"a","version":"2","state":"staged","transitionRunId":"t/mgmt1"}`
+	})
+	ctx := context.Background()
+	out, err := c.TransitionAgentDeployment(ctx, "a", AgentDeploymentTransition{Version: "2", Transition: "promote"}, MutationOptions{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out.State != "staged" || out.TransitionRunID != "t/mgmt1" {
+		t.Fatalf("202 record = %+v", out)
+	}
+	if got := (*captured)[0].RawPath; got != "/agents/a/deployments" {
+		t.Fatalf("path = %s", got)
+	}
+	_, err = c.TransitionAgentDeployment(ctx, "a", AgentDeploymentTransition{Version: "2", Transition: "promote", ToState: "active"}, MutationOptions{IdempotencyKey: "skip"})
+	var werr *WopError
+	if !errors.As(err, &werr) || werr.Status != 409 || werr.Envelope == nil || werr.Envelope.Error != "deployment_state_conflict" {
+		t.Fatalf("409 err = %v", err)
+	}
+	if (*captured)[1].Body["toState"] != "active" {
+		t.Fatalf("toState not sent: %v", (*captured)[1].Body)
 	}
 }

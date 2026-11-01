@@ -137,3 +137,25 @@ describe('host test events and front-end plugins', () => {
     expect(captured[1]!.body).toEqual({ message: { openwop: 'ui-plugin/1', type: 'request', id: 1, method: 'host.toast' } });
   });
 });
+
+describe('agents.transitionDeployment (RFC 0254)', () => {
+  const record = { agentId: 'a', version: '2', state: 'staged', transitionRunId: 't/mgmt1' };
+
+  it('resolves a 202 gated transition with the unchanged record and its transitionRunId', async () => {
+    const { client, captured } = mockClient(() => ({ status: 202, body: record }));
+    const out = await client.agents.transitionDeployment('a', { version: '2', transition: 'promote' });
+    expect(out.state).toBe('staged');
+    expect(out.transitionRunId).toBe('t/mgmt1');
+    expect(captured[0]!.url).toBe('https://host.example/agents/a/deployments');
+  });
+
+  it('rejects a 409 deployment_state_conflict with the code', async () => {
+    const { client } = mockClient(() => ({
+      status: 409,
+      body: { error: 'deployment_state_conflict', message: 'promote skips a step', details: { state: 'draft' } },
+    }));
+    await expect(
+      client.agents.transitionDeployment('a', { version: '2', transition: 'promote', toState: 'active' }),
+    ).rejects.toMatchObject({ status: 409, envelope: { error: 'deployment_state_conflict' } });
+  });
+});
