@@ -2,6 +2,11 @@
 
 The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop/v2.Y.Z` tracking a published corpus tag) published from `sdk/typescript-v2/`.
 
+## [2.9.0] — 2026-10-31 — corpus `v2.46.38`: deployment transitions typed (RFC 0254)
+
+- **`AgentDeployment.transitionRunId`** (RFC 0254 §D, optional): the deployment-management run that applied, or is applying, the record's last transition. It carries the transition's `authorization.decided`, any approval interrupt and the `deployment.*` event.
+- **`agents.transitionDeployment` documents the RFC 0254 answers.** A `202` (gated by an approval) returns the unchanged record whose `transitionRunId` names the run suspended on that approval; it is returned like a `200`, so follow `transitionRunId` to tell them apart. Errors are now named as the corpus has them: `400 validation_error` for an unadvertised state or canary share, `403` without `deploy:*`, `409 deployment_state_conflict` for an illegal edge, a skipped step or nothing to roll back to, and `422 eval_gate_unmet`. The old text named `400 no_active_deployment` and a `403` for `eval_gate_unmet`, which the corpus no longer uses.
+
 ## [2.8.0] — 2026-10-31 — corpus `v2.46.38`: the AI Envelope is deleted from v2 (RFC 0255)
 
 - **BREAKING (type surface): the AI Envelope types are removed (RFC 0255).** RFC 0255 deleted the AI Envelope from the v2 protocol, so this v2-only package no longer exports `AIEnvelope`, `EnvelopeMeta`, `PartialInfo`, `EnvelopeContract`, `EnvelopeContractRefusal`, `EnvelopeOutcome`, `EnvelopeStrictness`, `ValidationDetail`, `ClarificationRequestPayload`, `SchemaRequestPayload`, `SchemaResponsePayload`, `AIEnvelopeErrorPayload`, `A2UISurfacePayload`, `A2uiSurfacePatchOp` or `A2uiSurfaceDeltaFrame`. None of them crossed a client method. `PromptTemplate.modelHints.envelopeType` is removed (deleted from `prompt-template.schema.json`). The members of the generated `ErrorCode` and `CapabilityFamilyKey` unions shrink as listed below. A clarification interrupt's form is `SuspendRequestSchema_ClarificationData.form` (generated, `InterruptFormSchema`).

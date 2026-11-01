@@ -445,6 +445,7 @@ def _agent_deployment_from_dict(d: dict[str, Any]) -> AgentDeployment:
         channels=d.get("channels"),
         evalRunId=d.get("evalRunId"),
         approvalGateId=d.get("approvalGateId"),
+        transitionRunId=d.get("transitionRunId"),
     )
 
 
@@ -1301,13 +1302,20 @@ class OpenwopClient:
         *,
         idempotency_key: str | None = None,
     ) -> AgentDeployment:
-        """RFC 0082 §E — request a deployment state transition (promote / pause /
-        deprecate / rollback / adjust-canary) via
-        ``POST /agents/{agentId}/deployments``. The host authorizes fail-closed
-        (RFC 0049 ``deploy:*``), runs any RFC 0051 approvalGate, and enforces RFC
-        0081 ``requiredEval`` before emitting ``deployment.promoted``. Returns the
-        updated record; raises ``WopError`` on non-2xx (403 fail-closed /
-        ``eval_gate_unmet``; 400 ``no_active_deployment`` / unsupported state)."""
+        """RFC 0082 §E, RFC 0254 — request a deployment state transition
+        (promote / pause / deprecate / rollback / adjust-canary) via
+        ``POST /agents/{agentId}/deployments``. ``promote`` moves exactly one
+        step; a paused version resumes by ``promote``; ``rollback`` restores the
+        version active before the last promote.
+
+        Returns the record on ``200`` (applied) and on ``202`` (gated by an
+        approval: the record is unchanged except ``transitionRunId``, which
+        names the management run suspended on that approval). Either way,
+        ``transitionRunId`` is the run to follow. Raises ``WopError``:
+        ``400 validation_error`` (a state or ``canaryPercent`` the host does not
+        advertise), ``403`` (no ``deploy:*``), ``409 deployment_state_conflict``
+        (an illegal edge, a skipped step, or no prior active version to roll
+        back to), ``422 eval_gate_unmet``."""
         headers = self._mutation_headers(idempotency_key=idempotency_key)
         d = self._request_json(
             "POST",

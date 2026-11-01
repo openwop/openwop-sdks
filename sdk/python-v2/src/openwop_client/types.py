@@ -938,6 +938,11 @@ class AgentDeployment:
     channels: list[str] | None = None
     evalRunId: str | None = None
     approvalGateId: str | None = None
+    transitionRunId: str | None = None
+    """RFC 0254 §D — the deployment-management run that applied, or is
+    applying, the last transition. It carries ``authorization.decided``, any
+    approval interrupt and the ``deployment.*`` event. A refused transition
+    leaves it unchanged."""
 
 
 @dataclass

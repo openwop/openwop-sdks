@@ -13,6 +13,7 @@ from unittest import mock
 
 import openwop_client.client as client_module
 from openwop_client import (
+    AgentDeploymentTransition,
     ApplyProposalGateResponse,
     CreateRunRequest,
     OpenwopClient,
@@ -274,6 +275,27 @@ class HostTestEventAndUiPluginTests(unittest.TestCase):
                 }
             },
         )
+
+
+class DeploymentTransitionTests(unittest.TestCase):
+    def test_transition_run_id_decoded(self) -> None:
+        """RFC 0254 §D: a gated (202) answer is the unchanged record plus the
+        management run that waits on the approval."""
+        seen, urlopen = _stub(
+            lambda req: {
+                "agentId": "a",
+                "version": "2",
+                "state": "staged",
+                "transitionRunId": "t/mgmt1",
+            }
+        )
+        with mock.patch.object(client_module, "urlopen", urlopen):
+            out = OpenwopClient("https://h.example", "k").agents_transition_deployment(
+                "a", AgentDeploymentTransition(version="2", transition="promote")
+            )
+        self.assertEqual(out.state, "staged")
+        self.assertEqual(out.transitionRunId, "t/mgmt1")
+        self.assertEqual(seen[0].full_url, "https://h.example/agents/a/deployments")
 
 
 if __name__ == "__main__":

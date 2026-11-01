@@ -574,7 +574,19 @@ export class OpenwopClient {
       }
     },
 
-    /** `POST /agents/{agentId}/deployments` (RFC 0082 §E) — a deployment state transition. */
+    /**
+     * `POST /agents/{agentId}/deployments` (RFC 0082 §E, RFC 0254) — a deployment
+     * state transition. `promote` moves exactly one step; a paused version resumes
+     * by `promote`; `rollback` restores the version active before the last promote.
+     *
+     * Resolves with the record on `200` (applied) and on `202` (gated by an
+     * approval: the record is unchanged except `transitionRunId`, which names the
+     * management run suspended on that approval). Either way, `transitionRunId`
+     * is the run to follow. Rejects with `WopError`: `400 validation_error` (a
+     * state or `canaryPercent` the host does not advertise), `403` (no `deploy:*`),
+     * `409 deployment_state_conflict` (an illegal edge, a skipped step, or no
+     * prior active version to roll back to), `422 eval_gate_unmet`.
+     */
     transitionDeployment: (
       agentId: string,
       body: AgentDeploymentTransition,

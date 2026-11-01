@@ -1600,6 +1600,13 @@ export interface AgentDeployment {
   channels?: readonly string[];
   evalRunId?: string;
   approvalGateId?: string;
+  /**
+   * RFC 0254 §D — the deployment-management run that applied, or is applying,
+   * this record's last transition. It carries the transition's
+   * `authorization.decided`, any approval interrupt and the `deployment.*`
+   * event; read it with `client.runs`. A refused transition leaves it unchanged.
+   */
+  transitionRunId?: string;
 }
 
 /**

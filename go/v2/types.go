@@ -939,6 +939,11 @@ type AgentDeployment struct {
 	Channels        []string `json:"channels,omitempty"`
 	EvalRunID       string   `json:"evalRunId,omitempty"`
 	ApprovalGateID  string   `json:"approvalGateId,omitempty"`
+	// TransitionRunID (RFC 0254 §D) names the deployment-management run that
+	// applied, or is applying, the last transition. It carries
+	// authorization.decided, any approval interrupt and the deployment.* event.
+	// A refused transition leaves it unchanged.
+	TransitionRunID string `json:"transitionRunId,omitempty"`
 }
 
 // AgentDeploymentTransition is the TransitionAgentDeployment request body

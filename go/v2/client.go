@@ -1005,12 +1005,18 @@ func (c *OpenwopClient) ListAgentDeployments(
 }
 
 // TransitionAgentDeployment calls POST /agents/{agentID}/deployments per
-// RFC 0082 §E — requests a deployment state transition (promote / pause /
-// deprecate / rollback / adjust-canary). The host authorizes fail-closed against
-// the RFC 0049 deploy:* scope, runs any RFC 0051 approvalGate, and enforces
-// RFC 0081 requiredEval before emitting deployment.promoted. Returns the updated
-// deployment record; a *WopError with Status 403 (fail-closed / eval_gate_unmet)
-// or 400 (no_active_deployment / unsupported state) on failure.
+// RFC 0082 §E and RFC 0254 — requests a deployment state transition (promote /
+// pause / deprecate / rollback / adjust-canary). Promote moves exactly one step;
+// a paused version resumes by promote; rollback restores the version active
+// before the last promote.
+//
+// Returns the record on 200 (applied) and on 202 (gated by an approval: the
+// record is unchanged except TransitionRunID, which names the management run
+// suspended on that approval). Either way, TransitionRunID is the run to
+// follow. On failure it returns a *WopError: 400 validation_error (a state or
+// canaryPercent the host does not advertise), 403 (no deploy:*), 409
+// deployment_state_conflict (an illegal edge, a skipped step, or no prior
+// active version to roll back to), 422 eval_gate_unmet.
 func (c *OpenwopClient) TransitionAgentDeployment(
 	ctx context.Context,
 	agentID string,
