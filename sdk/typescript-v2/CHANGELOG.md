@@ -2,7 +2,7 @@
 
 The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop/v2.Y.Z` tracking a published corpus tag) published from `sdk/typescript-v2/`.
 
-## [Unreleased]
+## [2.10.0] — 2026-11-02 — corpus `v2.46.41`: installed-pack readback (RFC 0253)
 
 - **`client.installedPacks.get(packName)`** — `GET /installed-packs/{packName}` (RFC 0253), the bare installed `pack.json` at the version installed in the caller's tenant. Served when `agents.proposals.readback` names `workflow-chain-pack` or `agent-pack`; an unadvertised host, and a pack installed in another tenant, both answer `404`. A pack proposal's `activation.installedArtifact` is `{ operationId: 'getInstalledPack', id: packName, version }`. New exported type `InstalledPack`.
 - **`RunCompletedPayload.skippedTerminals`** (RFC 0257, generated): the terminal node ids skipped when a run completes with every terminal skipped.

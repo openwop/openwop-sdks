@@ -2,7 +2,7 @@
 
 The 1.x line's history lives in [`sdk/python/CHANGELOG.md`](../python/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop-client/v2.Y.Z` tracking a published corpus tag) published from `sdk/python-v2/` (import name unchanged: `openwop_client`).
 
-## [Unreleased]
+## [2.10.0] — 2026-11-02 — corpus `v2.46.41`: installed-pack readback (RFC 0253)
 
 - **`OpenwopClient.installed_packs_get(pack_name)`** — `GET /installed-packs/{packName}` (RFC 0253), the bare installed `pack.json` as a `dict` at the version installed in the caller's tenant. Served when `agents.proposals.readback` names `workflow-chain-pack` or `agent-pack`; an unadvertised host, and a pack installed in another tenant, both answer `404`.
 - **Re-vendored on corpus `v2.46.41`** (was `v2.46.38`): `api/v2/openapi.yaml`, `api/v2/asyncapi.yaml`, `spec/v2/path-manifest.json` (69 operations) and 5 `schemas/v2` files (`proposal`, `capabilities`, `run-event-payloads`, `workflow-chain-pack-manifest`, `workflow-definition`). No error code or capability family changes. `CORPUS_VERSION` becomes `2.46.41`, so `OpenWOP-Client-Version` now sends `2.46.41`. `_generated.py` regenerated.
