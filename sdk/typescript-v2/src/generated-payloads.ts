@@ -1728,6 +1728,7 @@ export type RunCancelledPayload = {
 export type RunCompletedPayload = {
   "outputs": OutputsObjectPayload;
   "durationMs"?: number;
+  /** RFC 0257. When a run is quiescent (nothing ready, running or suspended), its definition has at least one terminal node (a node with no outgoing edge; a `disabled` node counts like any other), no terminal node's latest outcome is completed, no node's latest outcome is failed, and no rule ending the run on its own cause applies (cancellation, `run_timeout`, a breached cap, `recursion_limit_exceeded`), the host MUST end the run `run.completed` (status `completed`), MUST NOT emit `run.failed` for it, and MUST carry `skippedTerminals`: every terminal node's id, once, in the definition's `nodes[]` order. A `run.completed` in which any terminal node completed MUST NOT carry it. The disposition MUST be a function only of the pinned definition and the recorded node outcomes, never host configuration, the clock or the evaluating instance, so a replay fork that reproduces the source's node outcomes ends with the same event and list. `outputs` stays governed by its own rule. The case where a node failed and every terminal was skipped is not governed here. Authors who need 'nothing routed' to fail add a `core.fail` terminal on the complement edge or the router's default branch. */ "skippedTerminals"?: Array<IdsSchema_NodeId>;
   /** RFC 0185 §B hatch — a vendor-prefixed property the host carried rather than dropped. */ [key: `openwop-${string}` | `x-${string}` | `vendor.${string}`]: unknown;
 };
 

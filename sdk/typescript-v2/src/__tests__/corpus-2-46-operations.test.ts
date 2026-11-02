@@ -92,6 +92,21 @@ describe('proposals (RFC 0249)', () => {
   });
 });
 
+describe('installed packs (RFC 0253)', () => {
+  it('reads the bare pack.json by name', async () => {
+    const pack = { name: 'private.acme.triage', version: '1.0.0', kind: 'workflow-chain', engines: {}, chains: [] };
+    const { client, captured } = mockClient(() => ({ status: 200, body: pack }));
+    const got = await client.installedPacks.get('private.acme.triage');
+    expect(`${captured[0]!.method} ${captured[0]!.url.replace('https://host.example', '')}`).toBe('GET /installed-packs/private.acme.triage');
+    expect(got).toEqual(pack);
+  });
+
+  it('surfaces the 404 an unadvertised host or another tenant answers', async () => {
+    const { client } = mockClient(() => ({ status: 404, body: { code: 'not_found', message: 'no pack', retriable: false } }));
+    await expect(client.installedPacks.get('private.acme.other')).rejects.toMatchObject({ status: 404 });
+  });
+});
+
 describe('connection providers', () => {
   it('list and resolve, the qualified form as a pack query parameter', async () => {
     const { client, captured } = mockClient(() => ({ status: 200, body: { providers: [], refusals: [] } }));

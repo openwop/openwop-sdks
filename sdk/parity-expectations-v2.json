@@ -860,6 +860,19 @@
       }
     },
     {
+      "operationId": "getInstalledPack",
+      "method": "GET",
+      "path": "/installed-packs/{packName}",
+      "ts": "typed",
+      "py": "typed",
+      "go": "typed",
+      "symbols": {
+        "ts": "installedPacks.get",
+        "py": "installed_packs_get",
+        "go": "GetInstalledPack"
+      }
+    },
+    {
       "operationId": "getProposal",
       "method": "GET",
       "path": "/proposals/{proposalId}",

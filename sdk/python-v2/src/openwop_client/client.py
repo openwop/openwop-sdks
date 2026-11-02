@@ -1222,6 +1222,20 @@ class OpenwopClient:
             )
         )
 
+    # ── Installed packs (RFC 0253; gated on ``agents.proposals.readback``) ──
+    # Advertised when ``readback`` names ``workflow-chain-pack`` or
+    # ``agent-pack``; an unadvertised host, and a pack installed in another
+    # tenant, both answer ``404``.
+    def installed_packs_get(self, pack_name: str) -> dict[str, Any]:
+        """``GET /installed-packs/{packName}`` — the bare installed ``pack.json``
+        at the version installed in the caller's tenant, with no install
+        metadata. ``kind == "workflow-chain"`` validates against
+        ``workflow-chain-pack-manifest``, else ``node-pack-manifest``. The ``id``
+        of a pack proposal's ``activation.installedArtifact`` is ``pack_name``."""
+        return self._request_json(
+            "GET", f"/installed-packs/{quote(pack_name, safe='')}"
+        )
+
     # ── Connection providers (gated on ``connections.providerRead``) ────
     def connection_providers_list(self) -> ConnectionProviderRegistry:
         """``GET /connection-providers`` — every definition the host resolves

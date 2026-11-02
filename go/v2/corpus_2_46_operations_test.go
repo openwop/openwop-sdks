@@ -246,3 +246,27 @@ func TestTransitionAgentDeploymentRFC0254(t *testing.T) {
 		t.Fatalf("toState not sent: %v", (*captured)[1].Body)
 	}
 }
+
+// RFC 0253: the body is the installed pack.json, returned as is; a 404 surfaces
+// as a WopError.
+func TestGetInstalledPack(t *testing.T) {
+	pack := `{"name":"private.acme.triage","version":"1.0.0","kind":"workflow-chain","engines":{},"chains":[]}`
+	c, captured := newBodyServer(t, func(r *http.Request) (int, string, string) {
+		if r.URL.Path == "/installed-packs/private.acme.other" {
+			return 404, "application/json", `{"code":"not_found","message":"no pack","retriable":false}`
+		}
+		return 200, "application/json", pack
+	})
+	ctx := context.Background()
+	got, err := c.GetInstalledPack(ctx, "private.acme.triage")
+	if err != nil || got["name"] != "private.acme.triage" || got["kind"] != "workflow-chain" {
+		t.Fatalf("get = %+v, %v", got, err)
+	}
+	if req := (*captured)[0]; req.Method != http.MethodGet || req.RawPath != "/installed-packs/private.acme.triage" {
+		t.Fatalf("request = %s %s", req.Method, req.RawPath)
+	}
+	var werr *WopError
+	if _, err := c.GetInstalledPack(ctx, "private.acme.other"); !errors.As(err, &werr) || werr.Status != 404 {
+		t.Fatalf("404 = %v", err)
+	}
+}

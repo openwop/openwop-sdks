@@ -15,18 +15,18 @@
 > `node scripts/check-sdk-parity.mjs --manifest spec/v2/path-manifest.json --expectations sdk/parity-expectations-v2.json`
 > (`scripts/sdks-check.sh` step 7).
 
-The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against the corpus tag in `CORPUS_TAG` — `@openwop/openwop@2.9.0`, `openwop-client==2.9.0`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2.9.0`; tags `go/v2.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **68 operations** (the two SSE channels among them). Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. `sdks-check` also fails on any `/v1` path literal in a v2 source tree.
+The three 2.x packages are v2-ONLY siblings of the 1.x ones, published against the corpus tag in `CORPUS_TAG` — `@openwop/openwop@2.9.0`, `openwop-client==2.9.0`, and the Go module `github.com/openwop/openwop-sdks/go/v2` (tag `go/v2.9.0`; tags `go/v2.Y.Z`). Their operation set is `spec/v2/path-manifest.json` (RFC 0172 §C.2: bare origin, unversioned keys, no seam or test-mode operation), vendored at `CORPUS_TAG`, **69 operations** (the two SSE channels among them). Every one maps to exactly one method in each SDK (RFC 0168 §D), and the gate makes the `symbols` map mandatory — there is no "excluded" row and no fragment-only anchoring in v2. `sdks-check` also fails on any `/v1` path literal in a v2 source tree.
 
 | SDK | typed | of manifest ops |
 |---|---:|---:|
-| TypeScript (`@openwop/openwop` 2.9.0) | 68 | 68 |
-| Python (`openwop-client` 2.9.0) | 68 | 68 |
-| Go (`github.com/openwop/openwop-sdks/go/v2` v2.9.0) | 68 | 68 |
+| TypeScript (`@openwop/openwop` 2.9.0) | 69 | 69 |
+| Python (`openwop-client` 2.9.0) | 69 | 69 |
+| Go (`github.com/openwop/openwop-sdks/go/v2` v2.9.0) | 69 | 69 |
 
-**What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 53 of the 58 v1 OpenAPI operations; the v2 manifest has 68. 49 are common to both:
+**What moved between the 1.x and 2.x surfaces.** The 1.x SDKs type 53 of the 58 v1 OpenAPI operations; the v2 manifest has 69. 49 are common to both:
 
 - Only in 1.x: the 4 `workspace` file operations (`/v1/host/workspace/files*`). The 5 seams the 1.x SDKs exclude (`packs-test` ×4, `getA2ATaskState`) are not v2 operations at all. Also dropped from the SDKs though never OpenAPI operations: `runs.debugBundle`, the host-sample `userAgents.*` wrappers (TS), and `RegistryClient` (v2 resolves registry paths through `.well-known/openwop-registry.json` `endpoints`, packs.md).
-- Only in 2.x: `getRunCompensation`, `getRunEffects`, `getEffectSeamManifest` (RFC 0173), `streamHostEvents` (the `hostEvents` AsyncAPI channel), `listRuns` (RFC 0182), `listWebhookDeadLetters` (RFC 0188), `listTriggerDeadLetters` (RFC 0232), the seven proposal operations (RFC 0249: `listProposals`, `submitProposal`, `getProposal`, `reviseProposal`, `archiveProposal`, `applyProposal`, `rejectProposal`), `listConnectionProviders` / `resolveConnectionProvider`, `emitTestHostEvent` (RFC 0250) and the front-end plugin `getUiPluginFrame` / `dispatchUiPluginRequest`.
+- Only in 2.x: `getRunCompensation`, `getRunEffects`, `getEffectSeamManifest` (RFC 0173), `streamHostEvents` (the `hostEvents` AsyncAPI channel), `listRuns` (RFC 0182), `listWebhookDeadLetters` (RFC 0188), `listTriggerDeadLetters` (RFC 0232), the seven proposal operations (RFC 0249: `listProposals`, `submitProposal`, `getProposal`, `reviseProposal`, `archiveProposal`, `applyProposal`, `rejectProposal`), `getInstalledPack` (RFC 0253), `listConnectionProviders` / `resolveConnectionProvider`, `emitTestHostEvent` (RFC 0250) and the front-end plugin `getUiPluginFrame` / `dispatchUiPluginRequest`.
 
 | Surface (v2) | TS | Python | Go |
 |---|---|---|---|
