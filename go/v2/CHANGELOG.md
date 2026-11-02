@@ -2,6 +2,11 @@
 
 The v1 module's history lives in [`go/CHANGELOG.md`](../CHANGELOG.md); this is a new v2-ONLY major module at `github.com/openwop/openwop-sdks/go/v2` (tags `go/v2.Y.Z`).
 
+## [Unreleased]
+
+- **`GetInstalledPack(ctx, packName)`** — `GET /installed-packs/{packName}` (RFC 0253), the bare installed `pack.json` as a `map[string]any` at the version installed in the caller's tenant. Served when `agents.proposals.readback` names `workflow-chain-pack` or `agent-pack`; an unadvertised host, and a pack installed in another tenant, both answer `404` (a `*WopError`).
+- **Re-vendored on corpus `v2.46.41`** (was `v2.46.38`): `api/v2/openapi.yaml`, `api/v2/asyncapi.yaml`, `spec/v2/path-manifest.json` (69 operations) and 5 `schemas/v2` files (`proposal`, `capabilities`, `run-event-payloads`, `workflow-chain-pack-manifest`, `workflow-definition`). No error code or capability family changes. `CORPUS_VERSION` becomes `2.46.41`, so `OpenWOP-Client-Version` now sends `2.46.41`. `generated.go` regenerated.
+
 ## [2.9.0] — 2026-10-31 — corpus `v2.46.38`: deployment transitions typed (RFC 0254)
 
 - **`AgentDeployment.TransitionRunID`** (RFC 0254 §D, optional): the deployment-management run that applied, or is applying, the record's last transition. It carries the transition's `authorization.decided`, any approval interrupt and the `deployment.*` event.

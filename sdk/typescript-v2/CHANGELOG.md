@@ -2,6 +2,12 @@
 
 The 1.x line's history lives in [`sdk/typescript/CHANGELOG.md`](../typescript/CHANGELOG.md); this package is a new v2-ONLY major (tags `openwop/v2.Y.Z` tracking a published corpus tag) published from `sdk/typescript-v2/`.
 
+## [Unreleased]
+
+- **`client.installedPacks.get(packName)`** — `GET /installed-packs/{packName}` (RFC 0253), the bare installed `pack.json` at the version installed in the caller's tenant. Served when `agents.proposals.readback` names `workflow-chain-pack` or `agent-pack`; an unadvertised host, and a pack installed in another tenant, both answer `404`. A pack proposal's `activation.installedArtifact` is `{ operationId: 'getInstalledPack', id: packName, version }`. New exported type `InstalledPack`.
+- **`RunCompletedPayload.skippedTerminals`** (RFC 0257, generated): the terminal node ids skipped when a run completes with every terminal skipped.
+- **Re-vendored on corpus `v2.46.41`** (was `v2.46.38`): `api/v2/openapi.yaml`, `api/v2/asyncapi.yaml`, `spec/v2/path-manifest.json` (69 operations) and 5 `schemas/v2` files (`proposal`, `capabilities`, `run-event-payloads`, `workflow-chain-pack-manifest`, `workflow-definition`). No error code or capability family changes. `CORPUS_VERSION` becomes `2.46.41`, so `OpenWOP-Client-Version` now sends `2.46.41`. `generated.ts` and `generated-payloads.ts` regenerated.
+
 ## [2.9.0] — 2026-10-31 — corpus `v2.46.38`: deployment transitions typed (RFC 0254)
 
 - **`AgentDeployment.transitionRunId`** (RFC 0254 §D, optional): the deployment-management run that applied, or is applying, the record's last transition. It carries the transition's `authorization.decided`, any approval interrupt and the `deployment.*` event.

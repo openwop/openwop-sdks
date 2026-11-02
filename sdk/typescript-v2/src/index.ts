@@ -243,6 +243,7 @@ export type {
   ProposalKind,
   ProposalState,
   ProposalActivation,
+  InstalledPack,
   ListProposalsRequest,
   ProposalListResponse,
   SubmitProposalRequest,

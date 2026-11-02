@@ -183,6 +183,28 @@ class ProposalTests(unittest.TestCase):
         self.assertEqual(_body(seen[6]), {"reason": "no"})
 
 
+class InstalledPackTests(unittest.TestCase):
+    def test_reads_the_bare_pack_json(self) -> None:
+        """RFC 0253: the body is the installed pack.json, returned as is."""
+        pack = {
+            "name": "private.acme.triage",
+            "version": "1.0.0",
+            "kind": "workflow-chain",
+            "engines": {},
+            "chains": [],
+        }
+        seen, urlopen = _stub(lambda req: pack)
+        with mock.patch.object(client_module, "urlopen", urlopen):
+            got = OpenwopClient("https://h.example", "k").installed_packs_get(
+                "private.acme.triage"
+            )
+        self.assertEqual(got, pack)
+        self.assertEqual(seen[0].get_method(), "GET")
+        self.assertEqual(
+            seen[0].full_url, "https://h.example/installed-packs/private.acme.triage"
+        )
+
+
 class ConnectionProviderTests(unittest.TestCase):
     def test_list_and_resolve(self) -> None:
         def responder(req: Any) -> Any:

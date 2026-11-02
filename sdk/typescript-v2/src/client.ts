@@ -31,6 +31,7 @@ import {
   type ConnectionProviderRegistry,
   type EmitTestHostEventRequest,
   type EmitTestHostEventResponse,
+  type InstalledPack,
   type ListProposalsRequest,
   type Proposal,
   type ProposalListResponse,
@@ -1085,6 +1086,18 @@ export class OpenwopClient {
         path: `/proposals/${encodeURIComponent(proposalId)}:reject`,
         body,
       }),
+  };
+
+  // ── Installed packs (RFC 0253; gated on `agents.proposals.readback`) ──
+  // Advertised when `readback` names `workflow-chain-pack` or `agent-pack`; a host that
+  // does not advertise it, and a pack installed in another tenant, both answer `404`.
+  readonly installedPacks = {
+    /**
+     * `GET /installed-packs/{packName}` — the pack at the version installed in the caller's
+     * tenant. The `id` of a pack proposal's `activation.installedArtifact` is `packName`.
+     */
+    get: (packName: string): Promise<InstalledPack> =>
+      this.#request<InstalledPack>({ method: 'GET', path: `/installed-packs/${encodeURIComponent(packName)}` }),
   };
 
   // ── Connection providers (gated on `connections.providerRead`) ───────

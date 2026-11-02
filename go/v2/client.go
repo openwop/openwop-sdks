@@ -1471,6 +1471,20 @@ func (c *OpenwopClient) RejectProposal(ctx context.Context, proposalID, reason s
 
 // ── Connection providers (gated on connections.providerRead) ────────────
 
+// GetInstalledPack calls GET /installed-packs/{packName}, RFC 0253: the bare
+// installed pack.json at the version installed in the caller's tenant, with no
+// install metadata. "kind" "workflow-chain" validates against
+// workflow-chain-pack-manifest, else node-pack-manifest. Advertised when
+// agents.proposals.readback names workflow-chain-pack or agent-pack; an
+// unadvertised host, and a pack installed in another tenant, both answer 404.
+func (c *OpenwopClient) GetInstalledPack(ctx context.Context, packName string) (map[string]any, error) {
+	var out map[string]any
+	if err := c.requestJSON(ctx, http.MethodGet, "/installed-packs/"+url.PathEscape(packName), nil, nil, true, &out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ListConnectionProviders calls GET /connection-providers: every definition
 // the host resolves against, and the pack registrations it refused.
 func (c *OpenwopClient) ListConnectionProviders(ctx context.Context) (*ConnectionProviderRegistry, error) {

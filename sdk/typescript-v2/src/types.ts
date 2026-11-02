@@ -1792,6 +1792,18 @@ export interface ProposalActivation {
   installedArtifact?: { kind: ProposalKind; operationId: string; id: string; version?: string };
 }
 
+/**
+ * `GET /installed-packs/{packName}` (RFC 0253) — the bare installed `pack.json`, with no
+ * install metadata. `kind: 'workflow-chain'` validates against
+ * `workflow-chain-pack-manifest.schema.json`, else `node-pack-manifest.schema.json`.
+ * For a pack `proposals.apply` installed it is RFC 8785 equal to the proposal's `artifact`.
+ */
+export type InstalledPack = Record<string, unknown> & {
+  name: string;
+  version: string;
+  kind?: 'workflow-chain' | 'node';
+};
+
 /** `GET /proposals` query. */
 export interface ListProposalsRequest {
   state?: ProposalState;
