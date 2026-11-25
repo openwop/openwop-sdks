@@ -22,9 +22,10 @@ discovery root, the generated error registry — RFC 0172 / 0171 / 0173, RFC 016
 68 operations of `spec/v2/path-manifest.json` at corpus **`v2.46.38`**
 ([`CORPUS_TAG`](./CORPUS_TAG)). The latest published release is **2.10.0**, on corpus `v2.46.41`.
 
-The 1.x packages target v1 hosts (`/v1/…`) and are the maintained parallel line through the v1
-overlap, until v1 end-of-support (earliest 2026-12-04). Unpinned installs now resolve to 2.x, so a
-v1 integration must pin the major.
+The 1.x packages target v1 hosts (`/v1/…`). v1 reached end of support on **2026-10-04**
+(RFC 0234), so the 1.x line is no longer maintained and is being deprecated; it stays installable
+until about 2027-09-05 (the 12-month floor from the 2.0.0 publish). Unpinned installs resolve to
+2.x; new integrations target v2.
 
 | SDK | Install (v2) | Install (v1 line) | 2.x path | 1.x path | 2.x tag form |
 |---|---|---|---|---|---|
