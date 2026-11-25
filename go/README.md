@@ -1,3 +1,5 @@
+> **DEPRECATED (2026-11-24) — frozen; do not edit.** The Go module `github.com/openwop/openwop-sdks/go` (v1) is retired. v1 reached end of support on 2026-10-04 (RFC 0234). Published v1 versions (last: v1.7.0) are deprecated, not yanked: they stay installable until about **2027-09-05** (the 12-month floor after the 2.0.0 publish), so existing pins keep building, but they get no fixes. **Use `github.com/openwop/openwop-sdks/go/v2` ([`go/v2/`](./v2/), `go get github.com/openwop/openwop-sdks/go/v2`) instead.** The v1 module in this directory (everything except `v2/`, which is the separate, maintained v2 module) is frozen history: do not edit it; it is no longer built, tested or tagged here ([`docs/RETIRE-1X.md`](../docs/RETIRE-1X.md)).
+
 # `openwopclient` — Go SDK for the Multi-Agent Workflow Orchestration Protocol
 
 **openwop is an open, wire-level protocol for multi-agent workflow orchestration** — a single contract for runs in which LLM agents, deterministic tools, sub-workflows, and human reviewers collaborate, with durable suspend / resume, replay, version negotiation, and observability owned by the protocol itself. This package is the reference Go client: synchronous, zero runtime deps, strongly-typed structs for every spec'd REST endpoint plus a channel-based SSE consumer.
@@ -6,7 +8,7 @@
 go get github.com/openwop/openwop-sdks/go@v1.7.0   # the v1 line; v2 is the separate module …/go/v2
 ```
 
-> **v1 line.** This is the v1 module for v1 hosts (`/v1/…`), which reached end of support on 2026-10-04 (RFC 0234); this line is no longer maintained and is being deprecated (installable until about 2027-09-05). New integrations target v2 with [`go/v2/`](./v2/) (`go get github.com/openwop/openwop-sdks/go/v2`). Go keeps the two majors in separate module paths, so this path never resolves to v2.
+> **v1 line.** This is the v1 module for v1 hosts (`/v1/…`), which reached end of support on 2026-10-04 (RFC 0234); this line is no longer maintained and is deprecated (installable until about 2027-09-05). New integrations target v2 with [`go/v2/`](./v2/) (`go get github.com/openwop/openwop-sdks/go/v2`). Go keeps the two majors in separate module paths, so this path never resolves to v2.
 >
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Status:** v1, finalized 2026-04-27; superseded by v2 · **Mirrors:** the TypeScript and Python SDKs (same endpoint coverage, idiomatic Go shape)
 
