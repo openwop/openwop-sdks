@@ -1,8 +1,8 @@
 # SDK Parity Matrix
 
 > **Status:** Living document. Two generations of SDKs are tracked: the **2.x** packages for v2 hosts
-> (the current major; section below) and the **1.x** packages for v1 hosts, the maintained parallel line
-> until v1 end-of-support (earliest 2026-12-04). Each generation is machine-enforced by
+> (the current major; section below) and the **1.x** packages for v1 hosts, which reached end of support
+> on 2026-10-04 (RFC 0234) and are being deprecated. Each generation is machine-enforced by
 > `scripts/check-sdk-parity.mjs` against its own expectations file (`sdk/parity-expectations-v2.json`,
 > `sdk/parity-expectations.json`); the JSON files are the source of truth and this prose is the
 > human-readable companion.

@@ -6,7 +6,7 @@
 pip install "openwop-client<2"   # the 1.x line (1.8.0); unpinned resolves to 2.x
 ```
 
-> **v1 line.** This is the 1.x client for v1 hosts (`/v1/…`), the maintained parallel line until v1 end-of-support (earliest 2026-12-04). New integrations target v2 with [`sdk/python-v2/`](../python-v2/) (`pip install "openwop-client>=2,<3"`). An unpinned install now resolves to 2.x, so pin the major as above.
+> **v1 line.** This is the 1.x client for v1 hosts (`/v1/…`), which reached end of support on 2026-10-04 (RFC 0234); this line is no longer maintained and is being deprecated (installable until about 2027-09-05). New integrations target v2 with [`sdk/python-v2/`](../python-v2/) (`pip install "openwop-client>=2,<3"`). An unpinned install now resolves to 2.x, so pin the major as above.
 >
 > **Spec:** [github.com/openwop/openwop](https://github.com/openwop/openwop) · **Status:** v1, finalized 2026-04-27; superseded by v2 · **Mirrors:** the TypeScript SDK at [`sdk/typescript/`](https://github.com/openwop/openwop/tree/main/sdk/typescript)
 
