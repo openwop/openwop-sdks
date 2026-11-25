@@ -5,26 +5,26 @@
 # coordinated spec release (a `v*` tag here, mirroring the spec corpus's `v*`)
 # publishes the three packages OF THAT MAJOR; per-package tags publish one.
 #
-# Two generations of packages live side by side (v2 charter Phase 3, S5):
+# Only the 2.x line publishes (sdk/typescript-v2 · sdk/python-v2 · go/v2).
 #
-#   major 1  sdk/typescript   sdk/python    go/     — unchanged 1.x publishing
-#   major 2  sdk/typescript-v2 sdk/python-v2 go/v2  — the v2-ONLY 2.0.0 packages
-#
-# The `resolve` job reads the tag's major and points every publish job at the
-# right directory; a major-1 tag resolves to exactly the directories and steps
-# this workflow always used.
+# The 1.x line (sdk/typescript · sdk/python · go/) is RETIRED: v1 reached end
+# of support on 2026-10-04 (RFC 0234) and the maintainer deprecated the 1.x
+# packages on 2026-11-24. They are deprecated, not yanked — the published
+# versions stay installable until about 2027-09-05 (the 12-month old-major
+# retention floor) — but nothing here publishes 1.x again: the tag filters
+# below match major 2 only, and `validate-tag` / `resolve` refuse a major-1
+# tag if one is ever pushed under a filter that matches. docs/RETIRE-1X.md has
+# the registry-side deprecation commands, which the maintainer runs by hand.
 #
 #   Tag pattern            Triggers                Use case
 #   --------------------   ---------------------   ---------------------------------
-#   v1.*                   the three 1.x jobs      Coordinated spec-aligned 1.x release
 #   v2.*                   the three 2.x jobs      Coordinated spec-aligned 2.x release
 #                                                  (corpus release tags are v2.<minor>.<patch>,
 #                                                  rc's v2.0.0-rc.<n>; RFC 0172 §D — the 2.x
 #                                                  packages currently sit on that rc line:
 #                                                  npm 2.0.0 / PyPI 2.0.0 / go/v2.0.0)
-#   openwop/v1.* / v2.*    publish-ts-client       SDK-only release (TS 1.x / 2.x)
-#   openwop-client/v1.* / v2.*  publish-python     SDK-only release (Python 1.x / 2.x)
-#   go/v1.*                publish-go              SDK-only release (Go v1; module …/go)
+#   openwop/v2.*           publish-ts-client       SDK-only release (TS 2.x)
+#   openwop-client/v2.*    publish-python          SDK-only release (Python 2.x)
 #   go/v2.*                publish-go              SDK-only release (Go v2; module …/go/v2)
 #
 # Go tag form — measured 2026-09-10, not inferred. Go derives the tag prefix
@@ -52,10 +52,11 @@ name: openwop-sdks — Publish
 on:
   push:
     tags:
-      - 'v*'
-      - 'openwop/v*'
-      - 'openwop-client/v*'
-      - 'go/v*'
+      # Major 2 only — the 1.x line is retired (header comment).
+      - 'v2.*'
+      - 'openwop/v2.*'
+      - 'openwop-client/v2.*'
+      - 'go/v2.*'
 
 # Least privilege. validate-tag, resolve, preflight and publish-go only read the
 # tagged tree (publish-go asks proxy.golang.org; the tag itself is the release).
@@ -72,6 +73,11 @@ jobs:
         run: |
           tag="${GITHUB_REF#refs/tags/}"
           case "$tag" in
+            v1.*|openwop/v1.*|openwop-client/v1.*|go/v1.*)
+              echo "::error::'$tag' is a 1.x tag; the 1.x line is retired and no longer publishes (docs/RETIRE-1X.md)"
+              exit 1 ;;
+          esac
+          case "$tag" in
             v[0-9]*.[0-9]*.[0-9]*|v[0-9]*.[0-9]*.[0-9]*-*|\
             openwop/v[0-9]*.[0-9]*.[0-9]*|openwop/v[0-9]*.[0-9]*.[0-9]*-*|\
             openwop-client/v[0-9]*.[0-9]*.[0-9]*|openwop-client/v[0-9]*.[0-9]*.[0-9]*-*|\
@@ -82,7 +88,7 @@ jobs:
               exit 1 ;;
             *)
               echo "::error::tag '$tag' does not match an expected SemVer pattern"
-              echo "Expected: vX.Y.Z | openwop/vX.Y.Z | openwop-client/vX.Y.Z | go/vX.Y.Z (major 1) | go/v2.Y.Z (major 2)"
+              echo "Expected: v2.Y.Z | openwop/v2.Y.Z | openwop-client/v2.Y.Z | go/v2.Y.Z"
               exit 1 ;;
           esac
 
@@ -114,14 +120,7 @@ jobs:
           [[ "$prerelease" == true ]] && npm_tag=next
           case "$major" in
             1)
-              # 2.x holds npm `latest`; a 1.x publish must not take it back,
-              # or every unpinned `npm install @openwop/openwop` downgrades to
-              # v1. The 1.x line publishes under `latest-1` (`@1` resolves by
-              # range either way). `v1` is not usable: npm refuses a dist-tag
-              # that parses as a semver range.
-              [[ "$prerelease" == true ]] || npm_tag=latest-1
-              ts_dir=sdk/typescript; py_dir=sdk/python; go_dir=go
-              go_module=github.com/openwop/openwop-sdks/go ;;
+              echo "::error::the 1.x line is retired and no longer publishes (tag $tag; docs/RETIRE-1X.md)"; exit 1 ;;
             2)
               ts_dir=sdk/typescript-v2; py_dir=sdk/python-v2; go_dir=go/v2
               go_module=github.com/openwop/openwop-sdks/go/v2 ;;
@@ -149,7 +148,7 @@ jobs:
         with:
           go-version: '1.22'
       - run: pip install ruff==0.16.3
-      - name: SDK gate (1.x + 2.x legs)
+      - name: SDK gate (2.x)
         run: npm run check
 
   publish-ts-client:
@@ -166,7 +165,6 @@ jobs:
       TAG_VERSION: ${{ needs.resolve.outputs.version }}
       NPM_TAG: ${{ needs.resolve.outputs.npm_tag }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
-      MAJOR: ${{ needs.resolve.outputs.major }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -180,7 +178,6 @@ jobs:
       # it the way the `sdks:check` gate already does, keeping publish cross-platform.
       - run: cd "$TS_DIR" && npm install --no-audit --no-fund
       - name: Version ↔ tag agreement + pre-release discipline (2.x)
-        if: env.MAJOR != '1'
         run: |
           cd "$TS_DIR"
           VER=$(node -p "require('./package.json').version")
@@ -217,7 +214,6 @@ jobs:
       PY_DIR: ${{ needs.resolve.outputs.py_dir }}
       TAG_VERSION: ${{ needs.resolve.outputs.version }}
       PRERELEASE: ${{ needs.resolve.outputs.prerelease }}
-      MAJOR: ${{ needs.resolve.outputs.major }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-python@v6
@@ -225,7 +221,6 @@ jobs:
           python-version: '3.12'
       - run: pip install --upgrade build packaging
       - name: Version ↔ tag agreement + pre-release discipline (2.x)
-        if: env.MAJOR != '1'
         run: |
           cd "$PY_DIR"
           python3 scripts/generate.py --check
@@ -260,15 +255,13 @@ jobs:
       GO_DIR: ${{ needs.resolve.outputs.go_dir }}
       GO_MODULE: ${{ needs.resolve.outputs.go_module }}
       TAG_VERSION: ${{ needs.resolve.outputs.version }}
-      MAJOR: ${{ needs.resolve.outputs.major }}
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-go@v6
         with:
           go-version: '1.22'
-      # Go modules are tag-based; proxy.golang.org indexes the …/go module from
-      # `go/v1.*` tags and the …/go/v2 module from `go/v2.*` tags, reading the
-      # v2 source from the major subdirectory `go/v2/` (header comment). This
+      # Go modules are tag-based; proxy.golang.org indexes the …/go/v2 module
+      # from `go/v2.*` tags, reading the v2 source from the major subdirectory `go/v2/` (header comment). This
       # job confirms the module path, vet, test and gofmt against the tagged
       # source, then asks the proxy whether the tag resolves.
       - name: Module path ↔ tag agreement
@@ -277,9 +270,7 @@ jobs:
           if [[ "$declared" != "$GO_MODULE" ]]; then
             echo "::error::$GO_DIR/go.mod declares $declared, tag expects $GO_MODULE"; exit 1
           fi
-          if [[ "$MAJOR" != "1" ]]; then
-            python3 "$GO_DIR/scripts/generate.py" --check
-          fi
+          python3 "$GO_DIR/scripts/generate.py" --check
       - run: cd "$GO_DIR" && go vet ./...
       - run: cd "$GO_DIR" && go test ./...
       - run: cd "$GO_DIR" && test -z "$(gofmt -l .)"

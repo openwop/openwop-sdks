@@ -2,6 +2,11 @@
 //
 // Types mirror the OpenAPI 3.1 spec (../../api/openapi.yaml) and JSON
 // Schemas (../schemas/). Hand-authored — see README.md §rationale.
+//
+// Deprecated: the v1 line is retired. v1 reached end of support on
+// 2026-10-04 (RFC 0234) and this module is no longer maintained; published
+// versions stay installable until about 2027-09-05. Use
+// github.com/openwop/openwop-sdks/go/v2 against v2 hosts.
 package openwopclient
 
 import "encoding/json"
